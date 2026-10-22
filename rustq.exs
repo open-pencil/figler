@@ -37,8 +37,13 @@ for {module, file} <- [
       {Figler.Codegen.Native.Graph.Bindings, "codegen/figler/codegen/native/graph/bindings.ex"},
       {Figler.Codegen.Native.Graph.Layer, "codegen/figler/codegen/native/graph/layer.ex"},
       {Figler.Codegen.Native.Graph.Geometry, "codegen/figler/codegen/native/graph/geometry.ex"},
+      {Figler.Codegen.Native.Graph.Variables, "codegen/figler/codegen/native/graph/variables.ex"},
+      {Figler.Codegen.Native.Graph.VariableBindings,
+       "codegen/figler/codegen/native/graph/variable_bindings.ex"},
       {Figler.Codegen.Native.Graph.Interpreter,
        "codegen/figler/codegen/native/graph/interpreter.ex"},
+      {Figler.Codegen.Native.Graph.Materialize,
+       "codegen/figler/codegen/native/graph/materialize.ex"},
       {Figler.Codegen.Native, "codegen/figler/codegen/native.ex"}
     ],
     not Code.ensure_loaded?(module),

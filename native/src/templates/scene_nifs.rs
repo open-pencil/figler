@@ -55,6 +55,51 @@ pub fn graph_interpret_impl<'a>(
     graph::encode_interpretation(env, &message, root)
 }
 
+/// Decode, index, and interpretation times for every page, in microseconds, and the
+/// occurrences built; a benchmark.
+pub fn graph_interpret_timing_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let started = std::time::Instant::now();
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    let decoded = started.elapsed().as_micros() as u64;
+    let (indexed, interpreted, occurrences) = graph::time_interpretation(&message)?;
+    Ok((decoded, indexed, interpreted, occurrences).encode(env))
+}
+
+/// Every variable resolved natively in each mode of its collection; a parity check.
+pub fn graph_resolve_variables_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    graph::encode_variable_resolution(env, &message)
+}
+
+/// The effective graph built natively, encoded as `Figler.Scene.Graph` holds its fields.
+pub fn graph_build_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+    styles: bool,
+    variables: bool,
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    graph::encode_graph_fields(env, &message, styles, variables)
+}
+
 pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
     bytes: Binary<'a>,

@@ -29,6 +29,9 @@ defmodule Figler.Codegen.Native do
       graph_layer: Graph.Layer.items(),
       graph_geometry: Graph.Geometry.items(),
       graph_interpreter: Graph.Interpreter.items(),
+      graph_variables: Graph.Variables.items(),
+      graph_variable_bindings: Graph.VariableBindings.items(),
+      graph_materialize: Graph.Materialize.items(),
       node_type_name_arms: node_type_name_arms(definition_map),
       graph_focus_decoders:
         Focus.render(definition_map, &Skip.message_arm/2, &Scene.render_template/2)

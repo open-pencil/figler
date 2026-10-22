@@ -3,7 +3,9 @@ defmodule Figler.Native.GraphTest do
 
   alias Figler.Native.CodecNifs
   alias Figler.Native.Module, as: Native
+  alias Figler.Scene.Graph.Materialize
   alias Figler.Scene.Graph.Occurrence.Interpreter
+  alias Figler.Scene.Graph.Variables
   alias Figler.Scene.Graph.Occurrence.SourceIndex
   alias Figler.Scene.Input
 
@@ -46,6 +48,32 @@ defmodule Figler.Native.GraphTest do
     end
   end
 
+  test "materializes the graph as the Elixir graph does, with and without variables" do
+    {payload, schema} = source = @fixture |> File.read!() |> Input.source!()
+    records = source |> CodecNifs.decode_sparse_message() |> Map.fetch!(:node_changes)
+    index = SourceIndex.new(records, styles: true)
+
+    for variables? <- [false, true] do
+      variables = if variables?, do: Variables.new(index.sources)
+      expected = Materialize.graph(index, variables)
+      native = Native.graph_build(payload, schema, true, variables?)
+
+      for field <- [
+            :nodes,
+            :records,
+            :children,
+            :roots,
+            :by_type,
+            :by_name,
+            :provenance,
+            :unresolved
+          ] do
+        assert without_nil(Map.fetch!(native, field)) == without_nil(Map.fetch!(expected, field)),
+               "#{field} differs with variables: #{variables?}"
+      end
+    end
+  end
+
   # The native tree omits nil fields and keeps no binding rank for slot content, which only
   # instance expansion reads; sets come back as lists.
   defp comparable(occurrence) do
@@ -60,7 +88,9 @@ defmodule Figler.Native.GraphTest do
     |> Map.update!(:property_claims, &without_nil/1)
   end
 
-  defp without_nil(%{} = map) when not is_struct(map),
+  defp without_nil(%_{} = struct), do: struct |> Map.from_struct() |> without_nil()
+
+  defp without_nil(%{} = map),
     do:
       map
       |> Map.delete(:__kiwi_module__)

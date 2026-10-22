@@ -18,6 +18,18 @@ defmodule Figler.Native.GeneratedStubs do
         :erlang.nif_error(:nif_not_loaded)
       end
 
+      def graph_interpret_timing(_bytes, _schema) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_resolve_variables(_bytes, _schema) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_build(_bytes, _schema, _styles, _variables) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
       def decode_graph_focused_sparse_message(_bytes, _schema, _focus) do
         :erlang.nif_error(:nif_not_loaded)
       end

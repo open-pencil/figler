@@ -43675,7 +43675,7 @@ fn decode_scene_node_change_from_decoder(
 )]
 pub mod graph {
     use super::*;
-    use std::collections::{HashMap, HashSet};
+    use std::collections::{BTreeMap, HashMap, HashSet};
     pub type GuidKey = (u32, u32);
     fn guid_key(guid: Option<&KiwiRecord>) -> Option<GuidKey> {
         match guid {
@@ -45257,7 +45257,7 @@ pub mod graph {
             .records(kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS)
             .into_iter()
             .cloned()
-            .collect::<Vec<_>>();
+            .collect::<Vec<KiwiRecord>>();
         if !path.is_empty() && (swap.is_some() || !assignments.is_empty()) {
             Some(Layer {
                 owner: owner.clone(),
@@ -46044,7 +46044,7 @@ pub mod graph {
             .records(kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS)
             .into_iter()
             .cloned()
-            .collect::<Vec<_>>();
+            .collect::<Vec<KiwiRecord>>();
         let mut root = Root {
             effective,
             replaced: replaced_before(original, effective, &&record.superseded),
@@ -46636,14 +46636,14 @@ pub mod graph {
     ) -> bool {
         match path.get(position) {
             Some(segment) => {
-                let rest = path.iter().skip(position).copied().collect::<Vec<GuidKey>>();
+                let rest = path.iter().skip(position).copied().collect::<Vec<_>>();
                 if current
                     .replaced_components
                     .iter()
                     .any(|component| resolves_in_source_component(
                         index,
                         *component,
-                        &&rest,
+                        &rest,
                     ))
                 {
                     true
@@ -46721,6 +46721,1607 @@ pub mod graph {
             bound_fields: HashMap::new(),
             replaced_components: Vec::new(),
             overridden: HashSet::new(),
+        }
+    }
+    #[derive(Clone, Debug)]
+    pub struct Collection {
+        pub default_mode: GuidKey,
+        pub modes: Vec<GuidKey>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Color {
+        pub r: f64,
+        pub g: f64,
+        pub b: f64,
+        pub a: f64,
+    }
+    #[derive(Clone, Debug)]
+    pub enum ColorOperand {
+        Literal(VariableValue),
+        Alias(GuidKey),
+        Other,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Composed {
+        pub color: ColorOperand,
+        pub opacity: ColorOperand,
+    }
+    #[derive(Clone, Debug)]
+    pub enum Formula {
+        Literal(VariableValue),
+        Alias(GuidKey),
+        Operation(Operation),
+    }
+    pub type Modes = HashMap<GuidKey, GuidKey>;
+    #[derive(Clone, Debug)]
+    pub struct Operation {
+        pub operator: u32,
+        pub operands: Vec<Formula>,
+    }
+    #[derive(Clone, Debug)]
+    pub enum Stored {
+        Literal(VariableValue),
+        Alias(GuidKey),
+        Formula(Operation),
+        ComposeColor(Composed),
+        Unsupported,
+    }
+    #[derive(Clone, Debug)]
+    pub struct UnsupportedExpression {
+        pub variable: GuidKey,
+        pub mode: GuidKey,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Variable {
+        pub id: GuidKey,
+        pub r#type: VariableType,
+        pub collection: GuidKey,
+        pub values: BTreeMap<GuidKey, Stored>,
+    }
+    #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+    pub enum VariableType {
+        Float,
+        Boolean,
+        String,
+        Color,
+    }
+    #[derive(Clone, Debug)]
+    pub enum VariableValue {
+        Float(f64),
+        Boolean(bool),
+        String(String),
+        Color(Color),
+    }
+    #[derive(Clone, Debug)]
+    pub struct Variables {
+        pub collections: HashMap<GuidKey, Collection>,
+        pub variables: HashMap<GuidKey, Variable>,
+        pub keys: HashMap<String, HashMap<String, GuidKey>>,
+        pub diagnostics: Vec<UnsupportedExpression>,
+    }
+    fn new_variables(records: &Sources) -> Variables {
+        let collections = records
+            .iter()
+            .filter(|(_id, record)| {
+                record.enum_value(kiwi_records::node_change::TYPE)
+                    == Some(kiwi_records::node_type::VARIABLE_SET)
+            })
+            .filter_map(|(id, record)| {
+                collection(record).map(|collection| (*id, collection))
+            })
+            .collect::<HashMap<GuidKey, Collection>>();
+        let mut vars = Variables {
+            collections,
+            variables: HashMap::new(),
+            keys: asset_keys(records),
+            diagnostics: Vec::new(),
+        };
+        let mut ids = records
+            .iter()
+            .filter_map(|item| match item {
+                (
+                    id,
+                    record,
+                ) if record.enum_value(kiwi_records::node_change::TYPE)
+                    == Some(kiwi_records::node_type::VARIABLE) => Some((id, record)),
+                _ => None,
+            })
+            .map(|(id, _)| *id)
+            .collect::<Vec<_>>();
+        ids.sort();
+        for id in ids {
+            put_variable(&mut vars, &records[&id]);
+        }
+        vars
+    }
+    fn asset_keys(records: &Sources) -> HashMap<String, HashMap<String, GuidKey>> {
+        let mut keys: HashMap<String, HashMap<String, GuidKey>> = HashMap::new();
+        for (id, record) in records.iter() {
+            if let Some(key) = record.str(kiwi_records::node_change::KEY) {
+                let version = record
+                    .str(kiwi_records::node_change::VERSION)
+                    .unwrap_or("");
+                keys.entry(key.to_string())
+                    .or_default()
+                    .insert(version.to_string(), *id);
+            }
+        }
+        keys
+    }
+    fn reference(vars: &Variables, reference: &KiwiRecord) -> Option<GuidKey> {
+        match guid_key(reference.record(kiwi_records::variable_id::GUID)) {
+            Some(id) => Some(id),
+            None => {
+                reference
+                    .record(kiwi_records::variable_id::ASSET_REF)
+                    .and_then(|asset| asset_reference(vars, asset))
+            }
+        }
+    }
+    fn asset_reference(vars: &Variables, asset: &KiwiRecord) -> Option<GuidKey> {
+        match asset.str(kiwi_records::asset_ref::KEY) {
+            Some(key) => {
+                match vars.keys.get(key) {
+                    Some(versions) => {
+                        match asset.str(kiwi_records::asset_ref::VERSION) {
+                            Some(version) if !version.is_empty() => {
+                                versions.get(version).copied()
+                            }
+                            _ => {
+                                match (versions.get(""), versions.len()) {
+                                    (Some(id), _count) => Some(*id),
+                                    (None, 1) => versions.values().copied().next(),
+                                    _ => None,
+                                }
+                            }
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+    fn collection(record: &KiwiRecord) -> Option<Collection> {
+        let modes = record
+            .records(kiwi_records::node_change::VARIABLE_SET_MODES)
+            .iter()
+            .filter_map(|mode| guid_key(
+                mode.record(kiwi_records::variable_set_mode::ID),
+            ))
+            .collect::<Vec<_>>();
+        match modes.first() {
+            Some(default) => {
+                Some(Collection {
+                    default_mode: *default,
+                    modes: modes.clone(),
+                })
+            }
+            None => None,
+        }
+    }
+    fn variable_type(record: &KiwiRecord) -> Option<VariableType> {
+        match record.enum_value(kiwi_records::node_change::VARIABLE_RESOLVED_TYPE) {
+            Some(kiwi_records::variable_resolved_data_type::FLOAT) => {
+                Some(VariableType::Float)
+            }
+            Some(kiwi_records::variable_resolved_data_type::BOOLEAN) => {
+                Some(VariableType::Boolean)
+            }
+            Some(kiwi_records::variable_resolved_data_type::STRING) => {
+                Some(VariableType::String)
+            }
+            Some(kiwi_records::variable_resolved_data_type::COLOR) => {
+                Some(VariableType::Color)
+            }
+            _ => None,
+        }
+    }
+    fn put_variable(vars: &mut Variables, record: &KiwiRecord) {
+        let collection = record
+            .record(kiwi_records::node_change::VARIABLE_SET_ID)
+            .and_then(|set| reference(vars, set))
+            .or_else(|| parent_id(record));
+        if let Some(id) = record_id(record) {
+            if let Some(r#type) = variable_type(record) {
+                if let Some(collection) = collection {
+                    if let Some(modes) = vars
+                        .collections
+                        .get(&collection)
+                        .map(|found| found.modes.clone())
+                    {
+                        let values = mode_values(vars, record, id, &modes);
+                        if !values.is_empty() {
+                            vars.variables
+                                .insert(
+                                    id,
+                                    Variable {
+                                        id,
+                                        r#type,
+                                        collection,
+                                        values,
+                                    },
+                                );
+                        }
+                    }
+                }
+            }
+        }
+    }
+    fn mode_values(
+        vars: &mut Variables,
+        record: &KiwiRecord,
+        id: GuidKey,
+        modes: &[GuidKey],
+    ) -> BTreeMap<GuidKey, Stored> {
+        let mut values: BTreeMap<GuidKey, Stored> = BTreeMap::new();
+        let entries = match record
+            .record(kiwi_records::node_change::VARIABLE_DATA_VALUES)
+        {
+            Some(data_values) => {
+                data_values.records(kiwi_records::variable_data_values::ENTRIES)
+            }
+            None => Vec::new(),
+        };
+        for entry in entries {
+            match guid_key(
+                entry.record(kiwi_records::variable_data_values_entry::MODE_ID),
+            ) {
+                Some(mode) if modes.contains(&mode) => {
+                    let stored = stored_value(
+                        vars,
+                        entry
+                            .record(
+                                kiwi_records::variable_data_values_entry::VARIABLE_DATA,
+                            ),
+                        0,
+                    );
+                    if let Stored::Unsupported = stored {
+                        vars.diagnostics
+                            .push(UnsupportedExpression {
+                                variable: id,
+                                mode,
+                            });
+                    }
+                    values.insert(mode, stored);
+                }
+                _ => {}
+            };
+        }
+        values
+    }
+    fn stored_value(vars: &Variables, data: Option<&KiwiRecord>, depth: u32) -> Stored {
+        match data {
+            Some(data) if depth <= 64 => {
+                let value = data.record(kiwi_records::variable_data::VALUE);
+                let data_type = data
+                    .enum_value(kiwi_records::variable_data::DATA_TYPE)
+                    .or_else(|| {
+                        data.enum_value(kiwi_records::variable_data::RESOLVED_DATA_TYPE)
+                    });
+                match (data_type, value) {
+                    (Some(kiwi_records::variable_data_type::ALIAS), Some(value)) => {
+                        alias_value(vars, value)
+                    }
+                    (Some(kiwi_records::variable_data_type::EXPRESSION), _value) => {
+                        expression(vars, data, depth)
+                    }
+                    (Some(data_type), Some(value)) => {
+                        match literal(data_type, value) {
+                            Some(literal) => Stored::Literal(literal),
+                            None => Stored::Unsupported,
+                        }
+                    }
+                    _ => Stored::Unsupported,
+                }
+            }
+            _ => Stored::Unsupported,
+        }
+    }
+    fn literal(data_type: u32, value: &KiwiRecord) -> Option<VariableValue> {
+        match (
+            data_type,
+            value.record(kiwi_records::variable_any_value::COLOR_VALUE),
+            value.bool(kiwi_records::variable_any_value::BOOL_VALUE),
+            value.str(kiwi_records::variable_any_value::TEXT_VALUE),
+            value.float(kiwi_records::variable_any_value::FLOAT_VALUE),
+        ) {
+            (
+                kiwi_records::variable_data_type::COLOR,
+                Some(color),
+                _flag,
+                _text,
+                _number,
+            ) => Some(VariableValue::Color(literal_color(color))),
+            (
+                kiwi_records::variable_data_type::BOOLEAN,
+                _color,
+                Some(flag),
+                _text,
+                _number,
+            ) => Some(VariableValue::Boolean(flag)),
+            (
+                kiwi_records::variable_data_type::STRING,
+                _color,
+                _flag,
+                Some(text),
+                _number,
+            ) => Some(VariableValue::String(text.to_string())),
+            (
+                kiwi_records::variable_data_type::FLOAT,
+                _color,
+                _flag,
+                _text,
+                Some(number),
+            ) => Some(VariableValue::Float(number as f64)),
+            _ => None,
+        }
+    }
+    fn literal_color(color: &KiwiRecord) -> Color {
+        Color {
+            r: color.float(kiwi_records::color::R).unwrap_or(0.0) as f64,
+            g: color.float(kiwi_records::color::G).unwrap_or(0.0) as f64,
+            b: color.float(kiwi_records::color::B).unwrap_or(0.0) as f64,
+            a: color.float(kiwi_records::color::A).unwrap_or(1.0) as f64,
+        }
+    }
+    fn alias_value(vars: &Variables, value: &KiwiRecord) -> Stored {
+        match value
+            .record(kiwi_records::variable_any_value::ALIAS)
+            .and_then(|variable| reference(vars, variable))
+        {
+            Some(id) => Stored::Alias(id),
+            None => Stored::Unsupported,
+        }
+    }
+    fn expression(vars: &Variables, data: &KiwiRecord, depth: u32) -> Stored {
+        match data
+            .record(kiwi_records::variable_data::VALUE)
+            .and_then(|value| {
+                value.record(kiwi_records::variable_any_value::EXPRESSION_VALUE)
+            })
+        {
+            Some(expression) => {
+                let arguments = expression
+                    .records(kiwi_records::expression::EXPRESSION_ARGUMENTS);
+                match expression
+                    .enum_value(kiwi_records::expression::EXPRESSION_FUNCTION)
+                {
+                    Some(kiwi_records::expression_function::COMPOSE_COLOR) => {
+                        compose_color(vars, &&arguments, depth)
+                    }
+                    Some(function) => formula(vars, function, &&arguments, depth),
+                    None => Stored::Unsupported,
+                }
+            }
+            None => Stored::Unsupported,
+        }
+    }
+    fn compose_color(vars: &Variables, arguments: &[&KiwiRecord], depth: u32) -> Stored {
+        match arguments {
+            [color, opacity] => {
+                match (
+                    color_operand(stored_value(vars, Some(*color), depth + 1)),
+                    color_operand(stored_value(vars, Some(*opacity), depth + 1)),
+                ) {
+                    (Some(color), Some(opacity)) => {
+                        Stored::ComposeColor(Composed { color, opacity })
+                    }
+                    _ => Stored::Unsupported,
+                }
+            }
+            _ => Stored::Unsupported,
+        }
+    }
+    fn color_operand(stored: Stored) -> Option<ColorOperand> {
+        match stored {
+            Stored::Literal(literal) => Some(ColorOperand::Literal(literal)),
+            Stored::Alias(id) => Some(ColorOperand::Alias(id)),
+            Stored::ComposeColor(_composed) => Some(ColorOperand::Other),
+            _ => None,
+        }
+    }
+    fn formula(
+        vars: &Variables,
+        function: u32,
+        arguments: &[&KiwiRecord],
+        depth: u32,
+    ) -> Stored {
+        let supported = &[
+            kiwi_records::expression_function::ADDITION,
+            kiwi_records::expression_function::SUBTRACTION,
+            kiwi_records::expression_function::MULTIPLY,
+            kiwi_records::expression_function::DIVIDE,
+            kiwi_records::expression_function::NEGATE,
+            kiwi_records::expression_function::EQUALS,
+            kiwi_records::expression_function::NOT_EQUAL,
+            kiwi_records::expression_function::LESS_THAN,
+            kiwi_records::expression_function::LESS_THAN_OR_EQUAL,
+            kiwi_records::expression_function::GREATER_THAN,
+            kiwi_records::expression_function::GREATER_THAN_OR_EQUAL,
+            kiwi_records::expression_function::AND,
+            kiwi_records::expression_function::OR,
+            kiwi_records::expression_function::NOT,
+            kiwi_records::expression_function::STRINGIFY,
+            kiwi_records::expression_function::IS_TRUTHY,
+            kiwi_records::expression_function::TERNARY,
+        ];
+        if supported.contains(&function) {
+            match formula_operands(vars, arguments, depth) {
+                Some(operands) => {
+                    Stored::Formula(Operation {
+                        operator: function,
+                        operands,
+                    })
+                }
+                None => Stored::Unsupported,
+            }
+        } else {
+            Stored::Unsupported
+        }
+    }
+    fn formula_operands(
+        vars: &Variables,
+        arguments: &[&KiwiRecord],
+        depth: u32,
+    ) -> Option<Vec<Formula>> {
+        arguments
+            .iter()
+            .map(|argument| formula_operand(
+                stored_value(vars, Some(*argument), depth + 1),
+            ))
+            .collect::<Option<Vec<Formula>>>()
+    }
+    fn formula_operand(stored: Stored) -> Option<Formula> {
+        match stored {
+            Stored::Literal(literal) => Some(Formula::Literal(literal)),
+            Stored::Alias(id) => Some(Formula::Alias(id)),
+            Stored::Formula(operation) => Some(Formula::Operation(operation)),
+            _ => None,
+        }
+    }
+    fn resolve_variable(
+        vars: &Variables,
+        id: GuidKey,
+        modes: &Modes,
+    ) -> Option<VariableValue> {
+        vars.variables
+            .get(&id)
+            .and_then(|variable| resolve_chain(
+                vars,
+                variable,
+                modes,
+                &HashSet::new(),
+                0,
+            ))
+    }
+    fn resolve_chain(
+        vars: &Variables,
+        variable: &Variable,
+        modes: &Modes,
+        visiting: &HashSet<GuidKey>,
+        depth: u32,
+    ) -> Option<VariableValue> {
+        if depth >= 64 {
+            None
+        } else {
+            let mut visited = visiting.clone();
+            visited.insert(variable.id);
+            match value_in_mode(vars, variable, modes) {
+                Some(Stored::Alias(next)) => {
+                    if visiting.contains(next) {
+                        None
+                    } else {
+                        vars.variables
+                            .get(next)
+                            .and_then(|target| resolve_chain(
+                                vars,
+                                target,
+                                modes,
+                                &visited,
+                                depth + 1,
+                            ))
+                            .and_then(|value| drawable(value, variable.r#type))
+                    }
+                }
+                Some(stored) => {
+                    evaluate(vars, stored, modes, &visited)
+                        .and_then(|value| drawable(value, variable.r#type))
+                }
+                None => None,
+            }
+        }
+    }
+    fn value_in_mode<'a>(
+        vars: &Variables,
+        variable: &'a Variable,
+        modes: &Modes,
+    ) -> Option<&'a Stored> {
+        match vars.collections.get(&variable.collection) {
+            Some(collection) => {
+                let mode = modes
+                    .get(&variable.collection)
+                    .copied()
+                    .unwrap_or(collection.default_mode);
+                variable
+                    .values
+                    .get(&mode)
+                    .or_else(|| variable.values.get(&collection.default_mode))
+                    .or_else(|| variable.values.values().next())
+            }
+            _ => None,
+        }
+    }
+    fn evaluate(
+        vars: &Variables,
+        stored: &Stored,
+        modes: &Modes,
+        visiting: &HashSet<GuidKey>,
+    ) -> Option<VariableValue> {
+        match stored {
+            Stored::Literal(literal) => Some(literal.clone()),
+            Stored::Formula(operation) => {
+                evaluate_formula(
+                    vars,
+                    &Formula::Operation(operation.clone()),
+                    modes,
+                    visiting,
+                )
+            }
+            Stored::ComposeColor(composed) => {
+                match evaluate_operand(vars, &composed.color, modes, visiting) {
+                    Some(VariableValue::Color(color)) => {
+                        match evaluate_operand(
+                            vars,
+                            &composed.opacity,
+                            modes,
+                            visiting,
+                        ) {
+                            Some(VariableValue::Float(opacity)) => {
+                                Some(
+                                    VariableValue::Color(Color {
+                                        a: (opacity / 100.0).clamp(0.0, 1.0),
+                                        ..color
+                                    }),
+                                )
+                            }
+                            _ => None,
+                        }
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+    fn evaluate_operand(
+        vars: &Variables,
+        operand: &ColorOperand,
+        modes: &Modes,
+        visiting: &HashSet<GuidKey>,
+    ) -> Option<VariableValue> {
+        match operand {
+            ColorOperand::Literal(literal) => Some(literal.clone()),
+            ColorOperand::Alias(id) => resolve_reference(vars, *id, modes, visiting),
+            ColorOperand::Other => None,
+        }
+    }
+    fn resolve_reference(
+        vars: &Variables,
+        id: GuidKey,
+        modes: &Modes,
+        visiting: &HashSet<GuidKey>,
+    ) -> Option<VariableValue> {
+        if visiting.contains(&id) {
+            None
+        } else {
+            vars.variables
+                .get(&id)
+                .and_then(|variable| resolve_chain(
+                    vars,
+                    variable,
+                    modes,
+                    visiting,
+                    visiting.len() as u32,
+                ))
+        }
+    }
+    fn drawable(value: VariableValue, r#type: VariableType) -> Option<VariableValue> {
+        if value_type(&value) == r#type { Some(value) } else { None }
+    }
+    fn value_type(value: &VariableValue) -> VariableType {
+        match value {
+            VariableValue::Float(_value) => VariableType::Float,
+            VariableValue::Boolean(_value) => VariableType::Boolean,
+            VariableValue::String(_value) => VariableType::String,
+            VariableValue::Color(_value) => VariableType::Color,
+        }
+    }
+    fn evaluate_formula(
+        vars: &Variables,
+        formula: &Formula,
+        modes: &Modes,
+        visiting: &HashSet<GuidKey>,
+    ) -> Option<VariableValue> {
+        match formula {
+            Formula::Literal(literal) => finite(literal.clone()),
+            Formula::Alias(id) => {
+                resolve_reference(vars, *id, modes, visiting)
+                    .and_then(|value| finite(value))
+            }
+            Formula::Operation(operation) => {
+                evaluated_operands(vars, &&operation.operands, modes, visiting)
+                    .and_then(|operands| apply_operator(operation.operator, operands))
+                    .and_then(|value| finite(value))
+            }
+        }
+    }
+    fn evaluated_operands(
+        vars: &Variables,
+        operands: &[Formula],
+        modes: &Modes,
+        visiting: &HashSet<GuidKey>,
+    ) -> Option<Vec<VariableValue>> {
+        operands
+            .iter()
+            .map(|operand| evaluate_formula(vars, operand, modes, visiting))
+            .collect::<Option<Vec<VariableValue>>>()
+    }
+    fn apply_operator(
+        operator: u32,
+        operands: Vec<VariableValue>,
+    ) -> Option<VariableValue> {
+        match operands.as_slice() {
+            [operand] => unary(operator, operand),
+            [left, right] => binary(operator, left, right),
+            [condition, then, otherwise] => ternary(operator, condition, then, otherwise),
+            _ => None,
+        }
+    }
+    fn unary(operator: u32, operand: &VariableValue) -> Option<VariableValue> {
+        match (operator, operand) {
+            (kiwi_records::expression_function::NEGATE, VariableValue::Float(number)) => {
+                Some(VariableValue::Float(-*number))
+            }
+            (kiwi_records::expression_function::NOT, VariableValue::Boolean(flag)) => {
+                Some(VariableValue::Boolean(!*flag))
+            }
+            (kiwi_records::expression_function::STRINGIFY, _operand) => {
+                text(operand).map(|text| VariableValue::String(text))
+            }
+            (kiwi_records::expression_function::IS_TRUTHY, _operand) => {
+                truthy(operand).map(|truthy| VariableValue::Boolean(truthy))
+            }
+            _ => None,
+        }
+    }
+    fn binary(
+        operator: u32,
+        left: &VariableValue,
+        right: &VariableValue,
+    ) -> Option<VariableValue> {
+        match (operator, left, right) {
+            (
+                kiwi_records::expression_function::ADDITION,
+                VariableValue::Float(a),
+                VariableValue::Float(b),
+            ) => Some(VariableValue::Float(a + b)),
+            (kiwi_records::expression_function::ADDITION, _left, _right) => {
+                concatenated(left, right)
+            }
+            (
+                kiwi_records::expression_function::SUBTRACTION,
+                VariableValue::Float(a),
+                VariableValue::Float(b),
+            ) => Some(VariableValue::Float(a - b)),
+            (
+                kiwi_records::expression_function::MULTIPLY,
+                VariableValue::Float(a),
+                VariableValue::Float(b),
+            ) => Some(VariableValue::Float(a * b)),
+            (
+                kiwi_records::expression_function::DIVIDE,
+                VariableValue::Float(_a),
+                VariableValue::Float(b),
+            ) if *b == 0.0 => None,
+            (
+                kiwi_records::expression_function::DIVIDE,
+                VariableValue::Float(a),
+                VariableValue::Float(b),
+            ) => Some(VariableValue::Float(a / b)),
+            (kiwi_records::expression_function::EQUALS, _left, _right) => {
+                equal(left, right).map(|same| VariableValue::Boolean(same))
+            }
+            (kiwi_records::expression_function::NOT_EQUAL, _left, _right) => {
+                equal(left, right).map(|same| VariableValue::Boolean(!same))
+            }
+            (
+                kiwi_records::expression_function::LESS_THAN,
+                VariableValue::Float(a),
+                VariableValue::Float(b),
+            ) => Some(VariableValue::Boolean(a < b)),
+            (
+                kiwi_records::expression_function::LESS_THAN_OR_EQUAL,
+                VariableValue::Float(a),
+                VariableValue::Float(b),
+            ) => Some(VariableValue::Boolean(a <= b)),
+            (
+                kiwi_records::expression_function::GREATER_THAN,
+                VariableValue::Float(a),
+                VariableValue::Float(b),
+            ) => Some(VariableValue::Boolean(a > b)),
+            (
+                kiwi_records::expression_function::GREATER_THAN_OR_EQUAL,
+                VariableValue::Float(a),
+                VariableValue::Float(b),
+            ) => Some(VariableValue::Boolean(a >= b)),
+            (
+                kiwi_records::expression_function::AND,
+                VariableValue::Boolean(a),
+                VariableValue::Boolean(b),
+            ) => Some(VariableValue::Boolean(*a && *b)),
+            (
+                kiwi_records::expression_function::OR,
+                VariableValue::Boolean(a),
+                VariableValue::Boolean(b),
+            ) => Some(VariableValue::Boolean(*a || *b)),
+            _ => None,
+        }
+    }
+    fn ternary(
+        operator: u32,
+        condition: &VariableValue,
+        then: &VariableValue,
+        otherwise: &VariableValue,
+    ) -> Option<VariableValue> {
+        match (operator, condition) {
+            (
+                kiwi_records::expression_function::TERNARY,
+                VariableValue::Boolean(chosen),
+            ) if value_type(then) == value_type(otherwise) => {
+                if *chosen { Some(then.clone()) } else { Some(otherwise.clone()) }
+            }
+            _ => None,
+        }
+    }
+    fn equal(left: &VariableValue, right: &VariableValue) -> Option<bool> {
+        match (left, right) {
+            (VariableValue::Float(a), VariableValue::Float(b)) => Some(a == b),
+            (VariableValue::Boolean(a), VariableValue::Boolean(b)) => Some(a == b),
+            (VariableValue::String(a), VariableValue::String(b)) => Some(a == b),
+            _ => None,
+        }
+    }
+    fn finite(value: VariableValue) -> Option<VariableValue> {
+        match value {
+            VariableValue::Float(number) if !number.is_finite() => None,
+            _ => Some(value),
+        }
+    }
+    fn concatenated(a: &VariableValue, b: &VariableValue) -> Option<VariableValue> {
+        match (value_type(a), value_type(b)) {
+            (VariableType::String, VariableType::String) => {
+                Some(
+                    VariableValue::String(
+                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
+                    ),
+                )
+            }
+            (VariableType::String, VariableType::Float) => {
+                Some(
+                    VariableValue::String(
+                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
+                    ),
+                )
+            }
+            (VariableType::Float, VariableType::String) => {
+                Some(
+                    VariableValue::String(
+                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
+                    ),
+                )
+            }
+            (VariableType::String, VariableType::Boolean) => {
+                Some(
+                    VariableValue::String(
+                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
+                    ),
+                )
+            }
+            (VariableType::Boolean, VariableType::String) => {
+                Some(
+                    VariableValue::String(
+                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
+                    ),
+                )
+            }
+            _ => None,
+        }
+    }
+    fn text(value: &VariableValue) -> Option<String> {
+        match value {
+            VariableValue::String(text) => Some(text.clone()),
+            VariableValue::Boolean(flag) => Some(flag.to_string()),
+            VariableValue::Float(number) => Some(number_text(*number)),
+            VariableValue::Color(_color) => None,
+        }
+    }
+    fn number_text(input: f64) -> String {
+        let value = input as f32 as f64;
+        if value.abs() < 0.000001 {
+            "0".to_string()
+        } else if value == value.trunc() {
+            (value.trunc().clamp(-2147483648.0, 2147483647.0) as i64).to_string()
+        } else {
+            two_decimals(value)
+        }
+    }
+    fn two_decimals(value: f64) -> String {
+        let scaled = value.abs() * 100.0;
+        let floor = scaled.floor();
+        let cents = if scaled - floor == 0.5 {
+            floor as i64 + floor as i64 % 2
+        } else {
+            scaled.round() as i64
+        };
+        let sign = if value < 0.0 { "-" } else { "" };
+        format!("{sign}{}.{:02}", cents / 100, cents % 100)
+    }
+    fn truthy(value: &VariableValue) -> Option<bool> {
+        match value {
+            VariableValue::Boolean(flag) => Some(*flag),
+            VariableValue::Float(number) => Some(*number != 0.0),
+            VariableValue::String(text) => {
+                let word = text.trim().to_lowercase();
+                Some(
+                    !text.is_empty()
+                        && !(&["false", "no", "off"]).contains(&word.as_str()),
+                )
+            }
+            VariableValue::Color(_color) => None,
+        }
+    }
+    #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+    pub enum BoundTarget {
+        Field(u32),
+        FillPaint(usize),
+        StrokePaint(usize),
+    }
+    #[derive(Clone, Debug)]
+    pub struct Linear {
+        pub multiplier: f64,
+        pub reference: Option<KiwiRecord>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct VariableBinding {
+        pub target: BoundTarget,
+        pub variable: Option<GuidKey>,
+        pub multiplier: f64,
+    }
+    fn bindable(field: u32) -> bool {
+        field == kiwi_records::variable_field::VISIBLE
+            || field == kiwi_records::variable_field::TEXT_DATA
+            || numeric_target(field).is_some()
+    }
+    fn field_target(field: u32) -> BoundTarget {
+        BoundTarget::Field(field)
+    }
+    fn paint_target(field: u32, index: usize) -> BoundTarget {
+        if field == kiwi_records::node_change::FILL_PAINTS {
+            BoundTarget::FillPaint(index)
+        } else {
+            BoundTarget::StrokePaint(index)
+        }
+    }
+    fn argument_alias(argument: &KiwiRecord) -> Option<Linear> {
+        argument
+            .record(kiwi_records::variable_data::VALUE)
+            .and_then(|value| value.record(kiwi_records::variable_any_value::ALIAS))
+            .map(|reference| Linear {
+                multiplier: 1.0,
+                reference: Some(reference.clone()),
+            })
+    }
+    fn bound(record: &KiwiRecord, vars: &Variables) -> Vec<VariableBinding> {
+        let mut bindings = Vec::new();
+        for entry in consumption_entries(record) {
+            bind_entry(&mut bindings, &entry, vars);
+        }
+        bind_paints(&mut bindings, record, kiwi_records::node_change::FILL_PAINTS, vars);
+        bind_paints(
+            &mut bindings,
+            record,
+            kiwi_records::node_change::STROKE_PAINTS,
+            vars,
+        );
+        bindings
+    }
+    fn bind_entry(
+        bindings: &mut Vec<VariableBinding>,
+        entry: &KiwiRecord,
+        vars: &Variables,
+    ) {
+        match entry.enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD) {
+            Some(field) if bindable(field) => {
+                let data = entry
+                    .record(kiwi_records::variable_data_map_entry::VARIABLE_DATA);
+                match data.and_then(|data| linear(data, 0)) {
+                    Some(Linear { multiplier, reference: Some(variable) }) => {
+                        put_binding(
+                            bindings,
+                            field_target(field),
+                            reference(vars, &variable),
+                            multiplier,
+                        );
+                    }
+                    _ => {
+                        let data_type = data
+                            .and_then(|data| {
+                                data.enum_value(kiwi_records::variable_data::DATA_TYPE)
+                            });
+                        if data_type != Some(kiwi_records::variable_data_type::ALIAS)
+                            && data_type
+                                != Some(kiwi_records::variable_data_type::EXPRESSION)
+                        {
+                            bindings
+                                .retain(|binding| binding.target != field_target(field));
+                        }
+                    }
+                };
+            }
+            _ => {}
+        };
+    }
+    fn put_binding(
+        bindings: &mut Vec<VariableBinding>,
+        target: BoundTarget,
+        variable: Option<GuidKey>,
+        multiplier: f64,
+    ) {
+        let binding = VariableBinding {
+            target,
+            variable,
+            multiplier,
+        };
+        match bindings.iter().position(|existing| existing.target == binding.target) {
+            Some(index) => {
+                bindings[index] = binding;
+            }
+            None => {
+                bindings.push(binding);
+            }
+        };
+    }
+    fn linear(data: &KiwiRecord, depth: u32) -> Option<Linear> {
+        match data.record(kiwi_records::variable_data::VALUE) {
+            Some(value) if depth <= 64 => {
+                match (
+                    value.record(kiwi_records::variable_any_value::ALIAS),
+                    value.float(kiwi_records::variable_any_value::FLOAT_VALUE),
+                    value.record(kiwi_records::variable_any_value::EXPRESSION_VALUE),
+                ) {
+                    (Some(reference), _number, _expression) => {
+                        Some(Linear {
+                            multiplier: 1.0,
+                            reference: Some(reference.clone()),
+                        })
+                    }
+                    (None, Some(number), _expression) => {
+                        Some(Linear {
+                            multiplier: number as f64,
+                            reference: None,
+                        })
+                    }
+                    (None, None, Some(expression)) => {
+                        linear_expression(expression, depth)
+                    }
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+    fn linear_expression(expression: &KiwiRecord, depth: u32) -> Option<Linear> {
+        let arguments = expression
+            .records(kiwi_records::expression::EXPRESSION_ARGUMENTS);
+        match (
+            expression.enum_value(kiwi_records::expression::EXPRESSION_FUNCTION),
+            arguments.as_slice(),
+        ) {
+            (Some(kiwi_records::expression_function::STRINGIFY), [argument]) => {
+                argument_alias(argument)
+            }
+            (Some(kiwi_records::expression_function::IS_TRUTHY), [argument]) => {
+                argument_alias(argument)
+            }
+            (Some(kiwi_records::expression_function::MULTIPLY), [_first, _rest @ ..]) => {
+                linear_product(arguments.as_slice(), depth)
+            }
+            _ => None,
+        }
+    }
+    fn linear_product(factors: &[&KiwiRecord], depth: u32) -> Option<Linear> {
+        factors
+            .iter()
+            .try_fold(
+                Linear {
+                    multiplier: 1.0,
+                    reference: None,
+                },
+                |product, factor| match linear(factor, depth + 1) {
+                    Some(Linear { multiplier: term, reference: None }) => {
+                        Some(Linear {
+                            multiplier: product.multiplier * term,
+                            reference: product.reference.clone(),
+                        })
+                    }
+                    Some(
+                        Linear { multiplier: term, reference: Some(reference) },
+                    ) if product.reference.is_none() => {
+                        Some(Linear {
+                            multiplier: product.multiplier * term,
+                            reference: Some(reference),
+                        })
+                    }
+                    _ => None,
+                },
+            )
+    }
+    fn bind_paints(
+        bindings: &mut Vec<VariableBinding>,
+        record: &KiwiRecord,
+        field: u32,
+        vars: &Variables,
+    ) {
+        for (index, paint) in record.records(field).iter().enumerate() {
+            let reference = paint
+                .record(kiwi_records::paint::COLOR_VAR)
+                .and_then(|color| color.record(kiwi_records::variable_data::VALUE))
+                .and_then(|value| value.record(kiwi_records::variable_any_value::ALIAS))
+                .and_then(|variable| reference(vars, variable));
+            if let Some(id) = reference {
+                put_binding(bindings, paint_target(field, index), Some(id), 1.0);
+            }
+        }
+    }
+    fn apply_bindings(
+        record: KiwiRecord,
+        occurrence: &Occurrence,
+        modes: &Modes,
+        vars: &Variables,
+    ) -> KiwiRecord {
+        bound(&record, vars)
+            .iter()
+            .fold(
+                record,
+                |record, binding| match binding
+                    .variable
+                    .and_then(|id| resolve_variable(vars, id, modes))
+                {
+                    Some(value) => apply_binding(record, binding, &value, occurrence),
+                    None => record,
+                },
+            )
+    }
+    fn apply_binding(
+        record: KiwiRecord,
+        binding: &VariableBinding,
+        value: &VariableValue,
+        occurrence: &Occurrence,
+    ) -> KiwiRecord {
+        match (&binding.target, value) {
+            (BoundTarget::FillPaint(index), VariableValue::Color(color)) => {
+                apply_paint(
+                    record,
+                    kiwi_records::node_change::FILL_PAINTS,
+                    *index,
+                    color,
+                )
+            }
+            (BoundTarget::StrokePaint(index), VariableValue::Color(color)) => {
+                apply_paint(
+                    record,
+                    kiwi_records::node_change::STROKE_PAINTS,
+                    *index,
+                    color,
+                )
+            }
+            (BoundTarget::Field(kiwi_records::variable_field::TEXT_DATA), _value) => {
+                match text(value) {
+                    Some(
+                        text,
+                    ) if record.enum_value(kiwi_records::node_change::TYPE)
+                        == Some(kiwi_records::node_type::TEXT) => put_text(record, &text),
+                    _ => record,
+                }
+            }
+            (BoundTarget::Field(kiwi_records::variable_field::VISIBLE), _value) => {
+                match truthy(value) {
+                    Some(
+                        visible,
+                    ) if !occurrence
+                        .overridden
+                        .contains(&kiwi_records::node_change::VISIBLE) => {
+                        record.put_bool(kiwi_records::node_change::VISIBLE, visible)
+                    }
+                    _ => record,
+                }
+            }
+            (BoundTarget::Field(field), VariableValue::Float(number)) => {
+                apply_number(record, *field, *number, binding.multiplier, occurrence)
+            }
+            _ => record,
+        }
+    }
+    fn apply_paint(
+        record: KiwiRecord,
+        field: u32,
+        index: usize,
+        color: &Color,
+    ) -> KiwiRecord {
+        let mut paints = record
+            .records(field)
+            .into_iter()
+            .cloned()
+            .collect::<Vec<KiwiRecord>>();
+        if index < paints.len() {
+            let paint = paints[index]
+                .put_record(kiwi_records::paint::COLOR, color_record(color))
+                .put_float(kiwi_records::paint::OPACITY, color.a as f32);
+            paints[index] = paint;
+            record.put_records(field, paints)
+        } else {
+            record
+        }
+    }
+    fn apply_number(
+        record: KiwiRecord,
+        field: u32,
+        value: f64,
+        multiplier: f64,
+        occurrence: &Occurrence,
+    ) -> KiwiRecord {
+        let placed = value * multiplier * occurrence.layout_scale;
+        match (field, numeric_target(field)) {
+            (kiwi_records::variable_field::OPACITY, _target) => {
+                record
+                    .put_float(
+                        kiwi_records::node_change::OPACITY,
+                        (value * 0.01).clamp(0.0, 1.0) as f32,
+                    )
+            }
+            (kiwi_records::variable_field::WIDTH, _target) => {
+                put_length(record, kiwi_records::vector::X, placed, occurrence)
+            }
+            (kiwi_records::variable_field::HEIGHT, _target) => {
+                put_length(record, kiwi_records::vector::Y, placed, occurrence)
+            }
+            (kiwi_records::variable_field::X_POSITION, _target) => {
+                put_position(record, kiwi_records::matrix::M02, placed)
+            }
+            (kiwi_records::variable_field::Y_POSITION, _target) => {
+                put_position(record, kiwi_records::matrix::M12, placed)
+            }
+            (
+                _field,
+                Some(target),
+            ) if target == kiwi_records::node_change::LETTER_SPACING
+                || target == kiwi_records::node_change::LINE_HEIGHT => {
+                record
+                    .put_record(
+                        target,
+                        KiwiRecord::new(kiwi_record_definitions::NUMBER)
+                            .put_float(kiwi_records::number::VALUE, placed as f32)
+                            .put_enum(
+                                kiwi_records::number::UNITS,
+                                kiwi_records::number_units::PIXELS,
+                                kiwi_record_definitions::NUMBER_UNITS,
+                            ),
+                    )
+            }
+            (_field, Some(target)) => record.put_float(target, placed as f32),
+            _ => record,
+        }
+    }
+    fn put_text(record: KiwiRecord, text: &str) -> KiwiRecord {
+        let text_data = match record.record(kiwi_records::node_change::TEXT_DATA) {
+            Some(text_data) => text_data.clone(),
+            None => KiwiRecord::new(kiwi_record_definitions::TEXT_DATA),
+        };
+        if text_data.str(kiwi_records::text_data::CHARACTERS) == Some(text) {
+            record
+        } else {
+            record
+                .put_record(
+                    kiwi_records::node_change::TEXT_DATA,
+                    text_data.put_str(kiwi_records::text_data::CHARACTERS, text),
+                )
+                .delete(kiwi_records::node_change::DERIVED_TEXT_DATA)
+        }
+    }
+    fn put_length(
+        record: KiwiRecord,
+        axis: u32,
+        value: f64,
+        occurrence: &Occurrence,
+    ) -> KiwiRecord {
+        match record.record(kiwi_records::node_change::SIZE) {
+            Some(
+                size,
+            ) if occurrence.derived_size.is_none()
+                && !occurrence.overridden.contains(&kiwi_records::node_change::SIZE) => {
+                record
+                    .put_record(
+                        kiwi_records::node_change::SIZE,
+                        size.put_float(axis, value as f32),
+                    )
+            }
+            _ => record,
+        }
+    }
+    fn put_position(record: KiwiRecord, axis: u32, value: f64) -> KiwiRecord {
+        match record.record(kiwi_records::node_change::TRANSFORM) {
+            Some(
+                transform,
+            ) if transform.float(kiwi_records::matrix::M01) == Some(0.0)
+                && transform.float(kiwi_records::matrix::M10) == Some(0.0) => {
+                record
+                    .put_record(
+                        kiwi_records::node_change::TRANSFORM,
+                        transform.put_float(axis, value as f32),
+                    )
+            }
+            _ => record,
+        }
+    }
+    fn numeric_target(field: u32) -> Option<u32> {
+        match field {
+            kiwi_records::variable_field::CORNER_RADIUS => {
+                Some(kiwi_records::node_change::CORNER_RADIUS)
+            }
+            kiwi_records::variable_field::RECTANGLE_TOP_LEFT_CORNER_RADIUS => {
+                Some(kiwi_records::node_change::RECTANGLE_TOP_LEFT_CORNER_RADIUS)
+            }
+            kiwi_records::variable_field::RECTANGLE_TOP_RIGHT_CORNER_RADIUS => {
+                Some(kiwi_records::node_change::RECTANGLE_TOP_RIGHT_CORNER_RADIUS)
+            }
+            kiwi_records::variable_field::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS => {
+                Some(kiwi_records::node_change::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS)
+            }
+            kiwi_records::variable_field::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS => {
+                Some(kiwi_records::node_change::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS)
+            }
+            kiwi_records::variable_field::STROKE_WEIGHT => {
+                Some(kiwi_records::node_change::STROKE_WEIGHT)
+            }
+            kiwi_records::variable_field::BORDER_TOP_WEIGHT => {
+                Some(kiwi_records::node_change::BORDER_TOP_WEIGHT)
+            }
+            kiwi_records::variable_field::BORDER_BOTTOM_WEIGHT => {
+                Some(kiwi_records::node_change::BORDER_BOTTOM_WEIGHT)
+            }
+            kiwi_records::variable_field::BORDER_LEFT_WEIGHT => {
+                Some(kiwi_records::node_change::BORDER_LEFT_WEIGHT)
+            }
+            kiwi_records::variable_field::BORDER_RIGHT_WEIGHT => {
+                Some(kiwi_records::node_change::BORDER_RIGHT_WEIGHT)
+            }
+            kiwi_records::variable_field::STACK_SPACING => {
+                Some(kiwi_records::node_change::STACK_SPACING)
+            }
+            kiwi_records::variable_field::STACK_PADDING_LEFT => {
+                Some(kiwi_records::node_change::STACK_HORIZONTAL_PADDING)
+            }
+            kiwi_records::variable_field::STACK_PADDING_TOP => {
+                Some(kiwi_records::node_change::STACK_VERTICAL_PADDING)
+            }
+            kiwi_records::variable_field::STACK_PADDING_RIGHT => {
+                Some(kiwi_records::node_change::STACK_PADDING_RIGHT)
+            }
+            kiwi_records::variable_field::STACK_PADDING_BOTTOM => {
+                Some(kiwi_records::node_change::STACK_PADDING_BOTTOM)
+            }
+            kiwi_records::variable_field::STACK_COUNTER_SPACING => {
+                Some(kiwi_records::node_change::STACK_COUNTER_SPACING)
+            }
+            kiwi_records::variable_field::FONT_SIZE => {
+                Some(kiwi_records::node_change::FONT_SIZE)
+            }
+            kiwi_records::variable_field::OPACITY => {
+                Some(kiwi_records::node_change::OPACITY)
+            }
+            kiwi_records::variable_field::WIDTH => Some(kiwi_records::node_change::SIZE),
+            kiwi_records::variable_field::HEIGHT => Some(kiwi_records::node_change::SIZE),
+            kiwi_records::variable_field::X_POSITION => {
+                Some(kiwi_records::node_change::TRANSFORM)
+            }
+            kiwi_records::variable_field::Y_POSITION => {
+                Some(kiwi_records::node_change::TRANSFORM)
+            }
+            kiwi_records::variable_field::LETTER_SPACING => {
+                Some(kiwi_records::node_change::LETTER_SPACING)
+            }
+            kiwi_records::variable_field::LINE_HEIGHT => {
+                Some(kiwi_records::node_change::LINE_HEIGHT)
+            }
+            _ => None,
+        }
+    }
+    fn color_record(color: &Color) -> KiwiRecord {
+        KiwiRecord::new(kiwi_record_definitions::COLOR)
+            .put_float(kiwi_records::color::R, color.r as f32)
+            .put_float(kiwi_records::color::G, color.g as f32)
+            .put_float(kiwi_records::color::B, color.b as f32)
+            .put_float(kiwi_records::color::A, 1.0)
+    }
+    #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+    pub struct CloneGuid {
+        pub root: GuidKey,
+        pub path: Vec<GuidKey>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Graph {
+        pub nodes: Vec<GraphNode>,
+        pub positions: HashMap<GraphGuid, usize>,
+        pub roots: Vec<GuidKey>,
+        pub unresolved: Vec<Unresolved>,
+    }
+    #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+    pub enum GraphGuid {
+        Source(GuidKey),
+        Clone(CloneGuid),
+    }
+    #[derive(Clone, Debug)]
+    pub struct GraphNode {
+        pub guid: GraphGuid,
+        pub parent: Option<GraphGuid>,
+        pub record: KiwiRecord,
+        pub provenance: Option<Provenance>,
+        pub children: Vec<usize>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Placement {
+        pub guid: GraphGuid,
+        pub parent: Option<usize>,
+        pub owner: Option<GraphGuid>,
+    }
+    #[derive(Clone, Debug)]
+    pub struct Provenance {
+        pub clone: bool,
+        pub source_guid: GuidKey,
+        pub instance_guid: Option<GraphGuid>,
+        pub component_guid: Option<GuidKey>,
+        pub applied: Vec<PropertyClaim>,
+        pub bindings: Vec<BindingClaim>,
+    }
+    #[derive(Clone, Debug)]
+    pub enum Unresolved {
+        Variable(UnsupportedExpression),
+        Occurrence(Diagnostic),
+    }
+    fn build_graph(index: &SourceIndex, vars: Option<&Variables>) -> NifResult<Graph> {
+        let unresolved = match vars {
+            Some(vars) => {
+                vars.diagnostics
+                    .iter()
+                    .map(|diagnostic| Unresolved::Variable(diagnostic.clone()))
+                    .collect()
+            }
+            None => Vec::new(),
+        };
+        let mut graph = Graph {
+            nodes: Vec::new(),
+            positions: HashMap::new(),
+            roots: Vec::new(),
+            unresolved,
+        };
+        for id in root_ids(index) {
+            put_root(index, &mut graph, id, vars)?;
+        }
+        Ok(graph)
+    }
+    fn root_ids(index: &SourceIndex) -> Vec<GuidKey> {
+        let mut roots = index
+            .sources
+            .iter()
+            .filter_map(|item| match item {
+                (
+                    id,
+                    record,
+                ) if parent_id(record)
+                    .is_none_or(|parent| !index.sources.contains_key(&parent)) => {
+                    Some((id, record))
+                }
+                _ => None,
+            })
+            .map(|(id, _)| *id)
+            .collect::<Vec<GuidKey>>();
+        roots.sort();
+        roots
+    }
+    fn put_root(
+        index: &SourceIndex,
+        graph: &mut Graph,
+        id: GuidKey,
+        vars: Option<&Variables>,
+    ) -> NifResult<()> {
+        graph.roots.push(id);
+        match source(index, id) {
+            Some(
+                record,
+            ) if record.enum_value(kiwi_records::node_change::TYPE)
+                == Some(kiwi_records::node_type::DOCUMENT) => {
+                let position = put_node(
+                    graph,
+                    GraphGuid::Source(id),
+                    None,
+                    record.clone(),
+                    None,
+                );
+                let modes = explicit_modes(record, vars);
+                for page in children_of(index, id) {
+                    put_interpreted(index, graph, *page, Some(position), &modes, vars)?;
+                }
+                Ok(())
+            }
+            _ => put_interpreted(index, graph, id, None, &HashMap::new(), vars),
+        }
+    }
+    fn put_interpreted(
+        index: &SourceIndex,
+        graph: &mut Graph,
+        id: GuidKey,
+        parent: Option<usize>,
+        modes: &Modes,
+        vars: Option<&Variables>,
+    ) -> NifResult<()> {
+        let (occurrence, diagnostics) = interpret(index, id)?;
+        graph
+            .unresolved
+            .extend(
+                diagnostics
+                    .into_iter()
+                    .map(|diagnostic| Unresolved::Occurrence(diagnostic))
+                    .collect::<Vec<Unresolved>>(),
+            );
+        let placement = Placement {
+            guid: GraphGuid::Source(id),
+            parent,
+            owner: None,
+        };
+        put_occurrence(graph, occurrence, placement, modes, vars);
+        Ok(())
+    }
+    fn put_occurrence(
+        graph: &mut Graph,
+        occurrence: Occurrence,
+        placement: Placement,
+        modes: &Modes,
+        vars: Option<&Variables>,
+    ) {
+        let mut modes = modes.clone();
+        modes.extend(explicit_modes(&occurrence.properties, vars));
+        let record = match vars {
+            Some(vars) => {
+                apply_bindings(occurrence.properties.clone(), &occurrence, &modes, vars)
+            }
+            None => occurrence.properties.clone(),
+        };
+        let provenance = provenance(&occurrence, &placement.guid, &placement.owner);
+        let position = put_node(
+            graph,
+            placement.guid.clone(),
+            placement.parent,
+            record,
+            provenance,
+        );
+        let owner = if instance(&occurrence) {
+            Some(placement.guid.clone())
+        } else {
+            placement.owner.clone()
+        };
+        let instance = instance(&occurrence);
+        for child in occurrence.children {
+            let guid = child_guid(&placement.guid, instance, child.source_id);
+            let child_placement = Placement {
+                guid,
+                parent: Some(position),
+                owner: owner.clone(),
+            };
+            put_occurrence(graph, child, child_placement, &modes, vars);
+        }
+    }
+    fn explicit_modes(record: &KiwiRecord, vars: Option<&Variables>) -> Modes {
+        let mut modes: Modes = HashMap::new();
+        if let (Some(vars), Some(set_map)) = (
+            vars,
+            record.record(kiwi_records::node_change::VARIABLE_MODE_BY_SET_MAP),
+        ) {
+            for entry in set_map.records(kiwi_records::variable_mode_by_set_map::ENTRIES)
+            {
+                let collection = entry
+                    .record(
+                        kiwi_records::variable_mode_by_set_map_entry::VARIABLE_SET_ID,
+                    )
+                    .and_then(|set| reference(vars, set));
+                let mode = guid_key(
+                    entry
+                        .record(
+                            kiwi_records::variable_mode_by_set_map_entry::VARIABLE_MODE_ID,
+                        ),
+                );
+                if let (Some(collection), Some(mode)) = (collection, mode) {
+                    modes.insert(collection, mode);
+                }
+            }
+        }
+        modes
+    }
+    fn child_guid(guid: &GraphGuid, instance: bool, child: GuidKey) -> GraphGuid {
+        match guid {
+            GraphGuid::Clone(clone) => {
+                let mut path = clone.path.clone();
+                path.push(child);
+                GraphGuid::Clone(CloneGuid {
+                    root: clone.root,
+                    path,
+                })
+            }
+            GraphGuid::Source(id) if instance => {
+                GraphGuid::Clone(CloneGuid {
+                    root: *id,
+                    path: vec![child],
+                })
+            }
+            _ => GraphGuid::Source(child),
+        }
+    }
+    fn put_node(
+        graph: &mut Graph,
+        guid: GraphGuid,
+        parent: Option<usize>,
+        record: KiwiRecord,
+        provenance: Option<Provenance>,
+    ) -> usize {
+        let position = graph.nodes.len();
+        let parent_guid = parent.map(|parent| graph.nodes[parent].guid.clone());
+        if let Some(parent) = parent {
+            graph.nodes[parent].children.push(position);
+        }
+        graph.positions.insert(guid.clone(), position);
+        graph
+            .nodes
+            .push(GraphNode {
+                guid,
+                parent: parent_guid,
+                record,
+                provenance,
+                children: Vec::new(),
+            });
+        position
+    }
+    fn provenance(
+        occurrence: &Occurrence,
+        guid: &GraphGuid,
+        owner: &Option<GraphGuid>,
+    ) -> Option<Provenance> {
+        let clone = match guid {
+            GraphGuid::Clone(_clone) => true,
+            GraphGuid::Source(_id) => false,
+        };
+        if clone || instance(occurrence) || !occurrence.property_claims.is_empty()
+            || !occurrence.binding_claims.is_empty()
+        {
+            Some(Provenance {
+                clone,
+                source_guid: occurrence.source_id,
+                instance_guid: owner.clone(),
+                component_guid: occurrence.main_component_id,
+                applied: occurrence.property_claims.clone(),
+                bindings: occurrence.binding_claims.clone(),
+            })
+        } else {
+            None
         }
     }
     /// Encodes the source index of `message` as Elixir's `SourceIndex` holds it: records by
@@ -46918,6 +48519,450 @@ pub mod graph {
         let values = entries.iter().map(|(_, value)| *value).collect::<Vec<_>>();
         Term::map_from_term_arrays(env, &keys, &values).expect("unique keys")
     }
+    /// Times indexing and interpreting every page, for benchmarks: microseconds to index, to
+    /// interpret, and the occurrences built.
+    pub fn time_interpretation(message: &KiwiRecord) -> NifResult<(u64, u64, usize)> {
+        let started = std::time::Instant::now();
+        let index = source_index(message, true)?;
+        let indexed = started.elapsed().as_micros() as u64;
+        let mut roots: Vec<GuidKey> = index
+            .sources
+            .iter()
+            .filter(|(_, record)| {
+                parent_id(record)
+                    .is_none_or(|parent| !index.sources.contains_key(&parent))
+            })
+            .map(|(id, _)| *id)
+            .collect();
+        roots.sort();
+        let pages: Vec<GuidKey> = roots
+            .iter()
+            .flat_map(|id| {
+                if node_type(&index, *id) == Some(kiwi_records::node_type::DOCUMENT) {
+                    children_of(&index, *id).to_vec()
+                } else {
+                    vec![* id]
+                }
+            })
+            .collect();
+        let started = std::time::Instant::now();
+        let mut occurrences = 0;
+        for page in pages {
+            let (occurrence, _diagnostics) = interpret(&index, page)?;
+            occurrences += count(&occurrence);
+        }
+        Ok((indexed, started.elapsed().as_micros() as u64, occurrences))
+    }
+    fn count(occurrence: &Occurrence) -> usize {
+        1 + occurrence.children.iter().map(count).sum::<usize>()
+    }
+    /// Resolves every variable in each mode of its collection, with the unsupported
+    /// expressions reported, for comparison with Elixir's `Variables`.
+    pub fn encode_variable_resolution<'a>(
+        env: Env<'a>,
+        message: &KiwiRecord,
+    ) -> NifResult<Term<'a>> {
+        let index = source_index(message, true)?;
+        let vars = new_variables(&index.sources);
+        let mut resolved = Vec::new();
+        for (id, variable) in &vars.variables {
+            let collection = &vars.collections[&variable.collection];
+            for mode in &collection.modes {
+                let modes = HashMap::from([(variable.collection, *mode)]);
+                let value = match resolve_variable(&vars, *id, &modes) {
+                    Some(value) => encode_variable_value(env, &value),
+                    None => atom(env, "nil"),
+                };
+                resolved.push((*id, *mode, value).encode(env));
+            }
+        }
+        let diagnostics = vars
+            .diagnostics
+            .iter()
+            .map(|diagnostic| {
+                (
+                    atom(env, "unsupported_variable_expression"),
+                    diagnostic.variable,
+                    diagnostic.mode,
+                )
+                    .encode(env)
+            })
+            .collect::<Vec<_>>();
+        Ok((resolved, diagnostics).encode(env))
+    }
+    fn encode_variable_value<'a>(env: Env<'a>, value: &VariableValue) -> Term<'a> {
+        match value {
+            VariableValue::Float(number) => number.encode(env),
+            VariableValue::Boolean(flag) => flag.encode(env),
+            VariableValue::String(text) => text.encode(env),
+            VariableValue::Color(color) => {
+                map(
+                    env,
+                    &[
+                        ("r", color.r.encode(env)),
+                        ("g", color.g.encode(env)),
+                        ("b", color.b.encode(env)),
+                        ("a", color.a.encode(env)),
+                    ],
+                )
+            }
+        }
+    }
+    /// Builds the effective graph of `message` and encodes the fields `Figler.Scene.Graph`
+    /// holds: nodes, records, children, roots, indexes by type and name, provenance, and the
+    /// unresolved overrides.
+    pub fn encode_graph_fields<'a>(
+        env: Env<'a>,
+        message: &KiwiRecord,
+        styles: bool,
+        variables: bool,
+    ) -> NifResult<Term<'a>> {
+        let index = source_index(message, styles)?;
+        let vars = variables.then(|| new_variables(&index.sources));
+        let graph = build_graph(&index, vars.as_ref())?;
+        let mut node_keys = Vec::with_capacity(graph.nodes.len());
+        let mut node_values = Vec::with_capacity(graph.nodes.len());
+        let mut record_values = Vec::with_capacity(graph.nodes.len());
+        let mut child_keys = Vec::new();
+        let mut child_values = Vec::new();
+        let mut provenance_keys = Vec::new();
+        let mut provenance_values = Vec::new();
+        let mut by_type: Vec<(&str, Vec<Term<'a>>)> = Vec::new();
+        let mut type_positions: HashMap<&str, usize> = HashMap::new();
+        let mut by_name: Vec<(&str, Vec<Term<'a>>)> = Vec::new();
+        let mut name_positions: HashMap<&str, usize> = HashMap::new();
+        for node in &graph.nodes {
+            let guid = encode_graph_guid(env, &node.guid);
+            let node_type = enum_name(node.record.get(kiwi_records::node_change::TYPE));
+            let name = node.record.str(kiwi_records::node_change::NAME);
+            node_keys.push(guid);
+            node_values.push(encode_scene_node(env, node, guid)?);
+            record_values.push(kiwi_encode_record(env, &node.record)?);
+            if !node.children.is_empty() {
+                child_keys.push(guid);
+                child_values
+                    .push(
+                        node
+                            .children
+                            .iter()
+                            .map(|child| encode_graph_guid(
+                                env,
+                                &graph.nodes[*child].guid,
+                            ))
+                            .collect::<Vec<_>>()
+                            .encode(env),
+                    );
+            }
+            if let Some(provenance) = &node.provenance {
+                provenance_keys.push(guid);
+                provenance_values.push(encode_provenance(env, provenance)?);
+            }
+            if let Some(node_type) = node_type {
+                let position = *type_positions
+                    .entry(node_type)
+                    .or_insert_with(|| {
+                        by_type.push((node_type, Vec::new()));
+                        by_type.len() - 1
+                    });
+                by_type[position].1.push(guid);
+            }
+            if let Some(name) = name {
+                let position = *name_positions
+                    .entry(name)
+                    .or_insert_with(|| {
+                        by_name.push((name, Vec::new()));
+                        by_name.len() - 1
+                    });
+                by_name[position].1.push(guid);
+            }
+        }
+        let (type_keys, type_values): (Vec<_>, Vec<_>) = by_type
+            .into_iter()
+            .map(|(key, guids)| (key.encode(env), guids.encode(env)))
+            .unzip();
+        let (name_keys, name_values): (Vec<_>, Vec<_>) = by_name
+            .into_iter()
+            .map(|(key, guids)| (key.encode(env), guids.encode(env)))
+            .unzip();
+        let unresolved = graph
+            .unresolved
+            .iter()
+            .map(|entry| match entry {
+                Unresolved::Variable(diagnostic) => {
+                    (
+                        atom(env, "unsupported_variable_expression"),
+                        diagnostic.variable,
+                        diagnostic.mode,
+                    )
+                        .encode(env)
+                }
+                Unresolved::Occurrence(diagnostic) => encode_diagnostic(env, diagnostic),
+            })
+            .collect::<Vec<_>>();
+        Ok(
+            map(
+                env,
+                &[
+                    (
+                        "nodes",
+                        Term::map_from_term_arrays(env, &node_keys, &node_values)?,
+                    ),
+                    (
+                        "records",
+                        Term::map_from_term_arrays(env, &node_keys, &record_values)?,
+                    ),
+                    (
+                        "children",
+                        Term::map_from_term_arrays(env, &child_keys, &child_values)?,
+                    ),
+                    ("roots", graph.roots.encode(env)),
+                    (
+                        "by_type",
+                        Term::map_from_term_arrays(env, &type_keys, &type_values)?,
+                    ),
+                    (
+                        "by_name",
+                        Term::map_from_term_arrays(env, &name_keys, &name_values)?,
+                    ),
+                    (
+                        "provenance",
+                        Term::map_from_term_arrays(
+                            env,
+                            &provenance_keys,
+                            &provenance_values,
+                        )?,
+                    ),
+                    ("unresolved", unresolved.encode(env)),
+                ],
+            ),
+        )
+    }
+    /// A graph GUID as Elixir's graph holds it: `{session, local}` for a source record, and
+    /// `{:clone, root, path}` for a layer of an instance expansion, its path nested to the
+    /// left: `[a]`, `{[a], b}`, `{{[a], b}, c}`.
+    fn encode_graph_guid<'a>(env: Env<'a>, guid: &GraphGuid) -> Term<'a> {
+        match guid {
+            GraphGuid::Source(id) => id.encode(env),
+            GraphGuid::Clone(clone) => {
+                let mut path = vec![clone.path[0]].encode(env);
+                for segment in &clone.path[1..] {
+                    path = (path, *segment).encode(env);
+                }
+                (atom(env, "clone"), clone.root, path).encode(env)
+            }
+        }
+    }
+    fn encode_scene_node<'a>(
+        env: Env<'a>,
+        node: &GraphNode,
+        guid: Term<'a>,
+    ) -> NifResult<Term<'a>> {
+        use kiwi_records::node_change as field;
+        let record = &node.record;
+        let nil = atom(env, "nil");
+        let text = record
+            .record(field::TEXT_DATA)
+            .and_then(|text| text.str(kiwi_records::text_data::CHARACTERS));
+        let font = record.record(field::FONT_NAME);
+        let font_field = |name: u32| {
+            font.and_then(|font| font.str(name)).map_or(nil, |value| value.encode(env))
+        };
+        let float = |name: u32| {
+            record.float(name).map_or(nil, |value| kiwi_encode_float(env, value))
+        };
+        let flag = |name: u32| record.bool(name).map_or(nil, |value| value.encode(env));
+        let string = |name: u32| record.str(name).map_or(nil, |value| value.encode(env));
+        let count = |name: u32| match record.get(name) {
+            Some(KiwiValue::Array(values)) => values.len().encode(env),
+            _ => nil,
+        };
+        let style = |name: u32| {
+            record
+                .record(name)
+                .and_then(|style| guid_key(style.record(kiwi_records::style_id::GUID)))
+                .map_or(nil, |(session, local)| format!("{session}:{local}").encode(env))
+        };
+        let size = record
+            .record(field::SIZE)
+            .and_then(|size| {
+                Some(
+                    map(
+                        env,
+                        &[
+                            (
+                                "x",
+                                kiwi_encode_float(env, size.float(kiwi_records::vector::X)?),
+                            ),
+                            (
+                                "y",
+                                kiwi_encode_float(env, size.float(kiwi_records::vector::Y)?),
+                            ),
+                        ],
+                    ),
+                )
+            });
+        let transform = record
+            .record(field::TRANSFORM)
+            .and_then(|matrix| {
+                use kiwi_records::matrix as m;
+                let entry = |name: &'static str, id: u32| Some((
+                    name,
+                    kiwi_encode_float(env, matrix.float(id)?),
+                ));
+                Some(
+                    map(
+                        env,
+                        &[
+                            entry("m00", m::M00)?,
+                            entry("m01", m::M01)?,
+                            entry("m02", m::M02)?,
+                            entry("m10", m::M10)?,
+                            entry("m11", m::M11)?,
+                            entry("m12", m::M12)?,
+                        ],
+                    ),
+                )
+            });
+        let position = record
+            .record(field::PARENT_INDEX)
+            .and_then(|parent| parent.str(kiwi_records::parent_index::POSITION))
+            .map_or(nil, |value| value.encode(env));
+        let parent = node
+            .parent
+            .as_ref()
+            .map_or(nil, |parent| encode_graph_guid(env, parent));
+        let node_type = enum_name(record.get(field::TYPE))
+            .map_or(nil, |name| name.encode(env));
+        Ok(
+            map(
+                env,
+                &[
+                    ("__struct__", atom(env, "Elixir.Figler.Scene.Node")),
+                    ("guid", guid),
+                    ("node_type", node_type),
+                    ("name", string(field::NAME)),
+                    ("parent_guid", parent),
+                    ("position", position),
+                    ("size", size.unwrap_or(nil)),
+                    ("transform", transform.unwrap_or(nil)),
+                    ("visible", flag(field::VISIBLE)),
+                    ("locked", flag(field::LOCKED)),
+                    ("opacity", float(field::OPACITY)),
+                    ("text", text.map_or(nil, |text| text.encode(env))),
+                    ("font_family", font_field(kiwi_records::font_name::FAMILY)),
+                    ("font_style", font_field(kiwi_records::font_name::STYLE)),
+                    ("font_postscript", font_field(kiwi_records::font_name::POSTSCRIPT)),
+                    ("font_size", float(field::FONT_SIZE)),
+                    ("text_style_guid", style(field::STYLE_ID_FOR_TEXT)),
+                    ("component_key", string(field::COMPONENT_KEY)),
+                    ("origin_component_key", string(field::ORIGIN_COMPONENT_KEY)),
+                    ("fill_style_guid", style(field::STYLE_ID_FOR_FILL)),
+                    ("stroke_style_guid", style(field::STYLE_ID_FOR_STROKE_FILL)),
+                    ("effect_style_guid", style(field::STYLE_ID_FOR_EFFECT)),
+                    ("grid_style_guid", style(field::STYLE_ID_FOR_GRID)),
+                    ("fill_count", count(field::FILL_PAINTS)),
+                    ("stroke_count", count(field::STROKE_PAINTS)),
+                    ("children", nil),
+                ],
+            ),
+        )
+    }
+    fn encode_provenance<'a>(
+        env: Env<'a>,
+        provenance: &Provenance,
+    ) -> NifResult<Term<'a>> {
+        let nil = atom(env, "nil");
+        let applied = provenance
+            .applied
+            .iter()
+            .map(|claim| {
+                let mut fields = claim
+                    .properties
+                    .field_ids()
+                    .into_iter()
+                    .map(node_change_field)
+                    .collect::<Vec<_>>();
+                fields.sort_unstable();
+                map(
+                    env,
+                    &[
+                        ("declared_by", claim.declared_by.encode(env)),
+                        ("path", claim.path.encode(env)),
+                        (
+                            "fields",
+                            fields
+                                .iter()
+                                .map(|field| atom(env, field))
+                                .collect::<Vec<_>>()
+                                .encode(env),
+                        ),
+                    ],
+                )
+            })
+            .collect::<Vec<_>>();
+        let bindings = provenance
+            .bindings
+            .iter()
+            .map(|claim| {
+                map(
+                    env,
+                    &[
+                        ("definition_id", claim.definition_id.encode(env)),
+                        ("field", atom(env, bound_field_name(&claim.field))),
+                        (
+                            "origin",
+                            atom(
+                                env,
+                                match claim.origin {
+                                    Origin::Default => "default",
+                                    Origin::Assignment => "assignment",
+                                },
+                            ),
+                        ),
+                    ],
+                )
+            })
+            .collect::<Vec<_>>();
+        Ok(
+            map(
+                env,
+                &[
+                    (
+                        "source",
+                        atom(
+                            env,
+                            if provenance.clone { "instance_clone" } else { "source" },
+                        ),
+                    ),
+                    ("source_guid", provenance.source_guid.encode(env)),
+                    (
+                        "instance_guid",
+                        provenance
+                            .instance_guid
+                            .as_ref()
+                            .map_or(nil, |guid| encode_graph_guid(env, guid)),
+                    ),
+                    ("component_guid", provenance.component_guid.encode(env)),
+                    ("applied", applied.encode(env)),
+                    ("bindings", bindings.encode(env)),
+                    ("unresolved", Vec::<Term<'a>>::new().encode(env)),
+                ],
+            ),
+        )
+    }
+    /// The variant name of an enum value, as a decoded record's atom spells it.
+    fn enum_name(value: Option<&KiwiValue>) -> Option<&'static str> {
+        match value {
+            Some(KiwiValue::Enum(value, definition)) => {
+                let variants = KIWI_RECORD_DEFINITIONS[*definition as usize].variants;
+                variants
+                    .binary_search_by_key(value, |variant| variant.value)
+                    .ok()
+                    .map(|index| variants[index].name)
+            }
+            _ => None,
+        }
+    }
 }
 use crate::runtime::runtime_schema;
 pub fn decode_sparse_message_impl<'a>(
@@ -46969,6 +49014,48 @@ pub fn graph_interpret_impl<'a>(
     let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
     decoder.finish()?;
     graph::encode_interpretation(env, &message, root)
+}
+/// Decode, index, and interpretation times for every page, in microseconds, and the
+/// occurrences built; a benchmark.
+pub fn graph_interpret_timing_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let started = std::time::Instant::now();
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    let decoded = started.elapsed().as_micros() as u64;
+    let (indexed, interpreted, occurrences) = graph::time_interpretation(&message)?;
+    Ok((decoded, indexed, interpreted, occurrences).encode(env))
+}
+/// Every variable resolved natively in each mode of its collection; a parity check.
+pub fn graph_resolve_variables_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    graph::encode_variable_resolution(env, &message)
+}
+/// The effective graph built natively, encoded as `Figler.Scene.Graph` holds its fields.
+pub fn graph_build_impl<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+    styles: bool,
+    variables: bool,
+) -> NifResult<Term<'a>> {
+    let schema = runtime_schema(&schema)?;
+    let mut decoder = Decoder::with_schema(bytes.as_slice(), schema.as_ref());
+    let message = kiwi_decode_record(&mut decoder, kiwi_record_definitions::MESSAGE)?;
+    decoder.finish()?;
+    graph::encode_graph_fields(env, &message, styles, variables)
 }
 pub fn decode_graph_focused_sparse_message_impl<'a>(
     env: Env<'a>,
@@ -47155,6 +49242,32 @@ pub fn graph_interpret<'a>(
     root: (u32, u32),
 ) -> NifResult<Term<'a>> {
     graph_interpret_impl(env, bytes, schema, root)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn graph_interpret_timing<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    graph_interpret_timing_impl(env, bytes, schema)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn graph_resolve_variables<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+) -> NifResult<Term<'a>> {
+    graph_resolve_variables_impl(env, bytes, schema)
+}
+#[rustler::nif(schedule = "DirtyCpu")]
+pub fn graph_build<'a>(
+    env: Env<'a>,
+    bytes: Binary<'a>,
+    schema: Binary<'a>,
+    styles: bool,
+    variables: bool,
+) -> NifResult<Term<'a>> {
+    graph_build_impl(env, bytes, schema, styles, variables)
 }
 #[rustler::nif(schedule = "DirtyCpu")]
 pub fn decode_graph_focused_sparse_message<'a>(
