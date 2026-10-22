@@ -3,8 +3,7 @@ defmodule Figler.Codegen.Native.Graph.Layer do
   Swaps and assignments addressed relative to the expansion that receives them, for the native
   interpreter.
 
-  Mirrors `Figler.Scene.Graph.Occurrence.Layer`. `boundary` is set when an outer decision
-  replaced a component the layer was written against.
+  `boundary` is set when an outer decision replaced a component the layer was written against.
   """
 
   use RustQ.Meta,

@@ -1,11 +1,9 @@
 defmodule Figler.Scene.Graph.VariablesTest do
   use ExUnit.Case, async: true
 
-  alias Figler.Native.CodecNifs
+  alias Figler.Native.Module, as: Native
   alias Figler.Scene
   alias Figler.Scene.Graph
-  alias Figler.Scene.Graph.Variables
-  alias Figler.Scene.Graph.Variables.Formula
 
   @fixture "test/fixtures/openpencil/variable-override-precedence.fig"
 
@@ -46,47 +44,13 @@ defmodule Figler.Scene.Graph.VariablesTest do
     assert first_text(graph, different.guid) == "Different"
   end
 
-  test "reads collections and resolves variables in their default mode", %{binary: binary} do
+  test "resolves every variable in each mode of its collection", %{binary: binary} do
     {payload, schema} = Scene.source!(binary)
-    message = CodecNifs.decode_sparse_message({payload, schema})
-    records = Map.new(message.node_changes, &{{&1.guid.session_id, &1.guid.local_id}, &1})
-    vars = Variables.new(records)
+    {resolved, diagnostics} = Native.graph_resolve_variables(payload, schema)
 
-    assert map_size(vars.collections) > 0
-
-    for {id, %{type: type}} <- vars.variables do
-      assert Formula.type(Variables.resolve(vars, id, %{})) == type
-    end
-  end
-
-  describe "formulas" do
-    test "evaluate operators with Figma's operand types" do
-      resolve = fn {1, 1} -> 4.0 end
-
-      assert Formula.evaluate({:multiply, [2.0, {:alias, {1, 1}}]}, resolve) == 8.0
-      assert Formula.evaluate({:addition, ["n=", {:alias, {1, 1}}]}, resolve) == "n=4"
-      assert Formula.evaluate({:ternary, [true, "a", "b"]}, resolve) == "a"
-      assert Formula.evaluate({:is_truthy, ["off"]}, resolve) == false
-
-      assert_raise ArgumentError, fn -> Formula.evaluate({:divide, [1.0, 0.0]}, resolve) end
-      assert_raise ArgumentError, fn -> Formula.evaluate({:subtraction, ["a", 1.0]}, resolve) end
-    end
-
-    test "write numbers as text the way Figma does" do
-      assert Formula.text(0.0000001) == "0"
-      assert Formula.text(3.0) == "3"
-      assert Formula.text(0.125) == "0.12"
-      assert Formula.text(0.999) == "1.00"
-      assert Formula.text(-0.004) == "-0.00"
-      assert Formula.text(true) == "true"
-    end
-
-    test "read text and numbers as true or false" do
-      assert Formula.truthy("No ") == false
-      assert Formula.truthy("yes") == true
-      assert Formula.truthy(0) == false
-      assert Formula.truthy("") == false
-    end
+    assert resolved != []
+    assert Enum.all?(resolved, fn {_variable, _mode, value} -> value != nil end)
+    assert diagnostics == []
   end
 
   defp first_text(graph, guid) do

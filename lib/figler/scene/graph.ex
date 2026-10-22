@@ -8,25 +8,24 @@ defmodule Figler.Scene.Graph do
   assignments, symbol overrides, uniform scale, placed constraints, and saved
   derived data applied.
 
-  Instances are resolved by `Figler.Scene.Graph.Occurrence.Interpreter`, a port
-  of OpenPencil's occurrence-scoped reader. Layers inside an expansion have
-  clone GUIDs (`"clone:<instance>/<source>/..."`) so each use of a component is
-  addressable on its own. Overrides that cannot be resolved are reported by
-  `unresolved/2` rather than failing the build.
+  Instances are resolved natively by an occurrence-scoped interpreter ported
+  from OpenPencil's reader, and the graph stays in a native resource: nodes and
+  records are read on demand with `fetch/2`, `record/3`, and `records/3`, or
+  enumerated, and `to_map/2` materializes the parts a caller names. Layers
+  inside an expansion have clone GUIDs (`"clone:<instance>/<source>/..."`) so
+  each use of a component is addressable on its own. Overrides that cannot be
+  resolved are reported by `unresolved/2` rather than failing the build.
 
   Malformed graph options and GUIDs raise `Figler.Error` with stable codes and
   structured context.
   """
 
   alias Figler.Error
-  alias Figler.Native.CodecNifs
+  alias Figler.Native.Module, as: Native
   alias Figler.Scene
   alias Figler.Scene.Graph.Diff
   alias Figler.Scene.Graph.GUID
-  alias Figler.Scene.Graph.Materialize
-  alias Figler.Scene.Graph.Occurrence.SourceIndex
   alias Figler.Scene.Graph.Options
-  alias Figler.Scene.Graph.Variables
   alias Figler.Scene.Index
   alias Figler.Scene.Input
   alias Figler.Scene.Node
@@ -37,17 +36,14 @@ defmodule Figler.Scene.Graph do
   defstruct [
     :resource,
     :source,
+    :native,
     mode: :interpreted,
     options: [],
-    sources: %{},
-    records: %{},
     nodes: %{},
     children: %{},
     roots: [],
     by_type: %{},
     by_name: %{},
-    provenance: %{},
-    unresolved: [],
     stats: %{}
   ]
 
@@ -57,19 +53,18 @@ defmodule Figler.Scene.Graph do
   @opaque t :: %__MODULE__{
             resource: reference() | nil,
             source: Index.t() | Scene.source() | reference() | nil,
+            native: reference() | nil,
             mode: :interpreted | :projected,
             options: keyword(),
-            sources: %{optional(GUID.figma_guid()) => map()},
-            records: %{optional(GUID.graph_guid()) => map()},
             nodes: %{optional(GUID.graph_guid()) => Node.t()},
             children: %{optional(GUID.graph_guid()) => [GUID.graph_guid()]},
             roots: [GUID.graph_guid()],
             by_type: %{optional(String.t()) => [GUID.graph_guid()]},
             by_name: %{optional(String.t()) => [GUID.graph_guid()]},
-            provenance: %{optional(GUID.graph_guid()) => map()},
-            unresolved: [term()],
             stats: map()
           }
+
+  @map_fields [:nodes, :records, :children, :roots, :by_type, :by_name, :provenance, :unresolved]
 
   @doc """
   Builds an effective scene graph handle.
@@ -140,42 +135,16 @@ defmodule Figler.Scene.Graph do
     end)
   end
 
-  defp interpret(source, opts) do
+  defp interpret({payload, schema} = source, opts) do
     opts = normalize_options(opts)
-    with_heap_for(source, opts, fn -> interpret_sized(source, opts) end)
-  end
-
-  # A whole document's records and graph take about two words per payload byte. Starting the
-  # heap near that size spares the many collections a growing heap would run, each copying the
-  # whole source index; the caller's own minimum is restored afterwards.
-  @heap_words_per_payload_byte 2
-
-  defp with_heap_for({payload, _schema}, opts, fun) do
-    if Keyword.get(opts, :focus) do
-      fun.()
-    else
-      previous = Process.flag(:min_heap_size, @heap_words_per_payload_byte * byte_size(payload))
-
-      try do
-        fun.()
-      after
-        Process.flag(:min_heap_size, previous)
-      end
-    end
-  end
-
-  defp interpret_sized(source, opts) do
-    {decode_us, message} = :timer.tc(fn -> decode(source, opts) end)
     styles? = opts[:resolve_styles] == :known
+    variables? = opts[:resolve_variables] == :known
+    focus = opts |> Keyword.get(:focus, []) |> Enum.map(&GUID.format/1)
 
-    {index_us, index} =
-      :timer.tc(fn -> SourceIndex.new(message.node_changes, styles: styles?) end)
+    {native, decode_us, index_us, interpret_us} =
+      Native.graph_new(payload, schema, styles?, variables?, focus)
 
-    variables = if opts[:resolve_variables] == :known, do: Variables.new(index.sources)
-    {interpret_us, fields} = :timer.tc(fn -> Materialize.graph(index, variables) end)
-
-    attrs = [resource: nil, source: source, options: opts, sources: index.sources]
-    graph = struct!(__MODULE__, Map.to_list(fields) ++ attrs)
+    graph = %__MODULE__{resource: nil, native: native, source: source, options: opts}
 
     phases = [
       %{phase: :decode, ms: ms(decode_us)},
@@ -184,16 +153,6 @@ defmodule Figler.Scene.Graph do
     ]
 
     %{graph: graph, total_ms: Enum.reduce(phases, 0, &(&1.ms + &2)), phases: phases}
-  end
-
-  defp decode(source, opts) do
-    case Keyword.get(opts, :focus) do
-      nil ->
-        CodecNifs.decode_sparse_message(source)
-
-      focus ->
-        CodecNifs.decode_graph_focused_sparse_message(source, Enum.map(focus, &GUID.format/1))
-    end
   end
 
   # A projected index has no override data: nodes keep their source records'
@@ -220,18 +179,131 @@ defmodule Figler.Scene.Graph do
   end
 
   @doc """
+  Fetches the node at a GUID string.
+
+      {:ok, node} = Figler.Scene.Graph.fetch(graph, "3740:112537")
+  """
+  @spec fetch(t(), String.t()) :: {:ok, Node.t()} | :error
+  def fetch(%__MODULE__{} = graph, guid) when is_binary(guid) do
+    case graph |> node_at(parse_guid!(:graph_fetch, guid)) |> Query.public_node() do
+      nil -> :error
+      node -> {:ok, node}
+    end
+  end
+
+  @doc """
+  Fetches the node at a GUID string, raising `KeyError` when the graph has none.
+  """
+  @spec fetch!(t(), String.t()) :: Node.t()
+  def fetch!(%__MODULE__{} = graph, guid) when is_binary(guid) do
+    case fetch(graph, guid) do
+      {:ok, node} -> node
+      :error -> raise KeyError, key: guid, term: graph
+    end
+  end
+
+  @doc """
+  Returns the effective record of a graph node: the sparse `NodeChange` map
+  with every override resolved, or `nil`.
+
+  Options:
+
+    * `:fields` - the record fields to return, as atoms. Defaults to all.
+    * `:as` - `:map` (default) for a sparse map, or `:struct` for the generated
+      `Figler.Schema` structs.
+  """
+  @spec record(t(), String.t(), keyword()) :: map() | struct() | nil
+  def record(%__MODULE__{} = graph, guid, opts \\ []) when is_binary(guid) and is_list(opts) do
+    graph_guid = parse_guid!(:graph_record, guid)
+
+    record =
+      case graph do
+        %__MODULE__{native: nil} -> nil
+        %__MODULE__{native: native} -> Native.graph_record(native, graph_guid, field_names(opts))
+      end
+
+    record && shape_record(record, opts)
+  end
+
+  @doc """
+  Returns the effective records of graph nodes by GUID string, leaving out GUIDs
+  the graph lacks. Takes the options of `record/3`.
+  """
+  @spec records(t(), [String.t()], keyword()) :: %{optional(String.t()) => map() | struct()}
+  def records(%__MODULE__{} = graph, guids, opts \\ []) when is_list(guids) and is_list(opts) do
+    case graph do
+      %__MODULE__{native: nil} ->
+        %{}
+
+      %__MODULE__{native: native} ->
+        graph_guids = Enum.map(guids, &parse_guid!(:graph_records, &1))
+
+        native
+        |> Native.graph_records(graph_guids, field_names(opts))
+        |> Map.new(fn {guid, record} -> {GUID.format(guid), shape_record(record, opts)} end)
+    end
+  end
+
+  @doc """
+  Materializes the parts of the graph named by `only:` as plain Elixir data,
+  keyed by internal graph GUIDs:
+
+    * `:nodes` - scene nodes by GUID
+    * `:records` - effective records by GUID
+    * `:children` - each parent's child GUIDs, in order
+    * `:roots` - the source GUIDs the graph starts from
+    * `:by_type` and `:by_name` - GUIDs by node type and by name
+    * `:provenance` - where each node that is not a plain source node came from
+    * `:unresolved` - the overrides the graph could not resolve
+
+  Records and nodes of a whole document are large; name only what is needed.
+  """
+  @spec to_map(t(), keyword()) :: map()
+  def to_map(%__MODULE__{} = graph, opts) when is_list(opts) do
+    only = Keyword.fetch!(opts, :only)
+
+    unless is_list(only) and only != [] and Enum.all?(only, &(&1 in @map_fields)) do
+      raise ArgumentError, "only: expects a non-empty list of #{inspect(@map_fields)}"
+    end
+
+    case graph do
+      %__MODULE__{native: nil} ->
+        projected_fields = %{
+          nodes: graph.nodes,
+          records: %{},
+          children: graph.children,
+          roots: graph.roots,
+          by_type: graph.by_type,
+          by_name: graph.by_name,
+          provenance: %{},
+          unresolved: []
+        }
+
+        Map.take(projected_fields, only)
+
+      %__MODULE__{native: native} ->
+        native
+        |> Native.graph_fields(Enum.map(only, &Atom.to_string/1))
+        |> Map.take(only)
+    end
+  end
+
+  @doc """
   Returns graph build/runtime stats.
   """
   @spec stats(t()) :: map()
-  def stats(%__MODULE__{} = graph) do
+  def stats(%__MODULE__{native: nil} = graph) do
     Map.merge(graph.stats, %{
       node_count: map_size(graph.nodes),
-      clone_count: clone_count(graph),
+      clone_count: 0,
       instance_count: graph.by_type |> Map.get("instance", []) |> length(),
-      unresolved_count: length(graph.unresolved),
-      applied_count: applied_count(graph)
+      unresolved_count: 0,
+      applied_count: 0
     })
   end
+
+  def stats(%__MODULE__{native: native} = graph),
+    do: Map.merge(graph.stats, Native.graph_stats(native))
 
   @doc """
   Explains how a node appears in the effective graph.
@@ -247,7 +319,7 @@ defmodule Figler.Scene.Graph do
   def explain(%__MODULE__{} = graph, guid) when is_binary(guid) do
     graph_guid = parse_guid!(:graph_explain, guid)
 
-    case Map.get(graph.nodes, graph_guid) do
+    case node_at(graph, graph_guid) do
       nil ->
         nil
 
@@ -262,7 +334,7 @@ defmodule Figler.Scene.Graph do
           source: provenance.source,
           source_guid: GUID.format(provenance.source_guid),
           parent_guid: public_node.parent_guid,
-          child_guids: graph.children |> Map.get(graph_guid, []) |> Enum.map(&GUID.format/1),
+          child_guids: graph |> child_guids(graph_guid) |> Enum.map(&GUID.format/1),
           applied: Map.get(provenance, :applied, []),
           bindings: Map.get(provenance, :bindings, []),
           unresolved: Map.get(provenance, :unresolved, []),
@@ -279,24 +351,14 @@ defmodule Figler.Scene.Graph do
     graph_guid = parse_guid!(:graph_source_node, guid)
     source_guid = provenance(graph, graph_guid).source_guid
 
-    case Map.get(graph.sources, source_guid) do
-      nil ->
+    case graph do
+      %__MODULE__{native: nil} ->
         graph.nodes |> Map.get(source_guid) |> Query.public_node()
 
-      record ->
-        record
-        |> Materialize.node(source_guid, SourceIndex.parent_id(record))
-        |> Query.public_node()
+      %__MODULE__{native: native} ->
+        native |> Native.graph_source_node(source_guid) |> Query.public_node()
     end
   end
-
-  @doc """
-  Returns the effective record of a graph node: the sparse `NodeChange` map
-  with every override resolved.
-  """
-  @spec record(t(), String.t()) :: map() | nil
-  def record(%__MODULE__{} = graph, guid) when is_binary(guid),
-    do: Map.get(graph.records, parse_guid!(:graph_record, guid))
 
   @doc """
   Returns a resolved tree from the effective graph.
@@ -324,9 +386,9 @@ defmodule Figler.Scene.Graph do
   def instance(%__MODULE__{} = graph, guid) when is_binary(guid) do
     graph_guid = parse_guid!(:graph_instance, guid)
 
-    case Map.get(graph.nodes, graph_guid) do
+    case node_at(graph, graph_guid) do
       %Node{node_type: "instance"} ->
-        record = Map.get(graph.records, graph_guid, %{})
+        record = record(graph, guid) || %{}
         provenance = provenance(graph, graph_guid)
         component_guid = Map.get(provenance, :component_guid)
 
@@ -364,13 +426,20 @@ defmodule Figler.Scene.Graph do
     * `{:unresolved_assignment, owner, main_component, path, reason}`
     * `{:missing_component, owner, component}`
     * `{:missing_slot_content, slot, content}`
+    * `{:unsupported_variable_expression, variable, mode}`
 
   GUIDs are `{session_id, local_id}` tuples and `reason` is `:missing_target`
   or `:ambiguous_target`.
   """
   @spec unresolved(t(), keyword()) :: [term()]
-  def unresolved(%__MODULE__{unresolved: unresolved}, opts \\ []) do
+  def unresolved(%__MODULE__{} = graph, opts \\ []) do
     Options.validate_unresolved!(opts)
+
+    unresolved =
+      case graph do
+        %__MODULE__{native: nil} -> []
+        %__MODULE__{native: native} -> Native.graph_unresolved(native)
+      end
 
     case Keyword.get(opts, :limit, :all) do
       :all -> unresolved
@@ -385,7 +454,7 @@ defmodule Figler.Scene.Graph do
   def diff_node(index, %__MODULE__{} = graph, guid) when is_binary(guid) do
     graph_guid = parse_guid!(:graph_diff_node, guid)
     raw = Scene.node(index, guid)
-    resolved = graph.nodes |> Map.get(graph_guid) |> Query.public_node()
+    resolved = graph |> node_at(graph_guid) |> Query.public_node()
 
     cond do
       is_nil(raw) and is_nil(resolved) -> nil
@@ -397,29 +466,116 @@ defmodule Figler.Scene.Graph do
   @doc false
   @spec provenance(t(), GUID.graph_guid()) :: map()
   def provenance(%__MODULE__{} = graph, guid) do
-    Map.get(graph.provenance, guid, %{
-      source: :projected_index,
-      source_guid: guid,
-      applied: [],
-      unresolved: []
-    })
+    provenance =
+      case graph do
+        %__MODULE__{native: nil} -> nil
+        %__MODULE__{native: native} -> Native.graph_provenance(native, guid)
+      end
+
+    provenance || %{source: :projected_index, source_guid: guid, applied: [], unresolved: []}
+  end
+
+  @doc false
+  # The internal node at a graph GUID, whose GUIDs stay graph GUIDs.
+  @spec node_at(t(), GUID.graph_guid()) :: Node.t() | nil
+  def node_at(%__MODULE__{native: nil, nodes: nodes}, guid), do: Map.get(nodes, guid)
+  def node_at(%__MODULE__{native: native}, guid), do: Native.graph_node(native, guid)
+
+  @doc false
+  # The effective record at a graph GUID, or `nil`.
+  @spec record_at(t(), GUID.graph_guid()) :: map() | nil
+  def record_at(%__MODULE__{native: nil}, _guid), do: nil
+  def record_at(%__MODULE__{native: native}, guid), do: Native.graph_record(native, guid, nil)
+
+  @doc false
+  @spec nodes_at(t(), [GUID.graph_guid()]) :: [Node.t()]
+  def nodes_at(%__MODULE__{native: nil, nodes: nodes}, guids),
+    do: guids |> Enum.map(&Map.get(nodes, &1)) |> Enum.reject(&is_nil/1)
+
+  def nodes_at(%__MODULE__{native: native}, guids), do: Native.graph_nodes(native, guids)
+
+  @doc false
+  # Every internal node, in graph order.
+  @spec all_nodes(t()) :: [Node.t()]
+  def all_nodes(%__MODULE__{native: nil, nodes: nodes}), do: Map.values(nodes)
+
+  def all_nodes(%__MODULE__{native: native} = graph),
+    do: Native.graph_node_slice(native, 0, node_count(graph))
+
+  @doc false
+  @spec all_guids(t()) :: [GUID.graph_guid()]
+  def all_guids(%__MODULE__{native: nil, nodes: nodes}), do: Map.keys(nodes)
+  def all_guids(%__MODULE__{native: native}), do: Native.graph_guids(native)
+
+  @doc false
+  @spec node_count(t()) :: non_neg_integer()
+  def node_count(%__MODULE__{native: nil, nodes: nodes}), do: map_size(nodes)
+  def node_count(%__MODULE__{native: native}), do: Native.graph_stats(native).node_count
+
+  @doc false
+  @spec child_guids(t(), GUID.graph_guid()) :: [GUID.graph_guid()]
+  def child_guids(%__MODULE__{native: nil, children: children}, guid),
+    do: Map.get(children, guid, [])
+
+  def child_guids(%__MODULE__{native: native}, guid), do: Native.graph_children(native, guid)
+
+  @doc false
+  @spec root_guids(t()) :: [GUID.graph_guid()]
+  def root_guids(%__MODULE__{native: nil, roots: roots}), do: roots
+  def root_guids(%__MODULE__{native: native}), do: Native.graph_roots(native)
+
+  @doc false
+  @spec type_guids(t(), String.t()) :: [GUID.graph_guid()]
+  def type_guids(%__MODULE__{native: nil, by_type: by_type}, type), do: Map.get(by_type, type, [])
+  def type_guids(%__MODULE__{native: native}, type), do: Native.graph_of_type(native, type)
+
+  @doc false
+  @spec name_guids(t(), String.t()) :: [GUID.graph_guid()]
+  def name_guids(%__MODULE__{native: nil, by_name: by_name}, name), do: Map.get(by_name, name, [])
+  def name_guids(%__MODULE__{native: native}, name), do: Native.graph_named(native, name)
+
+  @doc false
+  # Internal nodes in graph order, `chunk` at a time, for enumeration.
+  @spec node_chunks(t(), pos_integer()) :: Enumerable.t()
+  def node_chunks(%__MODULE__{native: nil} = graph, _chunk), do: [all_nodes(graph)]
+
+  def node_chunks(%__MODULE__{native: native} = graph, chunk) do
+    count = node_count(graph)
+
+    Stream.unfold(0, fn
+      offset when offset >= count -> nil
+      offset -> {Native.graph_node_slice(native, offset, chunk), offset + chunk}
+    end)
   end
 
   defp component_node(_graph, nil), do: nil
-  defp component_node(graph, guid), do: graph.nodes |> Map.get(guid) |> Query.public_node()
+  defp component_node(graph, guid), do: graph |> node_at(guid) |> Query.public_node()
 
-  defp clone_count(graph) do
-    Enum.count(graph.nodes, fn
-      {{:clone, _root_guid, _source_path}, _node} -> true
-      _entry -> false
-    end)
+  defp field_names(opts) do
+    case Keyword.get(opts, :fields) do
+      nil -> nil
+      fields when is_list(fields) -> Enum.map(fields, &to_string/1)
+    end
   end
 
-  defp applied_count(graph) do
-    Enum.reduce(graph.provenance, 0, fn {_guid, provenance}, count ->
-      count + length(Map.get(provenance, :applied, []))
-    end)
+  defp shape_record(record, opts) do
+    case Keyword.get(opts, :as, :map) do
+      :map -> record
+      :struct -> to_struct(record)
+    end
   end
+
+  defp to_struct(%{__kiwi_module__: module} = record) do
+    fields =
+      record
+      |> Map.delete(:__kiwi_module__)
+      |> Map.new(fn {key, value} -> {key, to_struct(value)} end)
+
+    struct(module, fields)
+  end
+
+  defp to_struct(values) when is_list(values), do: Enum.map(values, &to_struct/1)
+  defp to_struct(value), do: value
 
   defp normalize_options(opts) do
     opts
@@ -443,5 +599,23 @@ defmodule Figler.Scene.Graph do
 
   defp parse_guid!(operation, guid) do
     GUID.parse(guid) || raise Error.invalid_guid(operation, guid)
+  end
+
+  defimpl Enumerable do
+    alias Figler.Scene.Graph
+    alias Figler.Scene.Query
+
+    # Public scene nodes, in graph order.
+    def reduce(graph, acc, fun) do
+      graph
+      |> Graph.node_chunks(4096)
+      |> Stream.flat_map(& &1)
+      |> Stream.map(&Query.public_node/1)
+      |> Enumerable.reduce(acc, fun)
+    end
+
+    def count(graph), do: {:ok, Graph.node_count(graph)}
+    def member?(_graph, _node), do: {:error, __MODULE__}
+    def slice(_graph), do: {:error, __MODULE__}
   end
 end

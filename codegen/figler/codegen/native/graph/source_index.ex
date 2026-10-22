@@ -2,8 +2,8 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   @moduledoc """
   Source records by GUID, with children in saved order, for the native occurrence interpreter.
 
-  Mirrors `Figler.Scene.Graph.Occurrence.SourceIndex`: removed records are dropped, duplicate
-  GUIDs are rejected, and siblings sort by their fractional position string, compared as text.
+  Removed records are dropped, duplicate GUIDs are rejected, and siblings sort by their
+  fractional position string, compared as text.
   """
 
   use RustQ.Meta,

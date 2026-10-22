@@ -3,8 +3,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   Placed geometry of an instance expansion, for the native interpreter: uniform scale, freeform
   resize constraints, and the saved derived cache Figma keeps per layer path.
 
-  Mirrors `Figler.Scene.Graph.Occurrence.Geometry`. Arithmetic runs in `f64`, as Elixir floats
-  do, and is stored back as the schema's `f32`.
+  Arithmetic runs in `f64` and is stored back as the schema's `f32`.
   """
 
   use RustQ.Meta,

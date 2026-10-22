@@ -93,4 +93,50 @@ defmodule Figler.Test.SceneFixture do
 
     KiwiCodec.encode(message)
   end
+
+  @doc """
+  Encodes sparse `NodeChange` maps, such as `Figler.Test.NodeChangeJSON` reads, into a
+  message payload and the schema that reads it.
+  """
+  def records_source(records) do
+    message =
+      struct(Figler.Schema.Message,
+        type: :node_changes,
+        session_id: 0,
+        node_changes: Enum.map(records, &schema_struct(&1, Figler.Schema.NodeChange))
+      )
+
+    {KiwiCodec.encode(message), Figler.schema() |> SchemaBinary.encode()}
+  end
+
+  defp schema_struct(map, module) do
+    types = Map.new(module.__kiwi_metadata__().ordered_fields, &{&1.name, &1.type})
+
+    fields =
+      for {field, value} <- map,
+          field != :__kiwi_module__,
+          Map.has_key?(types, field),
+          do: {field, schema_value(value, Map.fetch!(types, field))}
+
+    struct(module, fields)
+  end
+
+  defp schema_value(values, type) when is_list(values),
+    do: Enum.map(values, &schema_value(&1, type))
+
+  defp schema_value(value, :float) when is_integer(value), do: value * 1.0
+
+  # JSON fixtures keep byte arrays as maps from index to byte.
+  defp schema_value(bytes, :byte) when is_map(bytes) do
+    bytes
+    |> Enum.sort_by(fn {index, _byte} -> String.to_integer(index) end)
+    |> Enum.map(&elem(&1, 1))
+    |> :binary.list_to_bin()
+  end
+
+  defp schema_value(value, module) when is_map(value) and is_atom(module) do
+    if KiwiCodec.PrimitiveType.atom?(module), do: value, else: schema_struct(value, module)
+  end
+
+  defp schema_value(value, _type), do: value
 end

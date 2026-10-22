@@ -41,6 +41,7 @@ defmodule Figler.MixProject do
         "rust.fmt --check",
         "rust.check",
         "rust.clippy",
+        "rust.test",
         "test",
         "credo --strict",
         "dialyzer --plt",
@@ -53,7 +54,8 @@ defmodule Figler.MixProject do
       "native.gen.check": "rustq.gen --check",
       "rust.fmt": &rust_fmt/1,
       "rust.check": &rust_check/1,
-      "rust.clippy": &rust_clippy/1
+      "rust.clippy": &rust_clippy/1,
+      "rust.test": &rust_test/1
     ]
   end
 
@@ -137,6 +139,10 @@ defmodule Figler.MixProject do
 
   defp rust_check(_args) do
     rust_cmd(["check", "--manifest-path", "native/Cargo.toml"])
+  end
+
+  defp rust_test(_args) do
+    rust_cmd(["test", "--manifest-path", "native/Cargo.toml", "--lib"])
   end
 
   defp rust_clippy(_args) do

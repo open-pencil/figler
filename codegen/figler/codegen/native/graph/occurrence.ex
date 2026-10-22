@@ -2,10 +2,9 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
   @moduledoc """
   One use of a source record in an interpreted page tree, for the native interpreter.
 
-  Mirrors `Figler.Scene.Graph.Occurrence`: an instance expands its component's subtree, and
-  every layer of that expansion is a separate occurrence with its own effective `properties`.
-  Paths address occurrences below an owner by GUID or override key, never inside a nested
-  instance.
+  An instance expands its component's subtree, and every layer of that expansion is a separate
+  occurrence with its own effective `properties`. Paths address occurrences below an owner by
+  GUID or override key, never inside a nested instance.
   """
 
   use RustQ.Meta,

@@ -14,8 +14,6 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
 
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.GUID
-  alias Figler.Scene.Graph.Occurrence
-  alias Figler.Scene.Graph.Occurrence.GUID, as: OccurrenceGUID
 
   @fields ["source_id", "type", "name", "visible", "main_component_id", "size", "position"] ++
             ["opacity", "characters", "font_size", "fills", "strokes", "stroke_weight"] ++
@@ -105,7 +103,7 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
   @spec compare_scene(Graph.t(), map()) :: %{pages: [map()], diffs: [diff()], by_field: map()}
   def compare_scene(%Graph{} = graph, expected) do
     compare_projected(expected, fn page ->
-      project_scene(graph, Map.fetch!(graph.nodes, GUID.parse!(page)))
+      project_scene(graph, Graph.node_at(graph, GUID.parse!(page)))
     end)
   end
 
@@ -119,7 +117,7 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
   """
   @spec project_scene(Graph.t(), Figler.Scene.Node.t()) :: map()
   def project_scene(%Graph{} = graph, node, expanded? \\ false) do
-    record = Map.get(graph.records, node.guid, %{})
+    record = Graph.record_at(graph, node.guid) || %{}
     type = scene_type(record)
     strokes = paints(Map.get(record, :stroke_paints))
     expanded? = expanded? or type in ["INSTANCE", "SYMBOL"]
@@ -135,9 +133,9 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
       "stroke_weight" => if(strokes != [], do: Map.get(record, :stroke_weight, 1)),
       "corner_radius" => nonzero(Map.get(record, :corner_radius)),
       "children" =>
-        graph.children
-        |> Map.get(node.guid, [])
-        |> Enum.map(&project_scene(graph, Map.fetch!(graph.nodes, &1), expanded?))
+        graph
+        |> Graph.nodes_at(Graph.child_guids(graph, node.guid))
+        |> Enum.map(&project_scene(graph, &1, expanded?))
     }
     |> Map.merge(scene_geometry(type, record))
     |> Map.merge(scene_text(type, record))
@@ -238,17 +236,18 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
   end
 
   @doc """
-  Projects an interpreted occurrence tree into the oracle's shape.
+  Projects an occurrence tree, as `Figler.Native.Module.graph_interpret/3` returns it, into
+  the oracle's shape.
   """
-  @spec project_occurrence(Occurrence.t()) :: map()
-  def project_occurrence(%Occurrence{properties: properties} = occurrence) do
+  @spec project_occurrence(map()) :: map()
+  def project_occurrence(%{properties: properties} = occurrence) do
     type = properties |> Map.get(:type) |> to_string() |> String.upcase()
     size = Map.get(properties, :size)
     transform = Map.get(properties, :transform)
     opacity = Map.get(properties, :opacity)
 
     %{
-      "source_id" => OccurrenceGUID.format(occurrence.source_id),
+      "source_id" => GUID.format(occurrence.source_id),
       "type" => type,
       "name" => Map.get(properties, :name),
       "visible" => Map.get(properties, :visible, true),
@@ -257,7 +256,7 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
       "opacity" => if(opacity not in [nil, 1, 1.0], do: opacity),
       "characters" => if(type == "TEXT", do: get_in(properties, [:text_data, :characters]) || ""),
       "main_component_id" =>
-        if(type == "INSTANCE", do: OccurrenceGUID.format(occurrence.main_component_id)),
+        if(type == "INSTANCE", do: GUID.format(occurrence.main_component_id)),
       "children" => Enum.map(occurrence.children, &project_occurrence/1)
     }
   end

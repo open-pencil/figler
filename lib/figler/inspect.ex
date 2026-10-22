@@ -146,9 +146,9 @@ defimpl Inspect, for: Figler.Scene.Graph do
       "#Figler.Scene.Graph<mode=",
       to_string(graph.mode),
       " nodes=",
-      to_string(map_size(graph.nodes)),
+      to_string(Figler.Scene.Graph.node_count(graph)),
       " unresolved=",
-      to_string(length(graph.unresolved)),
+      to_string(length(Figler.Scene.Graph.unresolved(graph))),
       ">"
     ])
   end

@@ -11,6 +11,17 @@
   field unless a strictly outer instance assigned it; uniform scale, placed
   constraints, slots, and saved derived data are applied. On OpenPencil's
   fixture files the resolved trees match OpenPencil's reader exactly.
+- **Breaking:** the effective graph is built natively and kept in a native
+  resource. Its fields are no longer public: read nodes with `fetch/2` and
+  `fetch!/2`, records with `record/3` and `records/3` (`fields:` and
+  `as: :struct`), enumerate the graph's nodes with `Enum`, and materialize
+  named parts with `to_map/2` (`only:` is required). Building a whole
+  document's graph no longer creates an Elixir map per node and record.
+- Unresolved diagnostics include
+  `{:unsupported_variable_expression, variable, mode}` for variable expressions
+  OpenPencil cannot evaluate.
+- `Figler.Native.Module.graph_interpret/3` returns one record's interpreted
+  occurrence tree and diagnostics, for inspecting the interpreter.
 - **Breaking:** the resolver stage options (`:stages`, `:only`, `:until`,
   `:skip`) and the graph's `seed_nodes/2` function are removed.
   `Figler.Scene.Graph.profile/2` reports `:decode`, `:index`, and `:interpret`

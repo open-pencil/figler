@@ -2,11 +2,11 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   @moduledoc """
   Applies a layer's variable bindings to its effective record, for the native interpreter.
 
-  Mirrors `Figler.Scene.Graph.Variables.Bindings`. A record binds a field through a variable
+  Following OpenPencil's document binding passes, a record binds a field through a variable
   consumption entry that names a variable (an alias, a constant times an alias, or an alias
-  wrapped in `STRINGIFY` or `IS_TRUTHY`); a later entry for the field without a variable
-  clears the binding. A paint binds its color through `colorVar`. Resolved values are written
-  back into the record's own fields.
+  wrapped in `STRINGIFY` or `IS_TRUTHY`); a later entry for the field without a variable clears
+  the binding. A paint binds its color through `colorVar`. Resolved values are written back into
+  the record's own fields.
   """
 
   use RustQ.Meta,

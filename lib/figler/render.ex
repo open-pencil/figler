@@ -87,7 +87,8 @@ defmodule Figler.Render do
           {source.guid, source}
         end)
 
-      render_nodes = effective_render_nodes(graph, source_nodes)
+      fields = Graph.to_map(graph, only: [:nodes, :records, :children, :provenance])
+      render_nodes = effective_render_nodes(fields, source_nodes)
 
       {:ok,
        %RenderScene{
@@ -95,7 +96,7 @@ defmodule Figler.Render do
          payload: document.payload,
          graph: graph,
          root: root,
-         children: graph.children,
+         children: fields.children,
          source_nodes: source_nodes,
          render_nodes: render_nodes
        }}
@@ -104,10 +105,15 @@ defmodule Figler.Render do
 
   # Render fields come from the source record, with the occurrence's effective
   # record applied over them.
-  defp effective_render_nodes(graph, source_nodes) do
-    Map.new(graph.nodes, fn {guid, node} ->
-      source_guid = Graph.provenance(graph, guid).source_guid
-      record = Map.get(graph.records, guid, %{})
+  defp effective_render_nodes(fields, source_nodes) do
+    Map.new(fields.nodes, fn {guid, node} ->
+      source_guid =
+        case Map.get(fields.provenance, guid) do
+          nil -> guid
+          provenance -> provenance.source_guid
+        end
+
+      record = Map.get(fields.records, guid, %{})
 
       source =
         case Map.get(source_nodes, source_guid) do

@@ -10,15 +10,7 @@ defmodule Figler.Native.GeneratedStubs do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def graph_source_index(_bytes, _schema) do
-        :erlang.nif_error(:nif_not_loaded)
-      end
-
       def graph_interpret(_bytes, _schema, _root) do
-        :erlang.nif_error(:nif_not_loaded)
-      end
-
-      def graph_interpret_timing(_bytes, _schema) do
         :erlang.nif_error(:nif_not_loaded)
       end
 
@@ -26,7 +18,71 @@ defmodule Figler.Native.GeneratedStubs do
         :erlang.nif_error(:nif_not_loaded)
       end
 
-      def graph_build(_bytes, _schema, _styles, _variables) do
+      def graph_new(_bytes, _schema, _styles, _variables, _focus) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_node(_graph, _guid) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_nodes(_graph, _guids) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_node_slice(_graph, _offset, _limit) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_record(_graph, _guid, _fields) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_records(_graph, _guids, _fields) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_children(_graph, _guid) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_guids(_graph) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_roots(_graph) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_of_type(_graph, _node_type) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_named(_graph, _name) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_provenance(_graph, _guid) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_unresolved(_graph) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_source(_graph, _id) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_source_node(_graph, _id) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_stats(_graph) do
+        :erlang.nif_error(:nif_not_loaded)
+      end
+
+      def graph_fields(_graph, _only) do
         :erlang.nif_error(:nif_not_loaded)
       end
 

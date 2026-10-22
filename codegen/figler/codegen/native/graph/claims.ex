@@ -2,8 +2,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   @moduledoc """
   Applies property values onto an occurrence's effective record, for the native interpreter.
 
-  Mirrors `Figler.Scene.Graph.Occurrence.Claims` and the field lists of
-  `Figler.Scene.Graph.Occurrence.Fields`.
+  Ported from OpenPencil's `instance-overrides`, with its field lists.
   """
 
   use RustQ.Meta,

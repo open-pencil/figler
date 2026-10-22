@@ -1,12 +1,12 @@
 defmodule Figler.Codegen.Native.Graph.Variables do
   @moduledoc """
-  Variable collections and values read from a document and resolved in a mode context, for
-  the native interpreter.
+  Variable collections and values read from a document and resolved in a mode context, for the
+  native interpreter.
 
-  Mirrors `Figler.Scene.Graph.Variables` and `Figler.Scene.Graph.Variables.Formula`. A
-  collection has modes, the first its default. A variable has one value per mode: a literal,
-  an alias of another variable, a formula, or a color composed from a color and an opacity.
-  Expressions OpenPencil cannot evaluate are kept unresolved and reported.
+  Following OpenPencil's reader and scene graph, a collection has modes, the first its default.
+  A variable has one value per mode: a literal, an alias of another variable, a formula, or a
+  color composed from a color and an opacity. Expressions OpenPencil cannot evaluate are kept
+  unresolved and reported.
   """
 
   use RustQ.Meta,

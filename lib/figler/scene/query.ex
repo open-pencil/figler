@@ -25,9 +25,8 @@ defmodule Figler.Scene.Query do
 
   @spec nodes_by_guids(Graph.t(), [term()]) :: [Node.t()]
   def nodes_by_guids(%Graph{} = graph, guids) do
-    guids
-    |> Enum.map(&Map.get(graph.nodes, &1))
-    |> Enum.reject(&is_nil/1)
+    graph
+    |> Graph.nodes_at(guids)
     |> Enum.map(&public_node/1)
   end
 

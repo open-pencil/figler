@@ -2,11 +2,10 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   @moduledoc """
   Builds the effective graph from interpreted occurrence trees, natively.
 
-  Mirrors `Figler.Scene.Graph.Materialize`. Every page is interpreted on its own. Layers
-  inside an instance expansion get clone GUIDs that append each source GUID to the path from
-  the outermost instance, so every occurrence has its own identity. Records outside the
-  document tree become roots of their own. With variables, each layer's bindings resolve in
-  the modes it and its ancestors set.
+  Every page is interpreted on its own. Layers inside an instance expansion get clone GUIDs that
+  append each source GUID to the path from the outermost instance, so every occurrence has its
+  own identity. Records outside the document tree become roots of their own. With variables,
+  each layer's bindings resolve in the modes it and its ancestors set.
   """
 
   use RustQ.Meta,

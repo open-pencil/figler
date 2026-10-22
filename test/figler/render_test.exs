@@ -9,6 +9,7 @@ defmodule Figler.RenderTest do
   alias Figler.Render.Skia, as: SkiaBackend
   alias Figler.Render.SourceNode
   alias Figler.Render.Warning
+  alias Figler.Scene.Graph, as: SceneGraph
   alias Figler.Scene.Graph.GUID
   alias KiwiCodec.Schema.Binary, as: SchemaBinary
 
@@ -377,9 +378,12 @@ defmodule Figler.RenderTest do
     assert {:ok, scene} = Render.prepare(payload)
 
     assert {clone_guid, %{source: :instance_clone, source_guid: {1, 2}}} =
-             Enum.find(scene.graph.provenance, fn {_guid, provenance} ->
-               provenance[:source] == :instance_clone and provenance[:source_guid] == {1, 2}
-             end)
+             Enum.find(
+               SceneGraph.to_map(scene.graph, only: [:provenance]).provenance,
+               fn {_guid, provenance} ->
+                 provenance[:source] == :instance_clone and provenance[:source_guid] == {1, 2}
+               end
+             )
 
     assert %RenderNode{
              guid: ^clone_guid,
@@ -401,9 +405,12 @@ defmodule Figler.RenderTest do
     assert {:ok, scene} = Render.prepare(payload)
 
     assert {clone_guid, %{source: :instance_clone, source_guid: {3, 2}}} =
-             Enum.find(scene.graph.provenance, fn {_guid, provenance} ->
-               provenance[:source] == :instance_clone and provenance[:source_guid] == {3, 2}
-             end)
+             Enum.find(
+               SceneGraph.to_map(scene.graph, only: [:provenance]).provenance,
+               fn {_guid, provenance} ->
+                 provenance[:source] == :instance_clone and provenance[:source_guid] == {3, 2}
+               end
+             )
 
     text = scene.render_nodes[clone_guid].text
 
@@ -436,9 +443,12 @@ defmodule Figler.RenderTest do
     assert {:ok, scene} = Render.prepare(payload)
 
     assert {clone_guid, %{source: :instance_clone, source_guid: {5, 2}}} =
-             Enum.find(scene.graph.provenance, fn {_guid, provenance} ->
-               provenance[:source] == :instance_clone and provenance[:source_guid] == {5, 2}
-             end)
+             Enum.find(
+               SceneGraph.to_map(scene.graph, only: [:provenance]).provenance,
+               fn {_guid, provenance} ->
+                 provenance[:source] == :instance_clone and provenance[:source_guid] == {5, 2}
+               end
+             )
 
     assert %RenderNode{vector_network: %{blob_index: 1}} = scene.render_nodes[clone_guid]
     assert {:ok, clone_scene} = Render.prepare(payload, root: GUID.format(clone_guid))
@@ -452,11 +462,14 @@ defmodule Figler.RenderTest do
     assert {:ok, scene} = instance_payload() |> Render.prepare()
 
     assert {clone_guid, %{source: :instance_clone, source_guid: {1, 2}}} =
-             Enum.find(scene.graph.provenance, fn {_guid, provenance} ->
-               provenance[:source] == :instance_clone and provenance[:source_guid] == {1, 2}
-             end)
+             Enum.find(
+               SceneGraph.to_map(scene.graph, only: [:provenance]).provenance,
+               fn {_guid, provenance} ->
+                 provenance[:source] == :instance_clone and provenance[:source_guid] == {1, 2}
+               end
+             )
 
-    assert Map.has_key?(scene.graph.nodes, clone_guid)
+    assert SceneGraph.node_at(scene.graph, clone_guid)
     assert %SourceNode{fill_paints: [%{type: :solid}]} = scene.source_nodes[{1, 2}]
     assert {:ok, result} = SkiaBackend.compile(scene)
     assert Enum.count(Skia.commands(result.document), &(&1.op == :rect)) >= 2

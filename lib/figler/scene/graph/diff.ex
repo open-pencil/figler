@@ -30,7 +30,7 @@ defmodule Figler.Scene.Graph.Diff do
         subtree_guids(graph, root_guid)
 
       :error ->
-        Map.keys(graph.nodes)
+        Graph.all_guids(graph)
     end
   end
 
@@ -42,15 +42,15 @@ defmodule Figler.Scene.Graph.Diff do
 
   defp subtree_guids(graph, guid, acc) do
     acc =
-      graph.children
-      |> Map.get(guid, [])
+      graph
+      |> Graph.child_guids(guid)
       |> Enum.reduce(acc, &subtree_guids(graph, &1, &2))
 
     [guid | acc]
   end
 
   defp diff_guid(graph, guid) do
-    with %Node{} = resolved <- graph.nodes |> Map.get(guid) |> Query.public_node(),
+    with %Node{} = resolved <- graph |> Graph.node_at(guid) |> Query.public_node(),
          %Node{} = source <- source_node(graph, guid),
          changes when changes != [] <- node_changes(source, resolved) do
       [%{guid: GUID.format(guid), source: source, resolved: resolved, changed: changes}]
@@ -61,7 +61,7 @@ defmodule Figler.Scene.Graph.Diff do
 
   # The source node keeps the graph node's identity, so only resolved fields differ.
   defp source_node(graph, guid) do
-    with %Node{} = resolved <- graph.nodes |> Map.get(guid) |> Query.public_node(),
+    with %Node{} = resolved <- graph |> Graph.node_at(guid) |> Query.public_node(),
          %Node{} = source <- Graph.source_node(graph, GUID.format(guid)) do
       %{Query.public_node(source) | guid: resolved.guid, parent_guid: resolved.parent_guid}
     else

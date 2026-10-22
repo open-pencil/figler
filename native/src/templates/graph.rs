@@ -26,31 +26,6 @@ pub mod graph {
     __rq_graph_variable_bindings!();
     __rq_graph_materialize!();
 
-    /// Encodes the source index of `message` as Elixir's `SourceIndex` holds it: records by
-    /// GUID tuple, and each parent's child GUIDs in saved order.
-    pub fn encode_source_index<'a>(env: Env<'a>, message: &KiwiRecord) -> NifResult<Term<'a>> {
-        let index = source_index(message, true)?;
-
-        let mut source_keys = Vec::with_capacity(index.sources.len());
-        let mut source_values = Vec::with_capacity(index.sources.len());
-        for (id, record) in &index.sources {
-            source_keys.push(id.encode(env));
-            source_values.push(kiwi_encode_record(env, record)?);
-        }
-
-        let (child_keys, child_values): (Vec<_>, Vec<_>) = index
-            .children
-            .iter()
-            .map(|(parent, ids)| (parent.encode(env), ids.encode(env)))
-            .unzip();
-
-        Ok((
-            Term::map_from_term_arrays(env, &source_keys, &source_values)?,
-            Term::map_from_term_arrays(env, &child_keys, &child_values)?,
-        )
-            .encode(env))
-    }
-
     /// Interprets `root` from the records of `message` and encodes the occurrence tree and
     /// diagnostics as plain maps, for comparison with Elixir's interpreter.
     pub fn encode_interpretation<'a>(
@@ -203,44 +178,6 @@ pub mod graph {
         Term::map_from_term_arrays(env, &keys, &values).expect("unique keys")
     }
 
-    /// Times indexing and interpreting every page, for benchmarks: microseconds to index, to
-    /// interpret, and the occurrences built.
-    pub fn time_interpretation(message: &KiwiRecord) -> NifResult<(u64, u64, usize)> {
-        let started = std::time::Instant::now();
-        let index = source_index(message, true)?;
-        let indexed = started.elapsed().as_micros() as u64;
-
-        let mut roots: Vec<GuidKey> = index
-            .sources
-            .iter()
-            .filter(|(_, record)| parent_id(record).is_none_or(|parent| !index.sources.contains_key(&parent)))
-            .map(|(id, _)| *id)
-            .collect();
-        roots.sort();
-        let pages: Vec<GuidKey> = roots
-            .iter()
-            .flat_map(|id| {
-                if node_type(&index, *id) == Some(kiwi_records::node_type::DOCUMENT) {
-                    children_of(&index, *id).to_vec()
-                } else {
-                    vec![*id]
-                }
-            })
-            .collect();
-
-        let started = std::time::Instant::now();
-        let mut occurrences = 0;
-        for page in pages {
-            let (occurrence, _diagnostics) = interpret(&index, page)?;
-            occurrences += count(&occurrence);
-        }
-        Ok((indexed, started.elapsed().as_micros() as u64, occurrences))
-    }
-
-    fn count(occurrence: &Occurrence) -> usize {
-        1 + occurrence.children.iter().map(count).sum::<usize>()
-    }
-
     /// Resolves every variable in each mode of its collection, with the unsupported
     /// expressions reported, for comparison with Elixir's `Variables`.
     pub fn encode_variable_resolution<'a>(env: Env<'a>, message: &KiwiRecord) -> NifResult<Term<'a>> {
@@ -285,99 +222,308 @@ pub mod graph {
         }
     }
 
-    /// Builds the effective graph of `message` and encodes the fields `Figler.Scene.Graph`
-    /// holds: nodes, records, children, roots, indexes by type and name, provenance, and the
-    /// unresolved overrides.
-    pub fn encode_graph_fields<'a>(
-        env: Env<'a>,
+    /// An effective graph held natively, with its source records and the indexes
+    /// `Figler.Scene.Graph` reads by type and name.
+    pub struct GraphResource {
+        graph: Graph,
+        sources: Sources,
+        by_type: HashMap<&'static str, Vec<usize>>,
+        by_name: HashMap<String, Vec<usize>>,
+    }
+
+    impl rustler::Resource for GraphResource {}
+
+    /// Builds the effective graph of `message`, with the microseconds spent indexing and
+    /// interpreting.
+    pub fn build_graph_resource(
         message: &KiwiRecord,
         styles: bool,
         variables: bool,
-    ) -> NifResult<Term<'a>> {
+    ) -> NifResult<(GraphResource, u64, u64)> {
+        let started = std::time::Instant::now();
         let index = source_index(message, styles)?;
+        let indexed = started.elapsed().as_micros() as u64;
+
+        let started = std::time::Instant::now();
         let vars = variables.then(|| new_variables(&index.sources));
         let graph = build_graph(&index, vars.as_ref())?;
-
-        let mut node_keys = Vec::with_capacity(graph.nodes.len());
-        let mut node_values = Vec::with_capacity(graph.nodes.len());
-        let mut record_values = Vec::with_capacity(graph.nodes.len());
-        let mut child_keys = Vec::new();
-        let mut child_values = Vec::new();
-        let mut provenance_keys = Vec::new();
-        let mut provenance_values = Vec::new();
-        let mut by_type: Vec<(&str, Vec<Term<'a>>)> = Vec::new();
-        let mut type_positions: HashMap<&str, usize> = HashMap::new();
-        let mut by_name: Vec<(&str, Vec<Term<'a>>)> = Vec::new();
-        let mut name_positions: HashMap<&str, usize> = HashMap::new();
-
-        for node in &graph.nodes {
-            let guid = encode_graph_guid(env, &node.guid);
-            let node_type = enum_name(node.record.get(kiwi_records::node_change::TYPE));
-            let name = node.record.str(kiwi_records::node_change::NAME);
-
-            node_keys.push(guid);
-            node_values.push(encode_scene_node(env, node, guid)?);
-            record_values.push(kiwi_encode_record(env, &node.record)?);
-
-            if !node.children.is_empty() {
-                child_keys.push(guid);
-                child_values.push(
-                    node.children
-                        .iter()
-                        .map(|child| encode_graph_guid(env, &graph.nodes[*child].guid))
-                        .collect::<Vec<_>>()
-                        .encode(env),
-                );
+        let mut by_type: HashMap<&'static str, Vec<usize>> = HashMap::new();
+        let mut by_name: HashMap<String, Vec<usize>> = HashMap::new();
+        for (position, node) in graph.nodes.iter().enumerate() {
+            if let Some(node_type) = enum_name(node.record.get(kiwi_records::node_change::TYPE)) {
+                by_type.entry(node_type).or_default().push(position);
             }
-            if let Some(provenance) = &node.provenance {
-                provenance_keys.push(guid);
-                provenance_values.push(encode_provenance(env, provenance)?);
+            if let Some(name) = node.record.str(kiwi_records::node_change::NAME) {
+                by_name.entry(name.to_string()).or_default().push(position);
             }
-            if let Some(node_type) = node_type {
-                let position = *type_positions.entry(node_type).or_insert_with(|| {
-                    by_type.push((node_type, Vec::new()));
-                    by_type.len() - 1
-                });
-                by_type[position].1.push(guid);
-            }
-            if let Some(name) = name {
-                let position = *name_positions.entry(name).or_insert_with(|| {
-                    by_name.push((name, Vec::new()));
-                    by_name.len() - 1
-                });
-                by_name[position].1.push(guid);
+        }
+        let interpreted = started.elapsed().as_micros() as u64;
+
+        Ok((GraphResource { graph, sources: index.sources, by_type, by_name }, indexed, interpreted))
+    }
+
+    /// Reads a graph GUID as Elixir's graph holds it.
+    pub fn decode_graph_guid(term: Term<'_>) -> NifResult<GraphGuid> {
+        if let Ok(id) = term.decode::<GuidKey>() {
+            return Ok(GraphGuid::Source(id));
+        }
+        let (tag, root, path): (Atom, GuidKey, Term<'_>) = term.decode()?;
+        if tag != Atom::from_str(term.get_env(), "clone")? {
+            return Err(Error::BadArg);
+        }
+        let mut segments = Vec::new();
+        decode_clone_path(path, &mut segments)?;
+        Ok(GraphGuid::Clone(CloneGuid { root, path: segments }))
+    }
+
+    fn decode_clone_path(term: Term<'_>, segments: &mut Vec<GuidKey>) -> NifResult<()> {
+        if let Ok(list) = term.decode::<Vec<GuidKey>>() {
+            segments.extend(list);
+            return Ok(());
+        }
+        let (prefix, segment): (Term<'_>, GuidKey) = term.decode()?;
+        decode_clone_path(prefix, segments)?;
+        segments.push(segment);
+        Ok(())
+    }
+
+    impl GraphResource {
+        fn position(&self, guid: Term<'_>) -> Option<usize> {
+            decode_graph_guid(guid).ok().and_then(|guid| self.graph.positions.get(&guid).copied())
+        }
+
+        fn guid<'a>(&self, env: Env<'a>, position: usize) -> Term<'a> {
+            encode_graph_guid(env, &self.graph.nodes[position].guid)
+        }
+
+        fn guids<'a>(&self, env: Env<'a>, positions: &[usize]) -> Term<'a> {
+            positions.iter().map(|position| self.guid(env, *position)).collect::<Vec<_>>().encode(env)
+        }
+
+        /// The scene node at a GUID, or `nil`.
+        pub fn node<'a>(&self, env: Env<'a>, guid: Term<'a>) -> NifResult<Term<'a>> {
+            match self.position(guid) {
+                Some(position) => self.node_at(env, position),
+                None => Ok(atom(env, "nil")),
             }
         }
 
-        let (type_keys, type_values): (Vec<_>, Vec<_>) =
-            by_type.into_iter().map(|(key, guids)| (key.encode(env), guids.encode(env))).unzip();
-        let (name_keys, name_values): (Vec<_>, Vec<_>) =
-            by_name.into_iter().map(|(key, guids)| (key.encode(env), guids.encode(env))).unzip();
-        let unresolved = graph
-            .unresolved
-            .iter()
-            .map(|entry| match entry {
-                Unresolved::Variable(diagnostic) => {
-                    (atom(env, "unsupported_variable_expression"), diagnostic.variable, diagnostic.mode)
-                        .encode(env)
-                }
-                Unresolved::Occurrence(diagnostic) => encode_diagnostic(env, diagnostic),
-            })
-            .collect::<Vec<_>>();
+        fn node_at<'a>(&self, env: Env<'a>, position: usize) -> NifResult<Term<'a>> {
+            encode_scene_node(env, &self.graph.nodes[position], self.guid(env, position))
+        }
 
-        Ok(map(
-            env,
-            &[
-                ("nodes", Term::map_from_term_arrays(env, &node_keys, &node_values)?),
-                ("records", Term::map_from_term_arrays(env, &node_keys, &record_values)?),
-                ("children", Term::map_from_term_arrays(env, &child_keys, &child_values)?),
-                ("roots", graph.roots.encode(env)),
-                ("by_type", Term::map_from_term_arrays(env, &type_keys, &type_values)?),
-                ("by_name", Term::map_from_term_arrays(env, &name_keys, &name_values)?),
-                ("provenance", Term::map_from_term_arrays(env, &provenance_keys, &provenance_values)?),
-                ("unresolved", unresolved.encode(env)),
-            ],
-        ))
+        /// The scene nodes at GUIDs, leaving out those the graph lacks.
+        pub fn nodes<'a>(&self, env: Env<'a>, guids: Vec<Term<'a>>) -> NifResult<Term<'a>> {
+            let nodes = guids
+                .into_iter()
+                .filter_map(|guid| self.position(guid))
+                .map(|position| self.node_at(env, position))
+                .collect::<NifResult<Vec<_>>>()?;
+            Ok(nodes.encode(env))
+        }
+
+        /// The scene nodes from `offset`, at most `limit`, in graph order.
+        pub fn node_slice<'a>(&self, env: Env<'a>, offset: usize, limit: usize) -> NifResult<Term<'a>> {
+            let end = offset.saturating_add(limit).min(self.graph.nodes.len());
+            let nodes = (offset.min(end)..end)
+                .map(|position| self.node_at(env, position))
+                .collect::<NifResult<Vec<_>>>()?;
+            Ok(nodes.encode(env))
+        }
+
+        /// The effective record at a GUID, holding only `fields` when given, or `nil`.
+        pub fn record<'a>(&self, env: Env<'a>, guid: Term<'a>, fields: Option<Vec<String>>) -> NifResult<Term<'a>> {
+            match self.position(guid) {
+                Some(position) => self.record_at(env, position, field_ids(fields).as_deref()),
+                None => Ok(atom(env, "nil")),
+            }
+        }
+
+        fn record_at<'a>(&self, env: Env<'a>, position: usize, only: Option<&[u32]>) -> NifResult<Term<'a>> {
+            kiwi_encode_record_fields(env, &self.graph.nodes[position].record, only)
+        }
+
+        /// The effective records at GUIDs, as `{guid, record}` pairs, leaving out those the
+        /// graph lacks.
+        pub fn records<'a>(
+            &self,
+            env: Env<'a>,
+            guids: Vec<Term<'a>>,
+            fields: Option<Vec<String>>,
+        ) -> NifResult<Term<'a>> {
+            let only = field_ids(fields);
+            let records = guids
+                .into_iter()
+                .filter_map(|guid| self.position(guid).map(|position| (guid, position)))
+                .map(|(guid, position)| Ok((guid, self.record_at(env, position, only.as_deref())?).encode(env)))
+                .collect::<NifResult<Vec<_>>>()?;
+            Ok(records.encode(env))
+        }
+
+        /// The GUIDs of a node's children, in order.
+        pub fn children<'a>(&self, env: Env<'a>, guid: Term<'a>) -> Term<'a> {
+            match self.position(guid) {
+                Some(position) => self.guids(env, &self.graph.nodes[position].children),
+                None => Vec::<Term<'a>>::new().encode(env),
+            }
+        }
+
+        /// Every node's GUID, in graph order.
+        pub fn all_guids<'a>(&self, env: Env<'a>) -> Term<'a> {
+            (0..self.graph.nodes.len()).map(|position| self.guid(env, position)).collect::<Vec<_>>().encode(env)
+        }
+
+        /// The GUIDs of the records the graph starts from.
+        pub fn roots<'a>(&self, env: Env<'a>) -> Term<'a> {
+            self.graph.roots.encode(env)
+        }
+
+        /// The GUIDs of nodes of a type, by its snake-case name, in graph order.
+        pub fn of_type<'a>(&self, env: Env<'a>, node_type: &str) -> Term<'a> {
+            self.guids(env, self.by_type.get(node_type).map_or(&[], |positions| positions.as_slice()))
+        }
+
+        /// The GUIDs of nodes with a name, in graph order.
+        pub fn named<'a>(&self, env: Env<'a>, name: &str) -> Term<'a> {
+            self.guids(env, self.by_name.get(name).map_or(&[], |positions| positions.as_slice()))
+        }
+
+        /// Where a node came from, or `nil` for a source node nothing changed.
+        pub fn provenance<'a>(&self, env: Env<'a>, guid: Term<'a>) -> NifResult<Term<'a>> {
+            match self.position(guid).and_then(|position| self.graph.nodes[position].provenance.as_ref()) {
+                Some(provenance) => encode_provenance(env, provenance),
+                None => Ok(atom(env, "nil")),
+            }
+        }
+
+        /// The overrides and variables the graph could not resolve.
+        pub fn unresolved<'a>(&self, env: Env<'a>) -> Term<'a> {
+            self.graph
+                .unresolved
+                .iter()
+                .map(|entry| match entry {
+                    Unresolved::Variable(diagnostic) => {
+                        (atom(env, "unsupported_variable_expression"), diagnostic.variable, diagnostic.mode)
+                            .encode(env)
+                    }
+                    Unresolved::Occurrence(diagnostic) => encode_diagnostic(env, diagnostic),
+                })
+                .collect::<Vec<_>>()
+                .encode(env)
+        }
+
+        /// The source record a graph node was built from, or `nil`.
+        pub fn source<'a>(&self, env: Env<'a>, id: GuidKey) -> NifResult<Term<'a>> {
+            match self.sources.get(&id) {
+                Some(record) => kiwi_encode_record(env, record),
+                None => Ok(atom(env, "nil")),
+            }
+        }
+
+        /// The source record a graph node was built from, projected as a scene node, or `nil`.
+        pub fn source_node<'a>(&self, env: Env<'a>, id: GuidKey) -> NifResult<Term<'a>> {
+            match self.sources.get(&id) {
+                Some(record) => {
+                    let parent = parent_id(record).map(|parent| parent.encode(env));
+                    encode_record_node(env, record, id.encode(env), parent)
+                }
+                None => Ok(atom(env, "nil")),
+            }
+        }
+
+        /// Counts of nodes, clones, instances, unresolved overrides, and applied claims.
+        pub fn stats<'a>(&self, env: Env<'a>) -> Term<'a> {
+            let clones = self
+                .graph
+                .nodes
+                .iter()
+                .filter(|node| matches!(node.guid, GraphGuid::Clone(_)))
+                .count();
+            let applied = self
+                .graph
+                .nodes
+                .iter()
+                .filter_map(|node| node.provenance.as_ref())
+                .map(|provenance| provenance.applied.len())
+                .sum::<usize>();
+            map(
+                env,
+                &[
+                    ("node_count", self.graph.nodes.len().encode(env)),
+                    ("clone_count", clones.encode(env)),
+                    ("instance_count", self.by_type.get("instance").map_or(0, Vec::len).encode(env)),
+                    ("unresolved_count", self.graph.unresolved.len().encode(env)),
+                    ("applied_count", applied.encode(env)),
+                ],
+            )
+        }
+
+        /// The graph's fields as `Figler.Scene.Graph` once held them, only those named.
+        pub fn fields<'a>(&self, env: Env<'a>, only: Vec<String>) -> NifResult<Term<'a>> {
+            let wants = |field: &str| only.iter().any(|name| name == field);
+            let all = (0..self.graph.nodes.len()).collect::<Vec<_>>();
+            let keys = if wants("nodes") || wants("records") || wants("provenance") || wants("children") {
+                all.iter().map(|position| self.guid(env, *position)).collect::<Vec<_>>()
+            } else {
+                Vec::new()
+            };
+            let mut entries = Vec::new();
+
+            if wants("nodes") {
+                let values = all.iter().map(|position| self.node_at(env, *position)).collect::<NifResult<Vec<_>>>()?;
+                entries.push(("nodes", Term::map_from_term_arrays(env, &keys, &values)?));
+            }
+            if wants("records") {
+                let values = all.iter().map(|position| self.record_at(env, *position, None)).collect::<NifResult<Vec<_>>>()?;
+                entries.push(("records", Term::map_from_term_arrays(env, &keys, &values)?));
+            }
+            if wants("children") {
+                let (child_keys, child_values): (Vec<_>, Vec<_>) = all
+                    .iter()
+                    .filter(|position| !self.graph.nodes[**position].children.is_empty())
+                    .map(|position| (keys[*position], self.guids(env, &self.graph.nodes[*position].children)))
+                    .unzip();
+                entries.push(("children", Term::map_from_term_arrays(env, &child_keys, &child_values)?));
+            }
+            if wants("provenance") {
+                let mut provenance_keys = Vec::new();
+                let mut provenance_values = Vec::new();
+                for position in &all {
+                    if let Some(provenance) = &self.graph.nodes[*position].provenance {
+                        provenance_keys.push(keys[*position]);
+                        provenance_values.push(encode_provenance(env, provenance)?);
+                    }
+                }
+                entries.push(("provenance", Term::map_from_term_arrays(env, &provenance_keys, &provenance_values)?));
+            }
+            if wants("roots") {
+                entries.push(("roots", self.roots(env)));
+            }
+            if wants("by_type") {
+                let (type_keys, type_values): (Vec<_>, Vec<_>) =
+                    self.by_type.iter().map(|(key, positions)| (key.encode(env), self.guids(env, positions))).unzip();
+                entries.push(("by_type", Term::map_from_term_arrays(env, &type_keys, &type_values)?));
+            }
+            if wants("by_name") {
+                let (name_keys, name_values): (Vec<_>, Vec<_>) =
+                    self.by_name.iter().map(|(key, positions)| (key.encode(env), self.guids(env, positions))).unzip();
+                entries.push(("by_name", Term::map_from_term_arrays(env, &name_keys, &name_values)?));
+            }
+            if wants("unresolved") {
+                entries.push(("unresolved", self.unresolved(env)));
+            }
+            Ok(map(env, &entries))
+        }
+    }
+
+    /// The `NodeChange` field ids named by their decoded-map keys; unknown names are left out.
+    fn field_ids(fields: Option<Vec<String>>) -> Option<Vec<u32>> {
+        fields.map(|fields| {
+            fields
+                .iter()
+                .filter_map(|name| kiwi_record_field(kiwi_record_definitions::NODE_CHANGE, name))
+                .collect()
+        })
     }
 
     /// A graph GUID as Elixir's graph holds it: `{session, local}` for a source record, and
@@ -397,8 +543,18 @@ pub mod graph {
     }
 
     fn encode_scene_node<'a>(env: Env<'a>, node: &GraphNode, guid: Term<'a>) -> NifResult<Term<'a>> {
+        let parent = node.parent.as_ref().map(|parent| encode_graph_guid(env, parent));
+        encode_record_node(env, &node.record, guid, parent)
+    }
+
+    /// Projects a record into a `Figler.Scene.Node` with the GUIDs given.
+    fn encode_record_node<'a>(
+        env: Env<'a>,
+        record: &KiwiRecord,
+        guid: Term<'a>,
+        parent: Option<Term<'a>>,
+    ) -> NifResult<Term<'a>> {
         use kiwi_records::node_change as field;
-        let record = &node.record;
         let nil = atom(env, "nil");
         let text = record.record(field::TEXT_DATA).and_then(|text| text.str(kiwi_records::text_data::CHARACTERS));
         let font = record.record(field::FONT_NAME);
@@ -444,7 +600,7 @@ pub mod graph {
             .record(field::PARENT_INDEX)
             .and_then(|parent| parent.str(kiwi_records::parent_index::POSITION))
             .map_or(nil, |value| value.encode(env));
-        let parent = node.parent.as_ref().map_or(nil, |parent| encode_graph_guid(env, parent));
+        let parent = parent.unwrap_or(nil);
         let node_type = enum_name(record.get(field::TYPE)).map_or(nil, |name| name.encode(env));
 
         Ok(map(
@@ -552,6 +708,55 @@ pub mod graph {
                     .map(|index| variants[index].name)
             }
             _ => None,
+        }
+    }
+
+    // Formula cases from OpenPencil's formula signatures, as Figma evaluates them.
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+        use kiwi_records::expression_function as function;
+
+        fn float(value: f64) -> VariableValue {
+            VariableValue::Float(value)
+        }
+
+        fn string(value: &str) -> VariableValue {
+            VariableValue::String(value.to_string())
+        }
+
+        #[test]
+        fn evaluates_operators_with_figma_operand_types() {
+            assert!(matches!(binary(function::MULTIPLY, &float(2.0), &float(4.0)), Some(VariableValue::Float(8.0))));
+            assert!(matches!(
+                binary(function::ADDITION, &string("n="), &float(4.0)),
+                Some(VariableValue::String(text)) if text == "n=4"
+            ));
+            assert!(matches!(
+                ternary(function::TERNARY, &VariableValue::Boolean(true), &string("a"), &string("b")),
+                Some(VariableValue::String(text)) if text == "a"
+            ));
+            assert!(matches!(unary(function::IS_TRUTHY, &string("off")), Some(VariableValue::Boolean(false))));
+            assert!(binary(function::DIVIDE, &float(1.0), &float(0.0)).is_none());
+            assert!(binary(function::SUBTRACTION, &string("a"), &float(1.0)).is_none());
+        }
+
+        #[test]
+        fn writes_numbers_as_text_the_way_figma_does() {
+            assert_eq!(number_text(0.0000001), "0");
+            assert_eq!(number_text(3.0), "3");
+            assert_eq!(number_text(0.125), "0.12");
+            assert_eq!(number_text(0.999), "1.00");
+            assert_eq!(number_text(-0.004), "-0.00");
+            assert_eq!(text(&VariableValue::Boolean(true)).as_deref(), Some("true"));
+        }
+
+        #[test]
+        fn reads_text_and_numbers_as_true_or_false() {
+            assert_eq!(truthy(&string("No ")), Some(false));
+            assert_eq!(truthy(&string("yes")), Some(true));
+            assert_eq!(truthy(&float(0.0)), Some(false));
+            assert_eq!(truthy(&string("")), Some(false));
         }
     }
 }

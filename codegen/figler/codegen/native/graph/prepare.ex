@@ -1,8 +1,6 @@
 defmodule Figler.Codegen.Native.Graph.Prepare do
   @moduledoc """
-  Normalizes source records before interpretation, as OpenPencil's reader does.
-
-  Mirrors `Figler.Scene.Graph.Occurrence.Prepare`:
+  Normalizes source records before interpretation, as OpenPencil's reader does:
 
     * `parameterConsumptionMap` entries of type PROP_REF become `componentPropRefs`, and
       property defaults kept in `varValue` become `initialValue`;

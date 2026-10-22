@@ -2,9 +2,9 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   @moduledoc """
   Component property bindings for the native interpreter.
 
-  Mirrors `Figler.Scene.Graph.Occurrence.Bindings`: a component definition starts a scope with
-  its defaults, and the instance's assignments replace them. Records inside bind their fields
-  through `componentPropRefs`.
+  Following OpenPencil's reader, a component definition starts a scope with its defaults, and
+  the instance's assignments replace them. Records inside bind their fields through
+  `componentPropRefs`.
 
   A value comes from a `ComponentPropValue` or from a variable's value; `prop_value` keeps the
   parts binding reads from either.

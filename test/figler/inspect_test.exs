@@ -66,11 +66,10 @@ defmodule Figler.InspectTest do
 
     graph = %Graph{
       resource: nil,
-      mode: :interpreted,
-      nodes: %{{0, 1} => %Figler.Scene.Node{guid: "0:1", node_type: "canvas"}},
-      unresolved: [{:missing_component, {1, 1}, {2, 2}}]
+      mode: :projected,
+      nodes: %{{0, 1} => %Figler.Scene.Node{guid: "0:1", node_type: "canvas"}}
     }
 
-    assert inspect(graph) == "#Figler.Scene.Graph<mode=interpreted nodes=1 unresolved=1>"
+    assert inspect(graph) == "#Figler.Scene.Graph<mode=projected nodes=1 unresolved=0>"
   end
 end

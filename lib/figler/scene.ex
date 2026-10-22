@@ -121,7 +121,7 @@ defmodule Figler.Scene do
   """
   @spec node(binary() | Index.t() | Graph.t() | reference(), String.t()) :: scene_node() | nil
   def node(%Graph{} = graph, guid) when is_binary(guid),
-    do: graph.nodes |> Map.get(parse_guid!(:node, guid)) |> Query.public_node()
+    do: graph |> Graph.node_at(parse_guid!(:node, guid)) |> Query.public_node()
 
   def node(scene, guid) when is_binary(guid) do
     validate_guid!(:node, guid)
@@ -136,7 +136,7 @@ defmodule Figler.Scene do
   Returns root nodes in scene order.
   """
   @spec roots(binary() | Index.t() | Graph.t() | reference()) :: [scene_node()]
-  def roots(%Graph{} = graph), do: Query.nodes_by_guids(graph, graph.roots)
+  def roots(%Graph{} = graph), do: Query.nodes_by_guids(graph, Graph.root_guids(graph))
 
   def roots(scene) do
     scene
@@ -170,7 +170,7 @@ defmodule Figler.Scene do
   """
   @spec children(binary() | Index.t() | Graph.t() | reference(), String.t()) :: [scene_node()]
   def children(%Graph{} = graph, parent_guid) when is_binary(parent_guid) do
-    Query.nodes_by_guids(graph, Map.get(graph.children, parse_guid!(:children, parent_guid), []))
+    Query.nodes_by_guids(graph, Graph.child_guids(graph, parse_guid!(:children, parent_guid)))
   end
 
   def children(scene, parent_guid) when is_binary(parent_guid) do
@@ -260,7 +260,7 @@ defmodule Figler.Scene do
     node_type = type |> to_string() |> Macro.underscore()
 
     graph
-    |> Query.nodes_by_guids(Map.get(graph.by_type, node_type, []))
+    |> Query.nodes_by_guids(Graph.type_guids(graph, node_type))
     |> Query.apply_field_filter(opts)
   end
 
@@ -286,7 +286,7 @@ defmodule Figler.Scene do
   def named(nodes, name) when is_list(nodes), do: Query.named(nodes, name)
 
   def named(%Graph{} = graph, name) when is_binary(name),
-    do: Query.nodes_by_guids(graph, Map.get(graph.by_name, name, []))
+    do: Query.nodes_by_guids(graph, Graph.name_guids(graph, name))
 
   def named(scene, name) when is_binary(name) do
     scene
@@ -313,8 +313,8 @@ defmodule Figler.Scene do
   def name_contains(%Graph{} = graph, needle, opts) when is_binary(needle) do
     Options.validate_query!(opts)
 
-    graph.nodes
-    |> Map.values()
+    graph
+    |> Graph.all_nodes()
     |> Query.name_contains(needle)
     |> Query.apply_field_filter(opts)
   end
@@ -346,7 +346,7 @@ defmodule Figler.Scene do
           scene_node()
         ]
   def components(nodes) when is_list(nodes), do: Query.components(nodes)
-  def components(%Graph{} = graph), do: graph.nodes |> Map.values() |> Query.components()
+  def components(%Graph{} = graph), do: graph |> Graph.all_nodes() |> Query.components()
 
   def components(scene) do
     scene
@@ -362,7 +362,7 @@ defmodule Figler.Scene do
           scene_node()
         ]
   def with_fills(nodes) when is_list(nodes), do: Query.with_fills(nodes)
-  def with_fills(%Graph{} = graph), do: graph.nodes |> Map.values() |> Query.with_fills()
+  def with_fills(%Graph{} = graph), do: graph |> Graph.all_nodes() |> Query.with_fills()
 
   def with_fills(scene) do
     scene
@@ -378,7 +378,7 @@ defmodule Figler.Scene do
           scene_node()
         ]
   def with_strokes(nodes) when is_list(nodes), do: Query.with_strokes(nodes)
-  def with_strokes(%Graph{} = graph), do: graph.nodes |> Map.values() |> Query.with_strokes()
+  def with_strokes(%Graph{} = graph), do: graph |> Graph.all_nodes() |> Query.with_strokes()
 
   def with_strokes(scene) do
     scene
@@ -405,8 +405,8 @@ defmodule Figler.Scene do
   def text_contains(%Graph{} = graph, needle, opts) when is_binary(needle) do
     Options.validate_query!(opts)
 
-    graph.nodes
-    |> Map.values()
+    graph
+    |> Graph.all_nodes()
     |> Query.text_contains(needle)
     |> Query.apply_field_filter(opts)
   end

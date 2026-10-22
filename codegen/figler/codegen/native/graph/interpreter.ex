@@ -2,16 +2,15 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @moduledoc """
   Expands source records into occurrence trees, resolving instances, natively.
 
-  Mirrors `Figler.Scene.Graph.Occurrence.Interpreter`, a port of OpenPencil's
-  occurrence-scoped instance interpreter. An instance expands its component's subtree;
-  owners contribute layers, each a partial record at a path relative to that owner; where
-  layers overlap, the outermost owner wins.
+  A port of OpenPencil's occurrence-scoped instance interpreter. An instance expands its
+  component's subtree; owners contribute layers, each a partial record at a path relative to
+  that owner; where layers overlap, the outermost owner wins.
 
   Swaps and property assignments are structural layers, routed down to the instance they
   configure before it expands. Every other override is a property claim, applied by its owner
-  onto the built subtree, inner owners before outer ones. Saved derived data is a cache,
-  applied last. Unresolvable overrides become diagnostics; overrides addressing a component
-  an outer swap replaced are stale and dropped.
+  onto the built subtree, inner owners before outer ones. Saved derived data is a cache, applied
+  last. Unresolvable overrides become diagnostics; overrides addressing a component an outer
+  swap replaced are stale and dropped.
   """
 
   use RustQ.Meta,

@@ -17,7 +17,8 @@ defmodule Figler.Scene.GraphTest do
   test "graph public APIs expose effective scene data" do
     graph = Scene.graph(message_payload())
 
-    assert %Graph{mode: :interpreted, unresolved: []} = graph
+    assert %Graph{mode: :interpreted} = graph
+    assert Graph.unresolved(graph) == []
     assert Graph.stats(graph).node_count == 2
 
     assert Scene.query(graph, "//canvas") == [scene_canvas()]
@@ -69,7 +70,7 @@ defmodule Figler.Scene.GraphTest do
 
     assert %Graph{mode: :projected} = graph
     assert Scene.node(graph, "0:1") == scene_canvas()
-    assert graph.roots == [{0, 0}]
+    assert Graph.root_guids(graph) == [{0, 0}]
   end
 
   test "profiles graph construction by phase" do
@@ -122,6 +123,38 @@ defmodule Figler.Scene.GraphTest do
   test "keeps each node's effective record", %{instances: graph} do
     assert %{type: :text, text_data: %{characters: "Different"}} =
              Graph.record(graph, "clone:9:1472/9:1466/9:1462")
+  end
+
+  test "fetches nodes and records by GUID", %{instances: graph} do
+    guid = "clone:9:1472/9:1466/9:1462"
+
+    assert {:ok, %Node{guid: ^guid, text: "Different"}} = Graph.fetch(graph, guid)
+    assert Graph.fetch(graph, "123:456") == :error
+    assert %Node{guid: ^guid} = Graph.fetch!(graph, guid)
+    assert_raise KeyError, fn -> Graph.fetch!(graph, "123:456") end
+
+    assert %{type: :text, text_data: %{characters: "Different"}} =
+             record = Graph.record(graph, guid, fields: [:type, :text_data])
+
+    assert record |> Map.keys() |> Enum.sort() == [:__kiwi_module__, :text_data, :type]
+
+    assert %Figler.Schema.NodeChange{text_data: %Figler.Schema.TextData{characters: "Different"}} =
+             Graph.record(graph, guid, as: :struct)
+
+    assert %{^guid => %{name: _name}} =
+             Graph.records(graph, [guid, "123:456"], fields: [:name])
+
+    assert map_size(Graph.records(graph, [guid, "123:456"])) == 1
+  end
+
+  test "materializes named parts and enumerates nodes", %{instances: graph} do
+    assert %{roots: roots, children: children} = Graph.to_map(graph, only: [:roots, :children])
+    assert roots == Graph.root_guids(graph)
+    assert children[hd(roots)] == Graph.child_guids(graph, hd(roots))
+    assert_raise ArgumentError, fn -> Graph.to_map(graph, only: [:everything]) end
+
+    assert Enum.count(graph) == Graph.stats(graph).node_count
+    assert "clone:9:1472/9:1466/9:1462" in Enum.map(graph, & &1.guid)
   end
 
   test "returns nil for non-instance nodes", %{instances: graph} do

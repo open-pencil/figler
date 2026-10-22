@@ -1,21 +1,24 @@
-defmodule Figler.Scene.Graph.Occurrence.InterpreterTest do
+defmodule Figler.Native.InterpreterTest do
   # Ported from OpenPencil's packages/fig/tests/instance-overrides, with records
   # captured from real Figma files. OpenPencil throws on unresolved paths unless
-  # a callback is given; Figler always reports them as diagnostics.
+  # a callback is given; Figler always reports them as diagnostics. Each case reads
+  # the occurrence tree the native interpreter builds for one record.
   use ExUnit.Case, async: true
 
-  alias Figler.Scene.Graph.Occurrence
-  alias Figler.Scene.Graph.Occurrence.Interpreter
-  alias Figler.Scene.Graph.Occurrence.SourceIndex
+  alias Figler.Native.Module, as: Native
   alias Figler.Test.NodeChangeJSON
+  alias Figler.Test.SceneFixture
 
   @fixtures "test/fixtures/openpencil/instance-overrides"
 
-  defp interpret(records, id), do: records |> SourceIndex.new() |> Interpreter.interpret(id)
+  defp interpret(records, id) do
+    {payload, schema} = SceneFixture.records_source(records)
+    Native.graph_interpret(payload, schema, id)
+  end
 
   defp fixture(name), do: NodeChangeJSON.read!(Path.join(@fixtures, name))
 
-  defp texts(%Occurrence{properties: properties, children: children}) do
+  defp texts(%{properties: properties, children: children}) do
     own =
       if Map.get(properties, :type) == :text,
         do: [get_in(properties, [:text_data, :characters]) || ""],
@@ -53,7 +56,7 @@ defmodule Figler.Scene.Graph.Occurrence.InterpreterTest do
       {root, diagnostics} = interpret(fixture("stale-chevron-override.json"), {7, 95})
 
       assert diagnostics == [{:unresolved_property, {7, 95}, {7, 94}, [{7, 93}], :missing_target}]
-      assert [%Occurrence{source_id: {94, 5438}, properties: vector}] = root.children
+      assert [%{source_id: {94, 5438}, properties: vector}] = root.children
       refute Map.has_key?(vector, :stroke_paints)
     end
 
@@ -126,7 +129,7 @@ defmodule Figler.Scene.Graph.Occurrence.InterpreterTest do
       {root, []} = interpret(records, {10_965, 1263})
 
       assert root.main_component_id == {10_965, 1261}
-      assert %{x: 160, y: 64} = root.properties.size
+      assert %{x: 160.0, y: 64.0} = root.properties.size
       assert [label] = root.children
       assert label.properties.text_data.characters == "Replacement label"
     end
@@ -134,7 +137,7 @@ defmodule Figler.Scene.Graph.Occurrence.InterpreterTest do
     test "reads explicit retained size, opacity and text", %{records: records} do
       {root, []} = interpret(records, {10_965, 1266})
 
-      assert %{x: 120, y: 50} = root.properties.size
+      assert %{x: 120.0, y: 50.0} = root.properties.size
       assert_in_delta root.properties.opacity, 0.6, 1.0e-6
       assert hd(root.children).properties.text_data.characters == "Edited label"
     end
@@ -144,9 +147,9 @@ defmodule Figler.Scene.Graph.Occurrence.InterpreterTest do
       [swapped] = root.children
 
       assert swapped.source_id == {10_965, 1270}
-      assert %{x: 100, y: 40} = swapped.properties.size
+      assert %{x: 100.0, y: 40.0} = swapped.properties.size
       assert swapped.main_component_id == {10_965, 1261}
-      assert [%Occurrence{source_id: {10_965, 1262}} = label] = swapped.children
+      assert [%{source_id: {10_965, 1262}} = label] = swapped.children
       assert label.properties.text_data.characters == "Inherited edit"
     end
 
@@ -154,7 +157,7 @@ defmodule Figler.Scene.Graph.Occurrence.InterpreterTest do
       {root, []} = interpret(records, {10_965, 1276})
       [swapped] = root.children
 
-      assert %{x: 100, y: 40} = swapped.properties.size
+      assert %{x: 100.0, y: 40.0} = swapped.properties.size
       assert swapped.main_component_id == {10_965, 1261}
       assert hd(swapped.children).properties.text_data.characters == "Replacement label"
     end

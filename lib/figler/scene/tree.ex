@@ -57,13 +57,13 @@ defmodule Figler.Scene.Tree do
       {:ok, guid} ->
         graph_guid = GUID.parse!(guid)
 
-        if node = Map.get(graph.nodes, graph_guid) do
+        if node = Graph.node_at(graph, graph_guid) do
           graph_node(graph, node, depth)
         end
 
       :error ->
         graph
-        |> Query.nodes_by_guids(graph.roots)
+        |> Query.nodes_by_guids(Graph.root_guids(graph))
         |> Enum.map(&graph_node(graph, &1, depth))
     end
   end
@@ -91,5 +91,5 @@ defmodule Figler.Scene.Tree do
     end
   end
 
-  defp child_guids(graph, guid), do: Map.get(graph.children, GUID.parse!(guid), [])
+  defp child_guids(graph, guid), do: Graph.child_guids(graph, GUID.parse!(guid))
 end
