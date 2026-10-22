@@ -5,8 +5,8 @@ defmodule Figler.Native.GraphTest do
   alias Figler.Native.Module, as: Native
   alias Figler.Scene.Graph.Materialize
   alias Figler.Scene.Graph.Occurrence.Interpreter
-  alias Figler.Scene.Graph.Variables
   alias Figler.Scene.Graph.Occurrence.SourceIndex
+  alias Figler.Scene.Graph.Variables
   alias Figler.Scene.Input
 
   @fixture "test/fixtures/openpencil/variable-override-precedence.fig"
