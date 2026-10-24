@@ -20,8 +20,8 @@
 - Unresolved diagnostics include
   `{:unsupported_variable_expression, variable, mode}` for variable expressions
   OpenPencil cannot evaluate.
-- `Figler.Native.Module.graph_interpret/3` returns one record's interpreted
-  occurrence tree and diagnostics, for inspecting the interpreter.
+- The native `graph_interpret/3` returns one record's interpreted occurrence
+  tree and diagnostics, for inspecting the interpreter.
 - **Breaking:** the resolver stage options (`:stages`, `:only`, `:until`,
   `:skip`) and the graph's `seed_nodes/2` function are removed.
   `Figler.Scene.Graph.profile/2` reports `:decode`, `:index`, and `:interpret`

@@ -236,8 +236,8 @@ defmodule Figler.Scene.Graph.OpenPencilOracle do
   end
 
   @doc """
-  Projects an occurrence tree, as `Figler.Native.Module.graph_interpret/3` returns it, into
-  the oracle's shape.
+  Projects an occurrence tree, as the native `graph_interpret/3` returns it, into the
+  oracle's shape.
   """
   @spec project_occurrence(map()) :: map()
   def project_occurrence(%{properties: properties} = occurrence) do
