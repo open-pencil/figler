@@ -1,4 +1,4 @@
-defmodule Figler.SchemaEvolutionTest do
+defmodule Figler.Scene.InputTest do
   use ExUnit.Case, async: true
 
   alias Figler.Scene.Input

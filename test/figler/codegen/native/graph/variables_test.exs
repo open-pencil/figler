@@ -1,4 +1,4 @@
-defmodule Figler.Scene.Graph.VariablesTest do
+defmodule Figler.Codegen.Native.Graph.VariablesTest do
   use ExUnit.Case, async: true
 
   alias Figler.Native.Module, as: Native

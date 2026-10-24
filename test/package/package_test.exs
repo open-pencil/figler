@@ -39,8 +39,7 @@ defmodule Figler.PackageTest do
     deps = Mix.Project.config() |> Keyword.fetch!(:deps)
 
     for app <- [:rustq, :reach] do
-      # A Hex dependency has a requirement; a git dependency only options.
-      opts = deps |> Enum.find(&(elem(&1, 0) == app)) |> Tuple.to_list() |> List.last()
+      {^app, _requirement, opts} = Enum.find(deps, &(elem(&1, 0) == app))
 
       assert Keyword.fetch!(opts, :only) == [:dev, :test]
       refute Keyword.get(opts, :override, false)

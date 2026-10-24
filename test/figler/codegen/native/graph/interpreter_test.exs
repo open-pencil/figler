@@ -1,4 +1,4 @@
-defmodule Figler.Native.InterpreterTest do
+defmodule Figler.Codegen.Native.Graph.InterpreterTest do
   # Ported from OpenPencil's packages/fig/tests/instance-overrides, with records
   # captured from real Figma files. OpenPencil throws on unresolved paths unless
   # a callback is given; Figler always reports them as diagnostics. Each case reads

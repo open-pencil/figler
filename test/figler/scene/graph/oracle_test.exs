@@ -1,4 +1,4 @@
-defmodule Figler.OracleFixtureTest do
+defmodule Figler.Scene.Graph.OracleTest do
   use ExUnit.Case, async: true
 
   alias Figler.Scene.Graph.Oracle
