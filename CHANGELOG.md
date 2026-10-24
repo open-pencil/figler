@@ -40,6 +40,9 @@
 - Shared fill, stroke, effect, grid, and text styles are applied to the layers
   that reference them. `resolve_styles` now defaults to `:known`; pass `false`
   to keep the values the file saved.
+- Depend on kiwi_codec 0.5.0 from Hex, and on RustQ 1.0.0-rc.15 for code
+  generation. kiwi_codec's Rustler generator now compiles as part of the
+  dependency, so Figler no longer compiles its sources itself.
 
 ### Fixed
 

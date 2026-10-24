@@ -28,7 +28,7 @@ defmodule Figler.MixProject do
     [extra_applications: [:logger]]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "codegen"]
+  defp elixirc_paths(:test), do: ["lib", "codegen", "test/support"]
   defp elixirc_paths(_env), do: ["lib"]
 
   defp aliases do
@@ -181,30 +181,18 @@ defmodule Figler.MixProject do
     ]
   end
 
-  # Runtime-schema decoding is unreleased; KIWI_CODEC_PATH points at a local checkout instead.
+  # KIWI_CODEC_PATH and RUSTQ_PATH point at local checkouts, to try changes to them here.
   defp kiwi_codec_dep do
     case System.get_env("KIWI_CODEC_PATH") do
-      nil ->
-        {:kiwi_codec,
-         github: "dannote/kiwi_codec", branch: "runtime-schema-unknown-fields", override: true}
-
-      path ->
-        {:kiwi_codec, path: path, override: true}
+      nil -> {:kiwi_codec, "~> 0.5.0"}
+      path -> {:kiwi_codec, path: path, override: true}
     end
   end
 
-  # RUSTQ_PATH points RustQ at a local checkout.
   defp rustq_dep do
     case System.get_env("RUSTQ_PATH") do
-      nil ->
-        {:rustq,
-         git: "https://github.com/elixir-crab/rustq.git",
-         branch: "lowering-gaps-from-figler",
-         only: [:dev, :test],
-         runtime: false}
-
-      path ->
-        {:rustq, path: path, only: [:dev, :test], runtime: false, override: true}
+      nil -> {:rustq, "~> 1.0.0-rc.15", only: [:dev, :test], runtime: false}
+      path -> {:rustq, path: path, only: [:dev, :test], runtime: false, override: true}
     end
   end
 

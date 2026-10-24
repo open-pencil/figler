@@ -1,8 +1,3 @@
-unless Code.ensure_loaded?(Figler.Mix.KiwiCodegen),
-  do: Code.require_file("lib/mix/figler/kiwi_codegen.ex")
-
-Figler.Mix.KiwiCodegen.load!()
-
 use RustQ.Config
 
 alias RustQ.Rustler.Nif
