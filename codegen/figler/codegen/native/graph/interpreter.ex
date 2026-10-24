@@ -394,10 +394,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   @spec assigned_visible?(R.ref(Occurrence.binding_claim())) :: R.bool()
   defrust assigned_visible?(claim) do
-    case {claim.field, claim.origin} do
-      {:visible, :assignment} -> true
-      _ -> false
-    end
+    match?({:visible, :assignment}, {claim.field, claim.origin})
   end
 
   # A component and its override key both address the root of an expansion.

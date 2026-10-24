@@ -105,7 +105,7 @@ defmodule Figler.Render.Shape.Outline do
     end
 
     corners
-    |> Enum.with_index()
+    |> Stream.with_index()
     |> Enum.reduce(min(max(smoothing, 0.0), 1.0), fn
       {%{extent: extent}, _index}, fitted when not (extent > 0) ->
         fitted
@@ -127,9 +127,10 @@ defmodule Figler.Render.Shape.Outline do
     p = (1 + smoothing) * extent
     ease = turn * smoothing / 2
     to_ease = radius * :math.tan(ease / 2)
+    sin_ease = :math.sin(ease)
     c = to_ease * :math.cos(ease)
-    d = to_ease * :math.sin(ease)
-    arc_start = extent - radius * :math.sin(ease) - d
+    d = to_ease * sin_ease
+    arc_start = extent - radius * sin_ease - d
     b = (p - arc_start - c - d) / 3
     %{p: p, a: 2 * b, b: b, c: c, d: d, ease: ease}
   end

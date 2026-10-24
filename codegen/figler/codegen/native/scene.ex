@@ -19,6 +19,7 @@ defmodule Figler.Codegen.Native.Scene do
   alias Figler.Scene.Projection
   alias KiwiCodec.RustlerGenerator.Skip
   alias RustQ.Rust.AST.Builder, as: A
+  alias RustQ.Rust.Identifier
   alias RustQ.Rustler.Nif
 
   def render(definition_map) do
@@ -77,7 +78,7 @@ defmodule Figler.Codegen.Native.Scene do
     for %RustQ.Syn.Function{name: name, visibility: :public} <-
           RustQ.Syn.parse!(File.read!(@nif_template)).items,
         String.ends_with?(name, "_impl"),
-        do: {name |> String.trim_trailing("_impl") |> String.to_atom(), []}
+        do: {name |> String.trim_trailing("_impl") |> Identifier.atom!(), []}
   end
 
   @doc "Metadata for the template NIFs, for generating their Elixir stubs."

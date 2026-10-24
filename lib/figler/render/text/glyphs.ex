@@ -151,7 +151,7 @@ defmodule Figler.Render.Text.Glyphs do
   # Pen position, then the rotation (negated for the y-down canvas), then font units to pixels
   # with the font's y-up axis flipped.
   defp matrix(glyph, snap?) do
-    y = if snap?, do: round(glyph.y) * 1.0, else: glyph.y
+    y = if snap?, do: :erlang.float(round(glyph.y)), else: glyph.y
     angle = 0.0 - glyph.rotation
     cos = :math.cos(angle) * glyph.font_size
     sin = :math.sin(angle) * glyph.font_size

@@ -222,8 +222,9 @@ defmodule Figler.Render.Skia.Paint do
   defp turned_image_matrix(rotation, image) when is_number(rotation) do
     radians = rotation * :math.pi() / 180.0
     {cos, sin} = {:math.cos(radians), :math.sin(radians)}
-    turned_width = image.width * abs(cos) + image.height * abs(sin)
-    turned_height = image.width * abs(sin) + image.height * abs(cos)
+    {abs_cos, abs_sin} = {abs(cos), abs(sin)}
+    turned_width = image.width * abs_cos + image.height * abs_sin
+    turned_height = image.width * abs_sin + image.height * abs_cos
 
     matrix =
       {1.0, 0.0, turned_width / 2, 0.0, 1.0, turned_height / 2}

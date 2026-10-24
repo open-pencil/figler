@@ -304,11 +304,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
         ) ::
           R.option(provenance())
   defrust provenance(occurrence, guid, owner) do
-    clone =
-      case guid do
-        {:clone, _clone} -> true
-        {:source, _id} -> false
-      end
+    clone = match?({:clone, _clone}, guid)
 
     if clone or instance?(occurrence) or not occurrence.property_claims.is_empty() or
          not occurrence.binding_claims.is_empty() do
