@@ -35440,7 +35440,8 @@ pub mod kiwi_record_definitions {
 
 
 pub mod kiwi_records {
-    pub mod message_type {
+    pub struct MessageType {}
+    impl MessageType {
         pub const JOIN_START: u32 = 0;
         pub const NODE_CHANGES: u32 = 1;
         pub const USER_CHANGES: u32 = 2;
@@ -35467,23 +35468,28 @@ pub mod kiwi_records {
         pub const CLIENT_RENDERED: u32 = 23;
         pub const BUZZ_APPROVAL_CHANGE: u32 = 24;
     }
-    pub mod axis {
+    pub struct Axis {}
+    impl Axis {
         pub const X: u32 = 0;
         pub const Y: u32 = 1;
     }
-    pub mod access {
+    pub struct Access {}
+    impl Access {
         pub const READ_ONLY: u32 = 0;
         pub const READ_WRITE: u32 = 1;
     }
-    pub mod node_phase {
+    pub struct NodePhase {}
+    impl NodePhase {
         pub const CREATED: u32 = 0;
         pub const REMOVED: u32 = 1;
     }
-    pub mod winding_rule {
+    pub struct WindingRule {}
+    impl WindingRule {
         pub const NONZERO: u32 = 0;
         pub const ODD: u32 = 1;
     }
-    pub mod node_type {
+    pub struct NodeType {}
+    impl NodeType {
         pub const NONE: u32 = 0;
         pub const DOCUMENT: u32 = 1;
         pub const CANVAS: u32 = 2;
@@ -35550,7 +35556,8 @@ pub mod kiwi_records {
         pub const CUSTOM_EFFECT_INSTANCE: u32 = 63;
         pub const NATIVE_CODE_LAYER_INSTANCE: u32 = 64;
     }
-    pub mod shape_with_text_type {
+    pub struct ShapeWithTextType {}
+    impl ShapeWithTextType {
         pub const SQUARE: u32 = 0;
         pub const ELLIPSE: u32 = 1;
         pub const DIAMOND: u32 = 2;
@@ -35582,7 +35589,8 @@ pub mod kiwi_records {
         pub const SPEECH_BUBBLE: u32 = 28;
         pub const INTERNAL_STORAGE: u32 = 29;
     }
-    pub mod blend_mode {
+    pub struct BlendMode {}
+    impl BlendMode {
         pub const PASS_THROUGH: u32 = 0;
         pub const NORMAL: u32 = 1;
         pub const DARKEN: u32 = 2;
@@ -35603,7 +35611,8 @@ pub mod kiwi_records {
         pub const COLOR: u32 = 17;
         pub const LUMINOSITY: u32 = 18;
     }
-    pub mod paint_type {
+    pub struct PaintType {}
+    impl PaintType {
         pub const SOLID: u32 = 0;
         pub const GRADIENT_LINEAR: u32 = 1;
         pub const GRADIENT_RADIAL: u32 = 2;
@@ -35616,13 +35625,15 @@ pub mod kiwi_records {
         pub const NOISE: u32 = 9;
         pub const CUSTOM: u32 = 10;
     }
-    pub mod image_scale_mode {
+    pub struct ImageScaleMode {}
+    impl ImageScaleMode {
         pub const STRETCH: u32 = 0;
         pub const FIT: u32 = 1;
         pub const FILL: u32 = 2;
         pub const TILE: u32 = 3;
     }
-    pub mod effect_type {
+    pub struct EffectType {}
+    impl EffectType {
         pub const INNER_SHADOW: u32 = 0;
         pub const DROP_SHADOW: u32 = 1;
         pub const FOREGROUND_BLUR: u32 = 2;
@@ -35634,7 +35645,8 @@ pub mod kiwi_records {
         pub const GLASS: u32 = 8;
         pub const CUSTOM: u32 = 9;
     }
-    pub mod text_case {
+    pub struct TextCase {}
+    impl TextCase {
         pub const ORIGINAL: u32 = 0;
         pub const UPPER: u32 = 1;
         pub const LOWER: u32 = 2;
@@ -35642,26 +35654,31 @@ pub mod kiwi_records {
         pub const SMALL_CAPS: u32 = 4;
         pub const SMALL_CAPS_FORCED: u32 = 5;
     }
-    pub mod text_decoration {
+    pub struct TextDecoration {}
+    impl TextDecoration {
         pub const NONE: u32 = 0;
         pub const UNDERLINE: u32 = 1;
         pub const STRIKETHROUGH: u32 = 2;
     }
-    pub mod text_decoration_style {
+    pub struct TextDecorationStyle {}
+    impl TextDecorationStyle {
         pub const SOLID: u32 = 0;
         pub const DOTTED: u32 = 1;
         pub const WAVY: u32 = 2;
     }
-    pub mod leading_trim {
+    pub struct LeadingTrim {}
+    impl LeadingTrim {
         pub const NONE: u32 = 0;
         pub const CAP_HEIGHT: u32 = 1;
     }
-    pub mod number_units {
+    pub struct NumberUnits {}
+    impl NumberUnits {
         pub const RAW: u32 = 0;
         pub const PIXELS: u32 = 1;
         pub const PERCENT: u32 = 2;
     }
-    pub mod constraint_type {
+    pub struct ConstraintType {}
+    impl ConstraintType {
         pub const MIN: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const MAX: u32 = 2;
@@ -35670,13 +35687,15 @@ pub mod kiwi_records {
         pub const FIXED_MIN: u32 = 5;
         pub const FIXED_MAX: u32 = 6;
     }
-    pub mod stroke_align {
+    pub struct StrokeAlign {}
+    impl StrokeAlign {
         pub const CENTER: u32 = 0;
         pub const INSIDE: u32 = 1;
         pub const OUTSIDE: u32 = 2;
         pub const OFFSET: u32 = 3;
     }
-    pub mod stroke_cap {
+    pub struct StrokeCap {}
+    impl StrokeCap {
         pub const NONE: u32 = 0;
         pub const ROUND: u32 = 1;
         pub const SQUARE: u32 = 2;
@@ -35699,29 +35718,34 @@ pub mod kiwi_records {
         pub const ERD_ONE: u32 = 19;
         pub const ERD_MANY: u32 = 20;
     }
-    pub mod stroke_join {
+    pub struct StrokeJoin {}
+    impl StrokeJoin {
         pub const MITER: u32 = 0;
         pub const BEVEL: u32 = 1;
         pub const ROUND: u32 = 2;
     }
-    pub mod boolean_operation {
+    pub struct BooleanOperation {}
+    impl BooleanOperation {
         pub const UNION: u32 = 0;
         pub const INTERSECT: u32 = 1;
         pub const SUBTRACT: u32 = 2;
         pub const XOR: u32 = 3;
     }
-    pub mod text_align_horizontal {
+    pub struct TextAlignHorizontal {}
+    impl TextAlignHorizontal {
         pub const LEFT: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const RIGHT: u32 = 2;
         pub const JUSTIFIED: u32 = 3;
     }
-    pub mod text_align_vertical {
+    pub struct TextAlignVertical {}
+    impl TextAlignVertical {
         pub const TOP: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const BOTTOM: u32 = 2;
     }
-    pub mod mouse_cursor {
+    pub struct MouseCursor {}
+    impl MouseCursor {
         pub const DEFAULT: u32 = 0;
         pub const CROSSHAIR: u32 = 1;
         pub const EYEDROPPER: u32 = 2;
@@ -35734,12 +35758,14 @@ pub mod kiwi_records {
         pub const HIGHLIGHTER: u32 = 9;
         pub const LASSO: u32 = 10;
     }
-    pub mod vector_mirror {
+    pub struct VectorMirror {}
+    impl VectorMirror {
         pub const NONE: u32 = 0;
         pub const ANGLE: u32 = 1;
         pub const ANGLE_AND_LENGTH: u32 = 2;
     }
-    pub mod image_type {
+    pub struct ImageType {}
+    impl ImageType {
         pub const PNG: u32 = 0;
         pub const JPEG: u32 = 1;
         pub const SVG: u32 = 2;
@@ -35747,55 +35773,65 @@ pub mod kiwi_records {
         pub const MP4: u32 = 4;
         pub const GIF: u32 = 5;
     }
-    pub mod export_constraint_type {
+    pub struct ExportConstraintType {}
+    impl ExportConstraintType {
         pub const CONTENT_SCALE: u32 = 0;
         pub const CONTENT_WIDTH: u32 = 1;
         pub const CONTENT_HEIGHT: u32 = 2;
     }
-    pub mod layout_grid_type {
+    pub struct LayoutGridType {}
+    impl LayoutGridType {
         pub const MIN: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const STRETCH: u32 = 2;
         pub const MAX: u32 = 3;
     }
-    pub mod layout_grid_pattern {
+    pub struct LayoutGridPattern {}
+    impl LayoutGridPattern {
         pub const STRIPES: u32 = 0;
         pub const GRID: u32 = 1;
     }
-    pub mod text_auto_resize {
+    pub struct TextAutoResize {}
+    impl TextAutoResize {
         pub const NONE: u32 = 0;
         pub const WIDTH_AND_HEIGHT: u32 = 1;
         pub const HEIGHT: u32 = 2;
     }
-    pub mod text_truncation {
+    pub struct TextTruncation {}
+    impl TextTruncation {
         pub const DISABLED: u32 = 0;
         pub const ENDING: u32 = 1;
     }
-    pub mod style_set_type {
+    pub struct StyleSetType {}
+    impl StyleSetType {
         pub const PERSONAL: u32 = 0;
         pub const TEAM: u32 = 1;
         pub const CUSTOM: u32 = 2;
         pub const FREQUENCY: u32 = 3;
         pub const TEMPORARY: u32 = 4;
     }
-    pub mod style_set_content_type {
+    pub struct StyleSetContentType {}
+    impl StyleSetContentType {
         pub const SOLID: u32 = 0;
         pub const GRADIENT: u32 = 1;
         pub const IMAGE: u32 = 2;
     }
-    pub mod stack_mode {
+    pub struct StackMode {}
+    impl StackMode {
         pub const NONE: u32 = 0;
         pub const HORIZONTAL: u32 = 1;
         pub const VERTICAL: u32 = 2;
         pub const GRID: u32 = 3;
     }
-    pub mod stack_align {
+    pub struct StackAlign {}
+    impl StackAlign {
         pub const MIN: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const MAX: u32 = 2;
         pub const BASELINE: u32 = 3;
     }
-    pub mod stack_counter_align {
+    pub struct StackCounterAlign {}
+    impl StackCounterAlign {
         pub const MIN: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const MAX: u32 = 2;
@@ -35803,41 +35839,49 @@ pub mod kiwi_records {
         pub const AUTO: u32 = 4;
         pub const BASELINE: u32 = 5;
     }
-    pub mod stack_justify {
+    pub struct StackJustify {}
+    impl StackJustify {
         pub const MIN: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const MAX: u32 = 2;
         pub const SPACE_EVENLY: u32 = 3;
         pub const SPACE_BETWEEN: u32 = 4;
     }
-    pub mod grid_child_align {
+    pub struct GridChildAlign {}
+    impl GridChildAlign {
         pub const AUTO: u32 = 0;
         pub const MIN: u32 = 1;
         pub const CENTER: u32 = 2;
         pub const MAX: u32 = 3;
     }
-    pub mod grid_auto_tracks {
+    pub struct GridAutoTracks {}
+    impl GridAutoTracks {
         pub const NONE: u32 = 0;
         pub const ROWS: u32 = 1;
     }
-    pub mod stack_size {
+    pub struct StackSize {}
+    impl StackSize {
         pub const FIXED: u32 = 0;
         pub const RESIZE_TO_FIT: u32 = 1;
         pub const RESIZE_TO_FIT_WITH_IMPLICIT_SIZE: u32 = 2;
     }
-    pub mod stack_positioning {
+    pub struct StackPositioning {}
+    impl StackPositioning {
         pub const AUTO: u32 = 0;
         pub const ABSOLUTE: u32 = 1;
     }
-    pub mod stack_wrap {
+    pub struct StackWrap {}
+    impl StackWrap {
         pub const NO_WRAP: u32 = 0;
         pub const WRAP: u32 = 1;
     }
-    pub mod stack_counter_align_content {
+    pub struct StackCounterAlignContent {}
+    impl StackCounterAlignContent {
         pub const AUTO: u32 = 0;
         pub const SPACE_BETWEEN: u32 = 1;
     }
-    pub mod connection_type {
+    pub struct ConnectionType {}
+    impl ConnectionType {
         pub const NONE: u32 = 0;
         pub const INTERNAL_NODE: u32 = 1;
         pub const URL: u32 = 2;
@@ -35850,7 +35894,8 @@ pub mod kiwi_records {
         pub const OBJECT_ANIMATION: u32 = 9;
         pub const UPDATE_ANIMATION_TIMELINE_STATE: u32 = 10;
     }
-    pub mod interaction_type {
+    pub struct InteractionType {}
+    impl InteractionType {
         pub const ON_CLICK: u32 = 0;
         pub const AFTER_TIMEOUT: u32 = 1;
         pub const MOUSE_IN: u32 = 2;
@@ -35868,7 +35913,8 @@ pub mod kiwi_records {
         pub const MOUSE_ENTER: u32 = 14;
         pub const MOUSE_LEAVE: u32 = 15;
     }
-    pub mod transition_type {
+    pub struct TransitionType {}
+    impl TransitionType {
         pub const INSTANT_TRANSITION: u32 = 0;
         pub const DISSOLVE: u32 = 1;
         pub const FADE: u32 = 2;
@@ -35896,7 +35942,8 @@ pub mod kiwi_records {
         pub const SMART_ANIMATE: u32 = 24;
         pub const SCROLL_ANIMATE: u32 = 25;
     }
-    pub mod easing_type {
+    pub struct EasingType {}
+    impl EasingType {
         pub const IN_CUBIC: u32 = 0;
         pub const OUT_CUBIC: u32 = 1;
         pub const INOUT_CUBIC: u32 = 2;
@@ -35913,46 +35960,55 @@ pub mod kiwi_records {
         pub const SPRING_PRESET_THREE: u32 = 13;
         pub const HOLD: u32 = 14;
     }
-    pub mod scroll_direction {
+    pub struct ScrollDirection {}
+    impl ScrollDirection {
         pub const NONE: u32 = 0;
         pub const HORIZONTAL: u32 = 1;
         pub const VERTICAL: u32 = 2;
         pub const BOTH: u32 = 3;
     }
-    pub mod scroll_contracted_state {
+    pub struct ScrollContractedState {}
+    impl ScrollContractedState {
         pub const EXPANDED: u32 = 0;
         pub const CONTRACTED: u32 = 1;
     }
-    pub mod guid {
+    pub struct Guid {}
+    impl Guid {
         pub const SESSION_ID: u32 = 1;
         pub const LOCAL_ID: u32 = 2;
     }
-    pub mod color {
+    pub struct Color {}
+    impl Color {
         pub const R: u32 = 1;
         pub const G: u32 = 2;
         pub const B: u32 = 3;
         pub const A: u32 = 4;
     }
-    pub mod vector {
+    pub struct Vector {}
+    impl Vector {
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
     }
-    pub mod rect {
+    pub struct Rect {}
+    impl Rect {
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
         pub const W: u32 = 3;
         pub const H: u32 = 4;
     }
-    pub mod color_stop {
+    pub struct ColorStop {}
+    impl ColorStop {
         pub const COLOR: u32 = 1;
         pub const POSITION: u32 = 2;
     }
-    pub mod color_stop_var {
+    pub struct ColorStopVar {}
+    impl ColorStopVar {
         pub const COLOR: u32 = 1;
         pub const COLOR_VAR: u32 = 2;
         pub const POSITION: u32 = 3;
     }
-    pub mod matrix {
+    pub struct Matrix {}
+    impl Matrix {
         pub const M00: u32 = 1;
         pub const M01: u32 = 2;
         pub const M02: u32 = 3;
@@ -35960,35 +36016,42 @@ pub mod kiwi_records {
         pub const M11: u32 = 5;
         pub const M12: u32 = 6;
     }
-    pub mod parent_index {
+    pub struct ParentIndex {}
+    impl ParentIndex {
         pub const GUID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
-    pub mod number {
+    pub struct Number {}
+    impl Number {
         pub const VALUE: u32 = 1;
         pub const UNITS: u32 = 2;
     }
-    pub mod font_name {
+    pub struct FontName {}
+    impl FontName {
         pub const FAMILY: u32 = 1;
         pub const STYLE: u32 = 2;
         pub const POSTSCRIPT: u32 = 3;
     }
-    pub mod font_variant_numeric_figure {
+    pub struct FontVariantNumericFigure {}
+    impl FontVariantNumericFigure {
         pub const NORMAL: u32 = 0;
         pub const LINING: u32 = 1;
         pub const OLDSTYLE: u32 = 2;
     }
-    pub mod font_variant_numeric_spacing {
+    pub struct FontVariantNumericSpacing {}
+    impl FontVariantNumericSpacing {
         pub const NORMAL: u32 = 0;
         pub const PROPORTIONAL: u32 = 1;
         pub const TABULAR: u32 = 2;
     }
-    pub mod font_variant_numeric_fraction {
+    pub struct FontVariantNumericFraction {}
+    impl FontVariantNumericFraction {
         pub const NORMAL: u32 = 0;
         pub const DIAGONAL: u32 = 1;
         pub const STACKED: u32 = 2;
     }
-    pub mod font_variant_caps {
+    pub struct FontVariantCaps {}
+    impl FontVariantCaps {
         pub const NORMAL: u32 = 0;
         pub const SMALL: u32 = 1;
         pub const ALL_SMALL: u32 = 2;
@@ -35997,35 +36060,42 @@ pub mod kiwi_records {
         pub const UNICASE: u32 = 5;
         pub const TITLING: u32 = 6;
     }
-    pub mod font_variant_position {
+    pub struct FontVariantPosition {}
+    impl FontVariantPosition {
         pub const NORMAL: u32 = 0;
         pub const SUB: u32 = 1;
         pub const SUPER: u32 = 2;
     }
-    pub mod font_style {
+    pub struct FontStyle {}
+    impl FontStyle {
         pub const NORMAL: u32 = 0;
         pub const ITALIC: u32 = 1;
     }
-    pub mod semantic_weight {
+    pub struct SemanticWeight {}
+    impl SemanticWeight {
         pub const NORMAL: u32 = 0;
         pub const BOLD: u32 = 1;
     }
-    pub mod semantic_italic {
+    pub struct SemanticItalic {}
+    impl SemanticItalic {
         pub const NORMAL: u32 = 0;
         pub const ITALIC: u32 = 1;
     }
-    pub mod code_snapshot_state {
+    pub struct CodeSnapshotState {}
+    impl CodeSnapshotState {
         pub const INITIAL: u32 = 0;
         pub const SNAPSHOTTING: u32 = 1;
         pub const OK: u32 = 2;
         pub const SNAPSHOT_ERROR: u32 = 3;
         pub const LLM_IN_PROGRESS: u32 = 4;
     }
-    pub mod snapshot_capture_mode {
+    pub struct SnapshotCaptureMode {}
+    impl SnapshotCaptureMode {
         pub const FULL: u32 = 0;
         pub const PARTIAL: u32 = 1;
     }
-    pub mod code_source_info {
+    pub struct CodeSourceInfo {}
+    impl CodeSourceInfo {
         pub const ORIGIN_REFERENCE_ID: u32 = 1;
         pub const ORIGIN_NODE_ID: u32 = 2;
         pub const LINKED_SNAPSHOT_ID: u32 = 3;
@@ -36033,7 +36103,8 @@ pub mod kiwi_records {
         pub const SOURCE_BLOB_REF: u32 = 5;
         pub const SOURCE_ELEMENT_ID: u32 = 6;
     }
-    pub mod code_object_type {
+    pub struct CodeObjectType {}
+    impl CodeObjectType {
         pub const WEB_LAYER: u32 = 0;
         pub const WEB_INTERACTION: u32 = 1;
         pub const NATIVE_LAYER: u32 = 2;
@@ -36044,18 +36115,21 @@ pub mod kiwi_records {
         pub const WEB_LAYER_GENERIC: u32 = 7;
         pub const CUSTOM_FILL: u32 = 8;
     }
-    pub mod custom_tool_artifact_ref {
+    pub struct CustomToolArtifactRef {}
+    impl CustomToolArtifactRef {
         pub const CUSTOM_TOOL_ID: u32 = 1;
         pub const CUSTOM_TOOL_VERSION: u32 = 2;
         pub const PUBLISHED_CUSTOM_TOOL_ID: u32 = 3;
         pub const PUBLISHED_CUSTOM_TOOL_VERSION_ID: u32 = 4;
     }
-    pub mod lock_mode {
+    pub struct LockMode {}
+    impl LockMode {
         pub const NONE: u32 = 0;
         pub const ALL: u32 = 1;
         pub const BACKGROUND_ONLY: u32 = 2;
     }
-    pub mod open_type_feature {
+    pub struct OpenTypeFeature {}
+    impl OpenTypeFeature {
         pub const PCAP: u32 = 0;
         pub const C2_PC: u32 = 1;
         pub const CASE: u32 = 2;
@@ -36286,31 +36360,38 @@ pub mod kiwi_records {
         pub const CV98: u32 = 227;
         pub const CV99: u32 = 228;
     }
-    pub mod export_constraint {
+    pub struct ExportConstraint {}
+    impl ExportConstraint {
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod guid_mapping {
+    pub struct GuidMapping {}
+    impl GuidMapping {
         pub const FROM: u32 = 1;
         pub const TO: u32 = 2;
     }
-    pub mod blob {
+    pub struct Blob {}
+    impl Blob {
         pub const BYTES: u32 = 1;
     }
-    pub mod image {
+    pub struct Image {}
+    impl Image {
         pub const HASH: u32 = 1;
         pub const NAME: u32 = 2;
         pub const DATA_BLOB: u32 = 3;
     }
-    pub mod video {
+    pub struct Video {}
+    impl Video {
         pub const HASH: u32 = 1;
         pub const S3_URL: u32 = 2;
     }
-    pub mod paste_source {
+    pub struct PasteSource {}
+    impl PasteSource {
         pub const SRC_FILE: u32 = 1;
         pub const SRC_NODE: u32 = 2;
     }
-    pub mod filter_color_adjust {
+    pub struct FilterColorAdjust {}
+    impl FilterColorAdjust {
         pub const TINT: u32 = 1;
         pub const SHADOWS: u32 = 2;
         pub const HIGHLIGHTS: u32 = 3;
@@ -36320,7 +36401,8 @@ pub mod kiwi_records {
         pub const TEMPERATURE: u32 = 7;
         pub const VIBRANCE: u32 = 8;
     }
-    pub mod paint_filter_message {
+    pub struct PaintFilterMessage {}
+    impl PaintFilterMessage {
         pub const TINT: u32 = 1;
         pub const SHADOWS: u32 = 2;
         pub const HIGHLIGHTS: u32 = 3;
@@ -36332,7 +36414,8 @@ pub mod kiwi_records {
         pub const CONTRAST: u32 = 9;
         pub const BRIGHTNESS: u32 = 10;
     }
-    pub mod paint {
+    pub struct Paint {}
+    impl Paint {
         pub const TYPE: u32 = 1;
         pub const COLOR: u32 = 2;
         pub const OPACITY: u32 = 3;
@@ -36376,47 +36459,55 @@ pub mod kiwi_records {
         pub const INTERPOLATION_COLOR_SPACE: u32 = 41;
         pub const INTERPOLATION_HUE_METHOD: u32 = 42;
     }
-    pub mod noise_type {
+    pub struct NoiseType {}
+    impl NoiseType {
         pub const MULTITONE: u32 = 0;
         pub const MONOTONE: u32 = 1;
         pub const DUOTONE: u32 = 2;
     }
-    pub mod pattern_tile_type {
+    pub struct PatternTileType {}
+    impl PatternTileType {
         pub const RECTANGULAR: u32 = 0;
         pub const HORIZONTAL_HEXAGONAL: u32 = 1;
         pub const VERTICAL_HEXAGONAL: u32 = 2;
     }
-    pub mod pattern_alignment {
+    pub struct PatternAlignment {}
+    impl PatternAlignment {
         pub const START: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const END: u32 = 2;
     }
-    pub mod interpolation_color_space {
+    pub struct InterpolationColorSpace {}
+    impl InterpolationColorSpace {
         pub const DEFAULT: u32 = 0;
         pub const OKLAB: u32 = 1;
         pub const OKLCH: u32 = 2;
         pub const HSL: u32 = 3;
         pub const SRGB_LINEAR: u32 = 4;
     }
-    pub mod interpolation_hue_method {
+    pub struct InterpolationHueMethod {}
+    impl InterpolationHueMethod {
         pub const SHORTER: u32 = 0;
         pub const LONGER: u32 = 1;
         pub const INCREASING: u32 = 2;
         pub const DECREASING: u32 = 3;
     }
-    pub mod font_meta_data {
+    pub struct FontMetaData {}
+    impl FontMetaData {
         pub const KEY: u32 = 1;
         pub const FONT_LINE_HEIGHT: u32 = 2;
         pub const FONT_DIGEST: u32 = 3;
         pub const FONT_STYLE: u32 = 4;
         pub const FONT_WEIGHT: u32 = 5;
     }
-    pub mod font_variation {
+    pub struct FontVariation {}
+    impl FontVariation {
         pub const AXIS_TAG: u32 = 1;
         pub const AXIS_NAME: u32 = 2;
         pub const VALUE: u32 = 3;
     }
-    pub mod text_data {
+    pub struct TextData {}
+    impl TextData {
         pub const CHARACTERS: u32 = 1;
         pub const CHARACTER_STYLE_I_DS: u32 = 2;
         pub const STYLE_OVERRIDE_TABLE: u32 = 3;
@@ -36437,7 +36528,8 @@ pub mod kiwi_records {
         pub const MENTION_BOXES: u32 = 18;
         pub const DERIVED_LINES: u32 = 19;
     }
-    pub mod derived_text_data {
+    pub struct DerivedTextData {}
+    impl DerivedTextData {
         pub const LAYOUT_SIZE: u32 = 1;
         pub const BASELINES: u32 = 2;
         pub const GLYPHS: u32 = 3;
@@ -36451,7 +36543,8 @@ pub mod kiwi_records {
         pub const MENTION_BOXES: u32 = 11;
         pub const DERIVED_LINES: u32 = 12;
     }
-    pub mod hyperlink_box {
+    pub struct HyperlinkBox {}
+    impl HyperlinkBox {
         pub const BOUNDS: u32 = 1;
         pub const URL: u32 = 2;
         pub const GUID: u32 = 3;
@@ -36459,14 +36552,16 @@ pub mod kiwi_records {
         pub const CMS_TARGET: u32 = 5;
         pub const OPEN_IN_NEW_TAB: u32 = 6;
     }
-    pub mod mention_box {
+    pub struct MentionBox {}
+    impl MentionBox {
         pub const BOUNDS: u32 = 1;
         pub const START_INDEX: u32 = 2;
         pub const END_INDEX: u32 = 3;
         pub const IS_VALID: u32 = 4;
         pub const MENTION_KEY: u32 = 5;
     }
-    pub mod baseline {
+    pub struct Baseline {}
+    impl Baseline {
         pub const POSITION: u32 = 1;
         pub const WIDTH: u32 = 2;
         pub const LINE_Y: u32 = 3;
@@ -36476,7 +36571,8 @@ pub mod kiwi_records {
         pub const LINE_ASCENT: u32 = 7;
         pub const IGNORE_LEADING_TRIM: u32 = 8;
     }
-    pub mod glyph {
+    pub struct Glyph {}
+    impl Glyph {
         pub const COMMANDS_BLOB: u32 = 1;
         pub const POSITION: u32 = 2;
         pub const STYLE_ID: u32 = 3;
@@ -36487,66 +36583,82 @@ pub mod kiwi_records {
         pub const EMOJI_IMAGE_SET: u32 = 8;
         pub const ROTATION: u32 = 9;
     }
-    pub mod decoration {
+    pub struct Decoration {}
+    impl Decoration {
         pub const RECTS: u32 = 1;
         pub const STYLE_ID: u32 = 2;
     }
-    pub mod blockquote {
+    pub struct Blockquote {}
+    impl Blockquote {
         pub const VERTICAL_BAR: u32 = 1;
         pub const QUOTE_MARK_BOUNDS: u32 = 2;
         pub const STYLE_ID: u32 = 3;
     }
-    pub mod vector_data {
+    pub struct VectorData {}
+    impl VectorData {
         pub const VECTOR_NETWORK_BLOB: u32 = 1;
         pub const NORMALIZED_SIZE: u32 = 2;
         pub const STYLE_OVERRIDE_TABLE: u32 = 3;
     }
-    pub mod text_path_start {
+    pub struct TextPathStart {}
+    impl TextPathStart {
         pub const T_VALUE: u32 = 1;
         pub const FORWARD: u32 = 2;
     }
-    pub mod guid_path {
+    pub struct GuidPath {}
+    impl GuidPath {
         pub const GUIDS: u32 = 1;
     }
-    pub mod symbol_data {
+    pub struct SymbolData {}
+    impl SymbolData {
         pub const SYMBOL_ID: u32 = 1;
         pub const SYMBOL_OVERRIDES: u32 = 2;
         pub const UNIFORM_SCALE_FACTOR: u32 = 3;
     }
-    pub mod guid_path_mapping {
+    pub struct GuidPathMapping {}
+    impl GuidPathMapping {
         pub const ID: u32 = 1;
         pub const PATH: u32 = 2;
     }
-    pub mod derived_breakpoint_data {
+    pub struct DerivedBreakpointData {}
+    impl DerivedBreakpointData {
         pub const OVERRIDES: u32 = 1;
     }
-    pub mod node_generation_data {
+    pub struct NodeGenerationData {}
+    impl NodeGenerationData {
         pub const OVERRIDES: u32 = 1;
         pub const USE_FINE_GRAINED_SYNCING: u32 = 2;
         pub const DIFF_ONLY_REMOVALS: u32 = 3;
     }
-    pub mod derived_immutable_frame_data {
+    pub struct DerivedImmutableFrameData {}
+    impl DerivedImmutableFrameData {
         pub const OVERRIDES: u32 = 1;
         pub const VERSION: u32 = 2;
     }
-    pub mod jsx_data {
+    pub struct JsxData {}
+    impl JsxData {
         pub const OVERRIDES: u32 = 1;
     }
-    pub mod derived_jsx_data {
+    pub struct DerivedJsxData {}
+    impl DerivedJsxData {
         pub const OVERRIDES: u32 = 1;
     }
-    pub mod asset_id_map {
+    pub struct AssetIdMap {}
+    impl AssetIdMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod asset_id_entry {
+    pub struct AssetIdEntry {}
+    impl AssetIdEntry {
         pub const ASSET_KEY: u32 = 1;
         pub const ASSET_ID: u32 = 2;
     }
-    pub mod asset_ref {
+    pub struct AssetRef {}
+    impl AssetRef {
         pub const KEY: u32 = 1;
         pub const VERSION: u32 = 2;
     }
-    pub mod asset_id {
+    pub struct AssetId {}
+    impl AssetId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
         pub const STATE_GROUP_ID: u32 = 3;
@@ -36555,77 +36667,94 @@ pub mod kiwi_records {
         pub const VARIABLE_ID: u32 = 6;
         pub const VARIABLE_SET_ID: u32 = 7;
     }
-    pub mod state_group_id {
+    pub struct StateGroupId {}
+    impl StateGroupId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod style_id {
+    pub struct StyleId {}
+    impl StyleId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod symbol_id {
+    pub struct SymbolId {}
+    impl SymbolId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod variable_id {
+    pub struct VariableId {}
+    impl VariableId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod variable_override_id {
+    pub struct VariableOverrideId {}
+    impl VariableOverrideId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod variable_set_id {
+    pub struct VariableSetId {}
+    impl VariableSetId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod theme_id {
+    pub struct ThemeId {}
+    impl ThemeId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod code_library_id {
+    pub struct CodeLibraryId {}
+    impl CodeLibraryId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod code_file_id {
+    pub struct CodeFileId {}
+    impl CodeFileId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod code_component_id {
+    pub struct CodeComponentId {}
+    impl CodeComponentId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod canvas_node_id {
+    pub struct CanvasNodeId {}
+    impl CanvasNodeId {
         pub const GUID: u32 = 1;
         pub const SYMBOL_ID: u32 = 2;
         pub const STATE_GROUP_ID: u32 = 3;
     }
-    pub mod index_range {
+    pub struct IndexRange {}
+    impl IndexRange {
         pub const START_INDEX: u32 = 1;
         pub const END_INDEX_EXCLUSIVE: u32 = 2;
     }
-    pub mod collaborative_text_op_id {
+    pub struct CollaborativeTextOpId {}
+    impl CollaborativeTextOpId {
         pub const SESSION_ID: u32 = 1;
         pub const COUNTER_ID: u32 = 2;
     }
-    pub mod collaborative_text_op_type {
+    pub struct CollaborativeTextOpType {}
+    impl CollaborativeTextOpType {
         pub const INSERT: u32 = 0;
         pub const DELETE: u32 = 1;
     }
-    pub mod collaborative_text_stripped_op_run_with_i_ds {
+    pub struct CollaborativeTextStrippedOpRunWithIDs {}
+    impl CollaborativeTextStrippedOpRunWithIDs {
         pub const FIRST_ID: u32 = 1;
         pub const RUN_LENGTH: u32 = 2;
         pub const PARENT_IDS: u32 = 3;
         pub const REBASED_ON_OP_IDS: u32 = 4;
     }
-    pub mod collaborative_text_stripped_op_run_with_loc {
+    pub struct CollaborativeTextStrippedOpRunWithLoc {}
+    impl CollaborativeTextStrippedOpRunWithLoc {
         pub const TYPE: u32 = 1;
         pub const RANGE: u32 = 2;
         pub const RANGE_SHOULD_BE_ITERATED_IN_REVERSE: u32 = 3;
         pub const CONTENT_BYTES_IN_BUFFER: u32 = 4;
         pub const REBASED_RANGE: u32 = 5;
     }
-    pub mod collaborative_text_op_run {
+    pub struct CollaborativeTextOpRun {}
+    impl CollaborativeTextOpRun {
         pub const ID: u32 = 1;
         pub const PARENT_IDS: u32 = 2;
         pub const TYPE: u32 = 3;
@@ -36635,20 +36764,23 @@ pub mod kiwi_records {
         pub const REBASED_ON_OP_IDS: u32 = 7;
         pub const REBASED_RANGE: u32 = 8;
     }
-    pub mod collaborative_plain_text {
+    pub struct CollaborativePlainText {}
+    impl CollaborativePlainText {
         pub const HISTORY_OPS_WITH_IDS: u32 = 1;
         pub const HISTORY_OPS_WITH_LOC: u32 = 2;
         pub const HISTORY_STRING_CONTENT_BUFFER: u32 = 3;
         pub const CHANGES_TO_APPEND: u32 = 4;
     }
-    pub mod collaborative_text_selection {
+    pub struct CollaborativeTextSelection {}
+    impl CollaborativeTextSelection {
         pub const NODE: u32 = 1;
         pub const FIELD: u32 = 2;
         pub const SELECTED_RANGE: u32 = 3;
         pub const CARET_AT_FRONT: u32 = 4;
         pub const TEXT_VERSION: u32 = 5;
     }
-    pub mod responsive_text_style_variant {
+    pub struct ResponsiveTextStyleVariant {}
+    impl ResponsiveTextStyleVariant {
         pub const MIN_WIDTH: u32 = 1;
         pub const FIELDS: u32 = 2;
         pub const VARIABLE_FONT_SIZE: u32 = 3;
@@ -36657,14 +36789,16 @@ pub mod kiwi_records {
         pub const VARIABLE_PARAGRAPH_SPACING: u32 = 6;
         pub const NAME: u32 = 7;
     }
-    pub mod flapp_type {
+    pub struct FlappType {}
+    impl FlappType {
         pub const POLL: u32 = 0;
         pub const EMBED: u32 = 1;
         pub const FACEPILE: u32 = 2;
         pub const ALIGNMENT: u32 = 3;
         pub const YOUTUBE: u32 = 4;
     }
-    pub mod slide_theme_props {
+    pub struct SlideThemeProps {}
+    impl SlideThemeProps {
         pub const THEME_VERSION: u32 = 1;
         pub const VARIABLE_SET_ID: u32 = 2;
         pub const TEXT_STYLE_IDS: u32 = 3;
@@ -36674,14 +36808,17 @@ pub mod kiwi_records {
         pub const SCHEMA_VERSION: u32 = 7;
         pub const IS_GENERATED_FROM_DESIGN: u32 = 8;
     }
-    pub mod slide_theme_map {
+    pub struct SlideThemeMap {}
+    impl SlideThemeMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod slide_theme_map_entry {
+    pub struct SlideThemeMapEntry {}
+    impl SlideThemeMapEntry {
         pub const THEME_ID: u32 = 1;
         pub const THEME_PROPS: u32 = 2;
     }
-    pub mod shared_symbol_reference {
+    pub struct SharedSymbolReference {}
+    impl SharedSymbolReference {
         pub const FILE_KEY: u32 = 1;
         pub const SYMBOL_ID: u32 = 2;
         pub const VERSION_HASH: u32 = 3;
@@ -36692,49 +36829,60 @@ pub mod kiwi_records {
         pub const UNFLATTENING_MAPPINGS: u32 = 8;
         pub const IS_UNFLATTENED: u32 = 9;
     }
-    pub mod shared_component_master_data {
+    pub struct SharedComponentMasterData {}
+    impl SharedComponentMasterData {
         pub const COMPONENT_KEY: u32 = 1;
         pub const PUBLISHING_GUID_PATH_TO_TEAM_LIBRARY_GUID: u32 = 2;
         pub const IS_UNFLATTENED: u32 = 3;
     }
-    pub mod instance_override_stash {
+    pub struct InstanceOverrideStash {}
+    impl InstanceOverrideStash {
         pub const OVERRIDE_PATH_OF_SWAPPED_INSTANCE: u32 = 1;
         pub const COMPONENT_KEY: u32 = 2;
         pub const OVERRIDES: u32 = 3;
     }
-    pub mod instance_override_stash_v2 {
+    pub struct InstanceOverrideStashV2 {}
+    impl InstanceOverrideStashV2 {
         pub const OVERRIDE_PATH_OF_SWAPPED_INSTANCE: u32 = 1;
         pub const LOCAL_SYMBOL_ID: u32 = 2;
         pub const OVERRIDES: u32 = 3;
     }
-    pub mod imported_code_file_entry {
+    pub struct ImportedCodeFileEntry {}
+    impl ImportedCodeFileEntry {
         pub const CODE_FILE_ID: u32 = 1;
     }
-    pub mod imported_code_files {
+    pub struct ImportedCodeFiles {}
+    impl ImportedCodeFiles {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod blur_op_type {
+    pub struct BlurOpType {}
+    impl BlurOpType {
         pub const NORMAL: u32 = 0;
         pub const PROGRESSIVE: u32 = 1;
     }
-    pub mod repeat_type {
+    pub struct RepeatType {}
+    impl RepeatType {
         pub const LINEAR: u32 = 0;
         pub const RADIAL: u32 = 1;
     }
-    pub mod unit_type {
+    pub struct UnitType {}
+    impl UnitType {
         pub const PIXELS: u32 = 0;
         pub const RELATIVE: u32 = 1;
     }
-    pub mod repeat_order {
+    pub struct RepeatOrder {}
+    impl RepeatOrder {
         pub const FORWARD: u32 = 0;
         pub const REVERSE: u32 = 1;
     }
-    pub mod effect_axis {
+    pub struct EffectAxis {}
+    impl EffectAxis {
         pub const X: u32 = 0;
         pub const Y: u32 = 1;
         pub const X_AND_Y: u32 = 2;
     }
-    pub mod effect {
+    pub struct Effect {}
+    impl Effect {
         pub const TYPE: u32 = 1;
         pub const COLOR: u32 = 2;
         pub const OFFSET: u32 = 3;
@@ -36791,12 +36939,14 @@ pub mod kiwi_records {
         pub const SECONDARY_COLOR_VAR: u32 = 54;
         pub const ID: u32 = 55;
     }
-    pub mod transform_modifier_type {
+    pub struct TransformModifierType {}
+    impl TransformModifierType {
         pub const REPEAT: u32 = 0;
         pub const SYMMETRY: u32 = 1;
         pub const SKEW: u32 = 2;
     }
-    pub mod transform_modifier {
+    pub struct TransformModifier {}
+    impl TransformModifier {
         pub const TYPE: u32 = 1;
         pub const OFFSET: u32 = 2;
         pub const VISIBLE: u32 = 3;
@@ -36808,12 +36958,14 @@ pub mod kiwi_records {
         pub const SKEW_X: u32 = 9;
         pub const SKEW_Y: u32 = 10;
     }
-    pub mod transform_schema_type {
+    pub struct TransformSchemaType {}
+    impl TransformSchemaType {
         pub const NONE: u32 = 0;
         pub const FIXED_ORDER: u32 = 1;
         pub const FREEFORM: u32 = 2;
     }
-    pub mod matrix4f {
+    pub struct Matrix4f {}
+    impl Matrix4f {
         pub const M00: u32 = 1;
         pub const M01: u32 = 2;
         pub const M02: u32 = 3;
@@ -36831,14 +36983,16 @@ pub mod kiwi_records {
         pub const M32: u32 = 15;
         pub const M33: u32 = 16;
     }
-    pub mod fixed_order_transform3d {
+    pub struct FixedOrderTransform3d {}
+    impl FixedOrderTransform3d {
         pub const PERSPECTIVE: u32 = 1;
         pub const TRANSLATE_Z: u32 = 2;
         pub const ROTATE_X: u32 = 3;
         pub const ROTATE_Y: u32 = 4;
         pub const ROTATE_Z: u32 = 5;
     }
-    pub mod transform_fn_type {
+    pub struct TransformFnType {}
+    impl TransformFnType {
         pub const NONE: u32 = 0;
         pub const MATRIX_3_D: u32 = 1;
         pub const PERSPECTIVE: u32 = 2;
@@ -36847,59 +37001,71 @@ pub mod kiwi_records {
         pub const ROTATE_Y: u32 = 5;
         pub const ROTATE_Z: u32 = 6;
     }
-    pub mod transform_fn_value {
+    pub struct TransformFnValue {}
+    impl TransformFnValue {
         pub const MATRIX3D: u32 = 1;
         pub const PERSPECTIVE: u32 = 2;
         pub const ROTATE_ANGLE: u32 = 3;
         pub const TRANSLATE_VALUE: u32 = 4;
     }
-    pub mod transform_fn {
+    pub struct TransformFn {}
+    impl TransformFn {
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod transform_schema_value {
+    pub struct TransformSchemaValue {}
+    impl TransformSchemaValue {
         pub const FIXED_ORDER_TRANSFORM3D: u32 = 1;
         pub const TRANSFORM_FUNCTIONS: u32 = 2;
     }
-    pub mod transform3d {
+    pub struct Transform3d {}
+    impl Transform3d {
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
         pub const BACKFACE_HIDDEN: u32 = 3;
     }
-    pub mod number_vector2_d {
+    pub struct NumberVector2D {}
+    impl NumberVector2D {
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
     }
-    pub mod scene3d {
+    pub struct Scene3d {}
+    impl Scene3d {
         pub const PERSPECTIVE: u32 = 1;
         pub const PERSPECTIVE_ORIGIN: u32 = 2;
         pub const PRESERVE3D: u32 = 3;
     }
-    pub mod transform_origin {
+    pub struct TransformOrigin {}
+    impl TransformOrigin {
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
     }
-    pub mod transition_info {
+    pub struct TransitionInfo {}
+    impl TransitionInfo {
         pub const TYPE: u32 = 1;
         pub const DURATION: u32 = 2;
     }
-    pub mod prototype_device_type {
+    pub struct PrototypeDeviceType {}
+    impl PrototypeDeviceType {
         pub const NONE: u32 = 0;
         pub const PRESET: u32 = 1;
         pub const CUSTOM: u32 = 2;
         pub const PRESENTATION: u32 = 3;
     }
-    pub mod device_rotation {
+    pub struct DeviceRotation {}
+    impl DeviceRotation {
         pub const NONE: u32 = 0;
         pub const CCW_90: u32 = 1;
     }
-    pub mod prototype_device {
+    pub struct PrototypeDevice {}
+    impl PrototypeDevice {
         pub const TYPE: u32 = 1;
         pub const SIZE: u32 = 2;
         pub const PRESET_IDENTIFIER: u32 = 3;
         pub const ROTATION: u32 = 4;
     }
-    pub mod overlay_position_type {
+    pub struct OverlayPositionType {}
+    impl OverlayPositionType {
         pub const CENTER: u32 = 0;
         pub const TOP_LEFT: u32 = 1;
         pub const TOP_CENTER: u32 = 2;
@@ -36909,37 +37075,44 @@ pub mod kiwi_records {
         pub const BOTTOM_RIGHT: u32 = 6;
         pub const MANUAL: u32 = 7;
     }
-    pub mod overlay_background_interaction {
+    pub struct OverlayBackgroundInteraction {}
+    impl OverlayBackgroundInteraction {
         pub const NONE: u32 = 0;
         pub const CLOSE_ON_CLICK_OUTSIDE: u32 = 1;
     }
-    pub mod overlay_background_type {
+    pub struct OverlayBackgroundType {}
+    impl OverlayBackgroundType {
         pub const NONE: u32 = 0;
         pub const SOLID_COLOR: u32 = 1;
     }
-    pub mod overlay_background_appearance {
+    pub struct OverlayBackgroundAppearance {}
+    impl OverlayBackgroundAppearance {
         pub const BACKGROUND_TYPE: u32 = 1;
         pub const BACKGROUND_COLOR: u32 = 2;
     }
-    pub mod navigation_type {
+    pub struct NavigationType {}
+    impl NavigationType {
         pub const NAVIGATE: u32 = 0;
         pub const OVERLAY: u32 = 1;
         pub const SWAP: u32 = 2;
         pub const SWAP_STATE: u32 = 3;
         pub const SCROLL_TO: u32 = 4;
     }
-    pub mod export_color_profile {
+    pub struct ExportColorProfile {}
+    impl ExportColorProfile {
         pub const DOCUMENT: u32 = 0;
         pub const SRGB: u32 = 1;
         pub const DISPLAY_P3_V4: u32 = 2;
         pub const CMYK: u32 = 3;
     }
-    pub mod export_background_type {
+    pub struct ExportBackgroundType {}
+    impl ExportBackgroundType {
         pub const SOLID: u32 = 0;
         pub const TRANSPARENT: u32 = 1;
         pub const GRID: u32 = 2;
     }
-    pub mod export_settings {
+    pub struct ExportSettings {}
+    impl ExportSettings {
         pub const SUFFIX: u32 = 1;
         pub const IMAGE_TYPE: u32 = 2;
         pub const CONSTRAINT: u32 = 3;
@@ -36956,11 +37129,13 @@ pub mod kiwi_records {
         pub const LOOP_COUNT: u32 = 14;
         pub const BACKGROUND_TYPE: u32 = 15;
     }
-    pub mod export_svgid_mode {
+    pub struct ExportSvgidMode {}
+    impl ExportSvgidMode {
         pub const IF_NEEDED: u32 = 0;
         pub const ALWAYS: u32 = 1;
     }
-    pub mod layout_grid {
+    pub struct LayoutGrid {}
+    impl LayoutGrid {
         pub const TYPE: u32 = 1;
         pub const AXIS: u32 = 2;
         pub const VISIBLE: u32 = 3;
@@ -36975,17 +37150,20 @@ pub mod kiwi_records {
         pub const SECTION_SIZE_VAR: u32 = 12;
         pub const GUTTER_SIZE_VAR: u32 = 13;
     }
-    pub mod guide {
+    pub struct Guide {}
+    impl Guide {
         pub const AXIS: u32 = 1;
         pub const OFFSET: u32 = 2;
         pub const GUID: u32 = 3;
     }
-    pub mod path {
+    pub struct Path {}
+    impl Path {
         pub const WINDING_RULE: u32 = 1;
         pub const COMMANDS_BLOB: u32 = 2;
         pub const STYLE_ID: u32 = 3;
     }
-    pub mod style_type {
+    pub struct StyleType {}
+    impl StyleType {
         pub const NONE: u32 = 0;
         pub const FILL: u32 = 1;
         pub const STROKE: u32 = 2;
@@ -36995,34 +37173,41 @@ pub mod kiwi_records {
         pub const GRID: u32 = 6;
         pub const ANIMATION: u32 = 7;
     }
-    pub mod brush_orientation {
+    pub struct BrushOrientation {}
+    impl BrushOrientation {
         pub const FORWARD: u32 = 0;
         pub const REVERSE: u32 = 1;
     }
-    pub mod brush_type {
+    pub struct BrushType {}
+    impl BrushType {
         pub const STRETCH: u32 = 0;
         pub const SCATTER: u32 = 1;
     }
-    pub mod dynamic_stroke_settings {
+    pub struct DynamicStrokeSettings {}
+    impl DynamicStrokeSettings {
         pub const FREQUENCY: u32 = 1;
         pub const WIGGLE: u32 = 2;
         pub const SMOOTHEN: u32 = 3;
     }
-    pub mod scatter_stroke_settings {
+    pub struct ScatterStrokeSettings {}
+    impl ScatterStrokeSettings {
         pub const GAP: u32 = 1;
         pub const WIGGLE: u32 = 2;
         pub const ANGULAR_JITTER: u32 = 3;
         pub const ROTATION: u32 = 4;
         pub const SIZE_JITTER: u32 = 5;
     }
-    pub mod stretch_stroke_settings {
+    pub struct StretchStrokeSettings {}
+    impl StretchStrokeSettings {
         pub const ORIENTATION: u32 = 1;
     }
-    pub mod stroke_data {
+    pub struct StrokeData {}
+    impl StrokeData {
         pub const STROKES: u32 = 1;
         pub const VERSION: u32 = 2;
     }
-    pub mod stroke {
+    pub struct Stroke {}
+    impl Stroke {
         pub const STROKE_ID: u32 = 1;
         pub const STROKE_WEIGHT: u32 = 2;
         pub const STROKE_WEIGHT_VAR: u32 = 3;
@@ -37038,53 +37223,63 @@ pub mod kiwi_records {
         pub const STROKE_OFFSET: u32 = 13;
         pub const IS_DELETED: u32 = 14;
     }
-    pub mod variable_width_point {
+    pub struct VariableWidthPoint {}
+    impl VariableWidthPoint {
         pub const POSITION: u32 = 1;
         pub const ASCENT: u32 = 2;
         pub const DESCENT: u32 = 3;
         pub const SEGMENT_ID: u32 = 4;
     }
-    pub mod shared_style_reference {
+    pub struct SharedStyleReference {}
+    impl SharedStyleReference {
         pub const STYLE_KEY: u32 = 1;
         pub const VERSION_HASH: u32 = 2;
     }
-    pub mod shared_style_master_data {
+    pub struct SharedStyleMasterData {}
+    impl SharedStyleMasterData {
         pub const STYLE_KEY: u32 = 1;
         pub const SORT_POSITION: u32 = 2;
         pub const FILE_KEY: u32 = 3;
     }
-    pub mod scroll_behavior {
+    pub struct ScrollBehavior {}
+    impl ScrollBehavior {
         pub const SCROLLS: u32 = 0;
         pub const FIXED_WHEN_CHILD_OF_SCROLLING_FRAME: u32 = 1;
         pub const STICKY_SCROLLS: u32 = 2;
     }
-    pub mod arc_data {
+    pub struct ArcData {}
+    impl ArcData {
         pub const STARTING_ANGLE: u32 = 1;
         pub const ENDING_ANGLE: u32 = 2;
         pub const INNER_RADIUS: u32 = 3;
     }
-    pub mod symbol_link {
+    pub struct SymbolLink {}
+    impl SymbolLink {
         pub const URI: u32 = 1;
         pub const DISPLAY_NAME: u32 = 2;
         pub const DISPLAY_TEXT: u32 = 3;
     }
-    pub mod plugin_data {
+    pub struct PluginData {}
+    impl PluginData {
         pub const PLUGIN_ID: u32 = 1;
         pub const VALUE: u32 = 2;
         pub const KEY: u32 = 3;
     }
-    pub mod plugin_relaunch_data {
+    pub struct PluginRelaunchData {}
+    impl PluginRelaunchData {
         pub const PLUGIN_ID: u32 = 1;
         pub const MESSAGE: u32 = 2;
         pub const COMMAND: u32 = 3;
         pub const IS_DELETED: u32 = 4;
         pub const CUSTOM_TOOL_ID: u32 = 5;
     }
-    pub mod multiplayer_field_version {
+    pub struct MultiplayerFieldVersion {}
+    impl MultiplayerFieldVersion {
         pub const COUNTER: u32 = 1;
         pub const SESSION_ID: u32 = 2;
     }
-    pub mod connector_magnet {
+    pub struct ConnectorMagnet {}
+    impl ConnectorMagnet {
         pub const NONE: u32 = 0;
         pub const AUTO: u32 = 1;
         pub const TOP: u32 = 2;
@@ -37096,40 +37291,48 @@ pub mod kiwi_records {
         pub const EDGE: u32 = 8;
         pub const ABSOLUTE: u32 = 9;
     }
-    pub mod connector_endpoint {
+    pub struct ConnectorEndpoint {}
+    impl ConnectorEndpoint {
         pub const ENDPOINT_NODE_ID: u32 = 1;
         pub const POSITION: u32 = 2;
         pub const MAGNET: u32 = 3;
         pub const RELATIVE_POSITION: u32 = 4;
     }
-    pub mod connector_control_point {
+    pub struct ConnectorControlPoint {}
+    impl ConnectorControlPoint {
         pub const POSITION: u32 = 1;
         pub const AXIS: u32 = 2;
     }
-    pub mod connector_text_section {
+    pub struct ConnectorTextSection {}
+    impl ConnectorTextSection {
         pub const MIDDLE_TO_START: u32 = 0;
         pub const MIDDLE_TO_END: u32 = 1;
     }
-    pub mod connector_off_axis_offset {
+    pub struct ConnectorOffAxisOffset {}
+    impl ConnectorOffAxisOffset {
         pub const NONE: u32 = 0;
         pub const ABOVE: u32 = 1;
         pub const BELOW: u32 = 2;
     }
-    pub mod connector_text_midpoint {
+    pub struct ConnectorTextMidpoint {}
+    impl ConnectorTextMidpoint {
         pub const SECTION: u32 = 1;
         pub const OFFSET: u32 = 2;
         pub const OFF_AXIS_OFFSET: u32 = 3;
     }
-    pub mod connector_line_style {
+    pub struct ConnectorLineStyle {}
+    impl ConnectorLineStyle {
         pub const ELBOWED: u32 = 0;
         pub const STRAIGHT: u32 = 1;
         pub const CURVED: u32 = 2;
     }
-    pub mod connector_type {
+    pub struct ConnectorType {}
+    impl ConnectorType {
         pub const MANUAL: u32 = 0;
         pub const DIAGRAM: u32 = 1;
     }
-    pub mod annotation_property_type {
+    pub struct AnnotationPropertyType {}
+    impl AnnotationPropertyType {
         pub const FILL: u32 = 0;
         pub const STROKE: u32 = 1;
         pub const WIDTH: u32 = 2;
@@ -37164,10 +37367,12 @@ pub mod kiwi_records {
         pub const GRID_ROW_SPAN: u32 = 31;
         pub const GRID_COLUMN_SPAN: u32 = 32;
     }
-    pub mod annotation_property {
+    pub struct AnnotationProperty {}
+    impl AnnotationProperty {
         pub const TYPE: u32 = 1;
     }
-    pub mod annotation_category_preset {
+    pub struct AnnotationCategoryPreset {}
+    impl AnnotationCategoryPreset {
         pub const NONE: u32 = 0;
         pub const ACCESSIBILITY: u32 = 1;
         pub const BEHAVIOR: u32 = 2;
@@ -37175,7 +37380,8 @@ pub mod kiwi_records {
         pub const DEVELOPMENT: u32 = 4;
         pub const INTERACTION: u32 = 5;
     }
-    pub mod annotation_category_color {
+    pub struct AnnotationCategoryColor {}
+    impl AnnotationCategoryColor {
         pub const YELLOW: u32 = 0;
         pub const ORANGE: u32 = 1;
         pub const RED: u32 = 2;
@@ -37185,33 +37391,39 @@ pub mod kiwi_records {
         pub const TEAL: u32 = 6;
         pub const GREEN: u32 = 7;
     }
-    pub mod annotation_category_custom {
+    pub struct AnnotationCategoryCustom {}
+    impl AnnotationCategoryCustom {
         pub const COLOR: u32 = 1;
         pub const CUSTOM_COLOR: u32 = 2;
         pub const LABEL: u32 = 3;
     }
-    pub mod annotation_category {
+    pub struct AnnotationCategory {}
+    impl AnnotationCategory {
         pub const ID: u32 = 1;
         pub const PRESET: u32 = 2;
         pub const CUSTOM: u32 = 3;
     }
-    pub mod annotation_categories {
+    pub struct AnnotationCategories {}
+    impl AnnotationCategories {
         pub const VERSION: u32 = 1;
         pub const ITEMS: u32 = 2;
     }
-    pub mod annotation {
+    pub struct Annotation {}
+    impl Annotation {
         pub const LABEL: u32 = 1;
         pub const PROPERTIES: u32 = 2;
         pub const LABEL_V2: u32 = 3;
         pub const CATEGORY_ID: u32 = 4;
     }
-    pub mod annotation_measurement_node_side {
+    pub struct AnnotationMeasurementNodeSide {}
+    impl AnnotationMeasurementNodeSide {
         pub const TOP: u32 = 0;
         pub const BOTTOM: u32 = 1;
         pub const LEFT: u32 = 2;
         pub const RIGHT: u32 = 3;
     }
-    pub mod annotation_measurement {
+    pub struct AnnotationMeasurement {}
+    impl AnnotationMeasurement {
         pub const ID: u32 = 1;
         pub const FROM_NODE: u32 = 2;
         pub const TO_NODE: u32 = 3;
@@ -37222,30 +37434,36 @@ pub mod kiwi_records {
         pub const TO_NODE_STABLE_PATH: u32 = 8;
         pub const FREE_TEXT: u32 = 9;
     }
-    pub mod library_move_info {
+    pub struct LibraryMoveInfo {}
+    impl LibraryMoveInfo {
         pub const OLD_KEY: u32 = 1;
         pub const PASTE_FILE_KEY: u32 = 2;
     }
-    pub mod library_move_history_item {
+    pub struct LibraryMoveHistoryItem {}
+    impl LibraryMoveHistoryItem {
         pub const SOURCE_NODE_ID: u32 = 1;
         pub const SOURCE_COMPONENT_KEY: u32 = 2;
     }
-    pub mod developer_related_link {
+    pub struct DeveloperRelatedLink {}
+    impl DeveloperRelatedLink {
         pub const NODE_ID: u32 = 1;
         pub const FILE_KEY: u32 = 2;
         pub const LINK_NAME: u32 = 3;
         pub const LINK_URL: u32 = 4;
     }
-    pub mod widget_pointer {
+    pub struct WidgetPointer {}
+    impl WidgetPointer {
         pub const NODE_ID: u32 = 1;
     }
-    pub mod edit_info {
+    pub struct EditInfo {}
+    impl EditInfo {
         pub const TIMESTAMP_ISO8601: u32 = 1;
         pub const USER_ID: u32 = 2;
         pub const LAST_EDITED_AT: u32 = 3;
         pub const CREATED_AT: u32 = 4;
     }
-    pub mod editor_type {
+    pub struct EditorType {}
+    impl EditorType {
         pub const DESIGN: u32 = 0;
         pub const WHITEBOARD: u32 = 1;
         pub const SLIDES: u32 = 2;
@@ -37256,29 +37474,34 @@ pub mod kiwi_records {
         pub const FIGMAKE: u32 = 7;
         pub const FIGSPEC: u32 = 8;
     }
-    pub mod mask_type {
+    pub struct MaskType {}
+    impl MaskType {
         pub const ALPHA: u32 = 0;
         pub const OUTLINE: u32 = 1;
         pub const LUMINANCE: u32 = 2;
     }
-    pub mod module_type {
+    pub struct ModuleType {}
+    impl ModuleType {
         pub const NONE: u32 = 0;
         pub const SINGLE_NODE: u32 = 1;
         pub const MULTI_NODE: u32 = 2;
     }
-    pub mod section_status {
+    pub struct SectionStatus {}
+    impl SectionStatus {
         pub const NONE: u32 = 0;
         pub const BUILD: u32 = 1;
         pub const COMPLETED: u32 = 2;
     }
-    pub mod section_status_info {
+    pub struct SectionStatusInfo {}
+    impl SectionStatusInfo {
         pub const STATUS: u32 = 1;
         pub const LAST_UPDATE_UNIX_TIMESTAMP: u32 = 2;
         pub const DESCRIPTION: u32 = 3;
         pub const USER_ID: u32 = 4;
         pub const PREV_STATUS: u32 = 5;
     }
-    pub mod buzz_approval_request_info {
+    pub struct BuzzApprovalRequestInfo {}
+    impl BuzzApprovalRequestInfo {
         pub const REQUEST_ID: u32 = 1;
         pub const REQUESTER_USER_ID: u32 = 2;
         pub const REQUESTED_AT: u32 = 3;
@@ -37287,32 +37510,38 @@ pub mod kiwi_records {
         pub const NOTE: u32 = 6;
         pub const ASSETS_IN_REQUEST: u32 = 7;
     }
-    pub mod buzz_approval_requests {
+    pub struct BuzzApprovalRequests {}
+    impl BuzzApprovalRequests {
         pub const REQUESTS: u32 = 1;
     }
-    pub mod buzz_approval_node_status {
+    pub struct BuzzApprovalNodeStatus {}
+    impl BuzzApprovalNodeStatus {
         pub const NONE: u32 = 0;
         pub const IN_REVIEW: u32 = 1;
         pub const APPROVED: u32 = 2;
         pub const CHANGES_REQUESTED: u32 = 3;
     }
-    pub mod buzz_approval_node_status_info {
+    pub struct BuzzApprovalNodeStatusInfo {}
+    impl BuzzApprovalNodeStatusInfo {
         pub const CURRENT_STATUS: u32 = 1;
         pub const WAS_PREVIOUSLY_APPROVED: u32 = 2;
         pub const APPROVAL_REVOKED_AT_HISTORY: u32 = 3;
     }
-    pub mod code_embed_info {
+    pub struct CodeEmbedInfo {}
+    impl CodeEmbedInfo {
         pub const URL: u32 = 1;
         pub const SRC_URL: u32 = 2;
         pub const TITLE: u32 = 3;
         pub const THUMBNAIL_IMAGE_HASH: u32 = 4;
         pub const IS_PUBLISHED_SITE: u32 = 5;
     }
-    pub mod variable_timing_display_unit {
+    pub struct VariableTimingDisplayUnit {}
+    impl VariableTimingDisplayUnit {
         pub const MILLISECONDS: u32 = 0;
         pub const SECONDS: u32 = 1;
     }
-    pub mod node_change {
+    pub struct NodeChange {}
+    impl NodeChange {
         pub const GUID: u32 = 1;
         pub const PHASE: u32 = 2;
         pub const PARENT_INDEX: u32 = 3;
@@ -37904,21 +38133,25 @@ pub mod kiwi_records {
         pub const CODE_SNAPSHOT_LAYERS: u32 = 589;
         pub const SPEC_EMBED_URL: u32 = 590;
     }
-    pub mod git_repo_ref_provider {
+    pub struct GitRepoRefProvider {}
+    impl GitRepoRefProvider {
         pub const UGIT: u32 = 0;
         pub const GITHUB: u32 = 1;
         pub const OTHER: u32 = 2;
     }
-    pub mod git_repo_ref {
+    pub struct GitRepoRef {}
+    impl GitRepoRef {
         pub const PROVIDER: u32 = 1;
         pub const GIT_REPO: u32 = 2;
         pub const GIT_REF: u32 = 3;
     }
-    pub mod source_control_config {
+    pub struct SourceControlConfig {}
+    impl SourceControlConfig {
         pub const ORIGIN: u32 = 1;
         pub const UPSTREAM: u32 = 2;
     }
-    pub mod code_snapshot {
+    pub struct CodeSnapshot {}
+    impl CodeSnapshot {
         pub const PAINTS: u32 = 1;
         pub const OFFSET: u32 = 2;
         pub const LAYOUT_SIZE: u32 = 3;
@@ -37927,29 +38160,35 @@ pub mod kiwi_records {
         pub const STATE: u32 = 6;
         pub const INVALIDATED_AT: u32 = 7;
     }
-    pub mod code_output_layer {
+    pub struct CodeOutputLayer {}
+    impl CodeOutputLayer {
         pub const NODE: u32 = 1;
     }
-    pub mod code_snapshot_layers {
+    pub struct CodeSnapshotLayers {}
+    impl CodeSnapshotLayers {
         pub const STATE: u32 = 1;
         pub const INVALIDATED_AT: u32 = 2;
         pub const LAYERS: u32 = 3;
     }
-    pub mod code_behavior_data {
+    pub struct CodeBehaviorData {}
+    impl CodeBehaviorData {
         pub const NAME: u32 = 1;
         pub const ICON: u32 = 2;
         pub const NODE_TYPES: u32 = 3;
         pub const CATEGORY: u32 = 4;
         pub const API_VERSION: u32 = 5;
     }
-    pub mod code_example {
+    pub struct CodeExample {}
+    impl CodeExample {
         pub const EXAMPLE_NAME: u32 = 1;
         pub const CODE_EXPORT_NAME: u32 = 2;
     }
-    pub mod used_make_library {
+    pub struct UsedMakeLibrary {}
+    impl UsedMakeLibrary {
         pub const MAKE_LIBRARY_ID: u32 = 1;
     }
-    pub mod cookie_banner_text {
+    pub struct CookieBannerText {}
+    impl CookieBannerText {
         pub const BANNER_HEADER: u32 = 1;
         pub const BANNER_DISCLAIMER_EXPLICIT: u32 = 2;
         pub const BANNER_DISCLAIMER_IMPLICIT: u32 = 3;
@@ -37969,7 +38208,8 @@ pub mod kiwi_records {
         pub const SAVE_LABEL: u32 = 17;
         pub const TRIGGER_LABEL: u32 = 18;
     }
-    pub mod cookie_banner_settings {
+    pub struct CookieBannerSettings {}
+    impl CookieBannerSettings {
         pub const ENABLED: u32 = 1;
         pub const COMPONENT_TYPE: u32 = 2;
         pub const X_ALIGNMENT: u32 = 3;
@@ -37982,25 +38222,30 @@ pub mod kiwi_records {
         pub const POLICY_LINK: u32 = 10;
         pub const LOCALE: u32 = 11;
     }
-    pub mod cookie_banner_component_type {
+    pub struct CookieBannerComponentType {}
+    impl CookieBannerComponentType {
         pub const BANNER: u32 = 0;
         pub const MODAL: u32 = 1;
     }
-    pub mod trigger_component_type {
+    pub struct TriggerComponentType {}
+    impl TriggerComponentType {
         pub const BANNER: u32 = 0;
         pub const TAG: u32 = 1;
     }
-    pub mod cookie_x_alignment {
+    pub struct CookieXAlignment {}
+    impl CookieXAlignment {
         pub const LEFT: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const RIGHT: u32 = 2;
     }
-    pub mod cookie_y_alignment {
+    pub struct CookieYAlignment {}
+    impl CookieYAlignment {
         pub const TOP: u32 = 0;
         pub const CENTER: u32 = 1;
         pub const BOTTOM: u32 = 2;
     }
-    pub mod responsive_set_settings {
+    pub struct ResponsiveSetSettings {}
+    impl ResponsiveSetSettings {
         pub const TITLE: u32 = 1;
         pub const DESCRIPTION: u32 = 2;
         pub const SCALING_MODE: u32 = 3;
@@ -38023,59 +38268,73 @@ pub mod kiwi_records {
         pub const IGNORE_REDUCED_MOTION: u32 = 20;
         pub const COOKIE_BANNER: u32 = 21;
     }
-    pub mod responsive_scaling_mode {
+    pub struct ResponsiveScalingMode {}
+    impl ResponsiveScalingMode {
         pub const REFLOW: u32 = 0;
         pub const SCALE: u32 = 1;
     }
-    pub mod cms_selector {
+    pub struct CmsSelector {}
+    impl CmsSelector {
         pub const CMS_COLLECTION_ID: u32 = 1;
         pub const FILTER_CRITERIA: u32 = 2;
         pub const SORTS: u32 = 3;
         pub const LIMIT: u32 = 4;
     }
-    pub mod cms_filter_critera {
+    pub struct CmsFilterCritera {}
+    impl CmsFilterCritera {
         pub const MATCH_TYPE: u32 = 1;
         pub const FILTERS: u32 = 2;
     }
-    pub mod cms_filter_criteria_match_type {
+    pub struct CmsFilterCriteriaMatchType {}
+    impl CmsFilterCriteriaMatchType {
         pub const MATCH_ALL: u32 = 0;
         pub const MATCH_ANY: u32 = 1;
     }
-    pub mod cms_selector_filter {
+    pub struct CmsSelectorFilter {}
+    impl CmsSelectorFilter {
         pub const CMS_FIELD_ID: u32 = 1;
         pub const OP: u32 = 2;
         pub const COMPARISON_VALUE: u32 = 3;
     }
-    pub mod cms_selector_filter_operator {
+    pub struct CmsSelectorFilterOperator {}
+    impl CmsSelectorFilterOperator {
         pub const EQUALS: u32 = 0;
     }
-    pub mod cms_selector_sort {
+    pub struct CmsSelectorSort {}
+    impl CmsSelectorSort {
         pub const CMS_FIELD_ID: u32 = 1;
         pub const ORDER_BY: u32 = 2;
     }
-    pub mod cms_field_order_by {
+    pub struct CmsFieldOrderBy {}
+    impl CmsFieldOrderBy {
         pub const ASCENDING: u32 = 0;
         pub const DESCENDING: u32 = 1;
     }
-    pub mod cms_consumption_map {
+    pub struct CmsConsumptionMap {}
+    impl CmsConsumptionMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod cms_consumption_map_entry {
+    pub struct CmsConsumptionMapEntry {}
+    impl CmsConsumptionMapEntry {
         pub const CONSUMPTION_FIELD: u32 = 1;
         pub const CMS_FIELD_ID: u32 = 2;
     }
-    pub mod cms_consumption_field {
+    pub struct CmsConsumptionField {}
+    impl CmsConsumptionField {
         pub const MISSING: u32 = 0;
         pub const TEXT_DATA: u32 = 1;
     }
-    pub mod cms_rich_text_style_map {
+    pub struct CmsRichTextStyleMap {}
+    impl CmsRichTextStyleMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod cms_rich_text_style_entry {
+    pub struct CmsRichTextStyleEntry {}
+    impl CmsRichTextStyleEntry {
         pub const STYLE_CLASS: u32 = 1;
         pub const TEXT_DESCRIPTOR: u32 = 2;
     }
-    pub mod cms_rich_text_style_class {
+    pub struct CmsRichTextStyleClass {}
+    impl CmsRichTextStyleClass {
         pub const HEADING1: u32 = 0;
         pub const HEADING2: u32 = 1;
         pub const HEADING3: u32 = 2;
@@ -38086,63 +38345,78 @@ pub mod kiwi_records {
         pub const LINK: u32 = 7;
         pub const BLOCKQUOTE: u32 = 8;
     }
-    pub mod cms_rich_text_descriptor {
+    pub struct CmsRichTextDescriptor {}
+    impl CmsRichTextDescriptor {
         pub const TEXT_STYLE_ID: u32 = 1;
         pub const FONT_NAME_VARIANTS: u32 = 2;
     }
-    pub mod repeater_cms_override_data {
+    pub struct RepeaterCmsOverrideData {}
+    impl RepeaterCmsOverrideData {
         pub const OVERRIDES: u32 = 1;
     }
-    pub mod repeater_override_data {
+    pub struct RepeaterOverrideData {}
+    impl RepeaterOverrideData {
         pub const PARENT_INDEX_OVERRIDES: u32 = 1;
     }
-    pub mod repeater_symbol_override_data {
+    pub struct RepeaterSymbolOverrideData {}
+    impl RepeaterSymbolOverrideData {
         pub const OVERRIDES_BY_POSITION: u32 = 1;
     }
-    pub mod repeater_position_overrides {
+    pub struct RepeaterPositionOverrides {}
+    impl RepeaterPositionOverrides {
         pub const POSITION: u32 = 1;
         pub const OVERRIDES: u32 = 2;
     }
-    pub mod inherited_variables_data {
+    pub struct InheritedVariablesData {}
+    impl InheritedVariablesData {
         pub const VARIABLE_IDS: u32 = 1;
     }
-    pub mod inherited_variable_entry {
+    pub struct InheritedVariableEntry {}
+    impl InheritedVariableEntry {
         pub const VARIABLE_ID: u32 = 1;
     }
-    pub mod hub_file_attribution {
+    pub struct HubFileAttribution {}
+    impl HubFileAttribution {
         pub const HUB_FILE_ID: u32 = 1;
         pub const HUB_FILE_NAME: u32 = 2;
     }
-    pub mod managed_string_data {
+    pub struct ManagedStringData {}
+    impl ManagedStringData {
         pub const KEY: u32 = 1;
         pub const CONTEXT: u32 = 2;
         pub const LOCALE: u32 = 3;
         pub const CONTENT: u32 = 4;
         pub const CONTENT_SCHEMA: u32 = 5;
     }
-    pub mod managed_string_content_schema {
+    pub struct ManagedStringContentSchema {}
+    impl ManagedStringContentSchema {
         pub const V0: u32 = 0;
     }
-    pub mod managed_string_node_type {
+    pub struct ManagedStringNodeType {}
+    impl ManagedStringNodeType {
         pub const TEXT: u32 = 0;
         pub const CONCATENATE: u32 = 1;
         pub const PLURAL: u32 = 2;
         pub const PLACEHOLDER: u32 = 3;
     }
-    pub mod managed_string_node {
+    pub struct ManagedStringNode {}
+    impl ManagedStringNode {
         pub const TYPE: u32 = 1;
         pub const TEXT_NODE_DATA: u32 = 2;
         pub const CONCATENATE_NODE_DATA: u32 = 3;
         pub const PLURAL_NODE_DATA: u32 = 4;
         pub const PLACEHOLDER_NODE_DATA: u32 = 5;
     }
-    pub mod managed_string_text_node_data {
+    pub struct ManagedStringTextNodeData {}
+    impl ManagedStringTextNodeData {
         pub const VALUE: u32 = 1;
     }
-    pub mod managed_string_concatenate_ast_node_data {
+    pub struct ManagedStringConcatenateAstNodeData {}
+    impl ManagedStringConcatenateAstNodeData {
         pub const VALUES: u32 = 1;
     }
-    pub mod managed_string_plural_type {
+    pub struct ManagedStringPluralType {}
+    impl ManagedStringPluralType {
         pub const ZERO: u32 = 0;
         pub const ONE: u32 = 1;
         pub const TWO: u32 = 2;
@@ -38150,29 +38424,35 @@ pub mod kiwi_records {
         pub const MANY: u32 = 4;
         pub const OTHER: u32 = 5;
     }
-    pub mod managed_string_plural_ast_node_data {
+    pub struct ManagedStringPluralAstNodeData {}
+    impl ManagedStringPluralAstNodeData {
         pub const IDENTIFIER: u32 = 1;
         pub const CONDITIONS: u32 = 2;
     }
-    pub mod managed_string_plural_type_map_entry {
+    pub struct ManagedStringPluralTypeMapEntry {}
+    impl ManagedStringPluralTypeMapEntry {
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod managed_string_format_type {
+    pub struct ManagedStringFormatType {}
+    impl ManagedStringFormatType {
         pub const TEXT: u32 = 0;
         pub const DATE: u32 = 1;
         pub const TIME: u32 = 2;
         pub const NUMBER: u32 = 3;
     }
-    pub mod managed_string_placeholder_ast_node_data {
+    pub struct ManagedStringPlaceholderAstNodeData {}
+    impl ManagedStringPlaceholderAstNodeData {
         pub const IDENTIFIER: u32 = 1;
         pub const FORMAT_TYPE: u32 = 2;
         pub const FORMAT_PATTERN: u32 = 3;
     }
-    pub mod cooper_revert_data {
+    pub struct CooperRevertData {}
+    impl CooperRevertData {
         pub const ORIGINAL_VALUES: u32 = 1;
     }
-    pub mod video_playback {
+    pub struct VideoPlayback {}
+    impl VideoPlayback {
         pub const AUTOPLAY: u32 = 1;
         pub const MEDIA_LOOP: u32 = 2;
         pub const MUTED: u32 = 3;
@@ -38180,7 +38460,8 @@ pub mod kiwi_records {
         pub const START_TIME_MS: u32 = 5;
         pub const END_TIME_MS: u32 = 6;
     }
-    pub mod media_action {
+    pub struct MediaAction {}
+    impl MediaAction {
         pub const PLAY: u32 = 0;
         pub const PAUSE: u32 = 1;
         pub const TOGGLE_PLAY_PAUSE: u32 = 2;
@@ -38192,13 +38473,15 @@ pub mod kiwi_records {
         pub const SKIP_TO: u32 = 8;
         pub const SET_PLAYBACK_RATE: u32 = 9;
     }
-    pub mod animation_timeline_action {
+    pub struct AnimationTimelineAction {}
+    impl AnimationTimelineAction {
         pub const PLAY: u32 = 0;
         pub const PAUSE: u32 = 1;
         pub const TOGGLE_PLAY_PAUSE: u32 = 2;
         pub const SET_PLAYHEAD: u32 = 3;
     }
-    pub mod widget_hover_style {
+    pub struct WidgetHoverStyle {}
+    impl WidgetHoverStyle {
         pub const FILL_PAINTS: u32 = 1;
         pub const STROKE_PAINTS: u32 = 2;
         pub const OPACITY: u32 = 3;
@@ -38206,26 +38489,32 @@ pub mod kiwi_records {
         pub const ARE_STROKE_PAINTS_SET: u32 = 5;
         pub const IS_OPACITY_SET: u32 = 6;
     }
-    pub mod widget_derived_subtree_cursor {
+    pub struct WidgetDerivedSubtreeCursor {}
+    impl WidgetDerivedSubtreeCursor {
         pub const SESSION_ID: u32 = 1;
         pub const COUNTER: u32 = 2;
     }
-    pub mod multiplayer_map {
+    pub struct MultiplayerMap {}
+    impl MultiplayerMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod multiplayer_map_entry {
+    pub struct MultiplayerMapEntry {}
+    impl MultiplayerMapEntry {
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod variable_data_map {
+    pub struct VariableDataMap {}
+    impl VariableDataMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod variable_data_map_entry {
+    pub struct VariableDataMapEntry {}
+    impl VariableDataMapEntry {
         pub const NODE_FIELD: u32 = 1;
         pub const VARIABLE_DATA: u32 = 2;
         pub const VARIABLE_FIELD: u32 = 3;
     }
-    pub mod variable_field {
+    pub struct VariableField {}
+    impl VariableField {
         pub const MISSING: u32 = 0;
         pub const CORNER_RADIUS: u32 = 1;
         pub const PARAGRAPH_SPACING: u32 = 2;
@@ -38293,97 +38582,122 @@ pub mod kiwi_records {
         pub const ARC_DATA_ENDING_ANGLE: u32 = 66;
         pub const ARC_DATA_INNER_RADIUS: u32 = 67;
     }
-    pub mod variable_mode_by_set_map {
+    pub struct VariableModeBySetMap {}
+    impl VariableModeBySetMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod variable_mode_by_set_map_entry {
+    pub struct VariableModeBySetMapEntry {}
+    impl VariableModeBySetMapEntry {
         pub const VARIABLE_SET_ID: u32 = 1;
         pub const VARIABLE_MODE_ID: u32 = 2;
         pub const VARIABLE_SET_EXTENSION_ID: u32 = 3;
     }
-    pub mod code_syntax_map {
+    pub struct CodeSyntaxMap {}
+    impl CodeSyntaxMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod code_syntax_map_entry {
+    pub struct CodeSyntaxMapEntry {}
+    impl CodeSyntaxMapEntry {
         pub const PLATFORM: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod table_merged_cell_map {
+    pub struct TableMergedCellMap {}
+    impl TableMergedCellMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod table_merged_cell_map_entry {
+    pub struct TableMergedCellMapEntry {}
+    impl TableMergedCellMapEntry {
         pub const ROW_ID: u32 = 1;
         pub const COL_ID: u32 = 2;
         pub const ROW_SPAN: u32 = 3;
         pub const COL_SPAN: u32 = 4;
     }
-    pub mod table_row_column_position_map {
+    pub struct TableRowColumnPositionMap {}
+    impl TableRowColumnPositionMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod table_row_column_position_map_entry {
+    pub struct TableRowColumnPositionMapEntry {}
+    impl TableRowColumnPositionMapEntry {
         pub const ID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
-    pub mod guid_position_map {
+    pub struct GuidPositionMap {}
+    impl GuidPositionMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod guid_position_map_entry {
+    pub struct GuidPositionMapEntry {}
+    impl GuidPositionMapEntry {
         pub const ID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
-    pub mod guid_grid_track_size_map {
+    pub struct GuidGridTrackSizeMap {}
+    impl GuidGridTrackSizeMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod guid_grid_track_size_map_entry {
+    pub struct GuidGridTrackSizeMapEntry {}
+    impl GuidGridTrackSizeMapEntry {
         pub const ID: u32 = 1;
         pub const TRACK_SIZE: u32 = 2;
     }
-    pub mod object_animation_list {
+    pub struct ObjectAnimationList {}
+    impl ObjectAnimationList {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod object_animation_list_item {
+    pub struct ObjectAnimationListItem {}
+    impl ObjectAnimationListItem {
         pub const TARGET_NODE_ID: u32 = 1;
         pub const ANIMATION: u32 = 2;
     }
-    pub mod grid_track_size {
+    pub struct GridTrackSize {}
+    impl GridTrackSize {
         pub const MIN_SIZING: u32 = 1;
         pub const MAX_SIZING: u32 = 2;
     }
-    pub mod grid_track_sizing_function {
+    pub struct GridTrackSizingFunction {}
+    impl GridTrackSizingFunction {
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod grid_track_sizing_type {
+    pub struct GridTrackSizingType {}
+    impl GridTrackSizingType {
         pub const FLEX: u32 = 0;
         pub const FIXED: u32 = 1;
         pub const HUG: u32 = 2;
     }
-    pub mod table_row_column_size_map {
+    pub struct TableRowColumnSizeMap {}
+    impl TableRowColumnSizeMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod table_row_column_size_map_entry {
+    pub struct TableRowColumnSizeMapEntry {}
+    impl TableRowColumnSizeMapEntry {
         pub const ID: u32 = 1;
         pub const SIZE: u32 = 2;
     }
-    pub mod agenda_position_map {
+    pub struct AgendaPositionMap {}
+    impl AgendaPositionMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod agenda_position_map_entry {
+    pub struct AgendaPositionMapEntry {}
+    impl AgendaPositionMapEntry {
         pub const ID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
-    pub mod agenda_item_type {
+    pub struct AgendaItemType {}
+    impl AgendaItemType {
         pub const NODE: u32 = 0;
         pub const BLOCK: u32 = 1;
     }
-    pub mod agenda_metadata_map {
+    pub struct AgendaMetadataMap {}
+    impl AgendaMetadataMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod agenda_metadata_map_entry {
+    pub struct AgendaMetadataMapEntry {}
+    impl AgendaMetadataMapEntry {
         pub const ID: u32 = 1;
         pub const DATA: u32 = 2;
     }
-    pub mod agenda_metadata {
+    pub struct AgendaMetadata {}
+    impl AgendaMetadata {
         pub const NAME: u32 = 1;
         pub const TYPE: u32 = 2;
         pub const TARGET_NODE_ID: u32 = 3;
@@ -38391,49 +38705,59 @@ pub mod kiwi_records {
         pub const VOTE_INFO: u32 = 5;
         pub const MUSIC_INFO: u32 = 6;
     }
-    pub mod agenda_timer_info {
+    pub struct AgendaTimerInfo {}
+    impl AgendaTimerInfo {
         pub const TIMER_LENGTH: u32 = 1;
     }
-    pub mod agenda_vote_info {
+    pub struct AgendaVoteInfo {}
+    impl AgendaVoteInfo {
         pub const VOTE_COUNT: u32 = 1;
     }
-    pub mod agenda_music_info {
+    pub struct AgendaMusicInfo {}
+    impl AgendaMusicInfo {
         pub const SONG_ID: u32 = 1;
         pub const START_TIME_MS: u32 = 2;
     }
-    pub mod diagram_layout_rule_type {
+    pub struct DiagramLayoutRuleType {}
+    impl DiagramLayoutRuleType {
         pub const NONE: u32 = 0;
         pub const TREE: u32 = 1;
     }
-    pub mod diagram_parent_index {
+    pub struct DiagramParentIndex {}
+    impl DiagramParentIndex {
         pub const GUID: u32 = 1;
         pub const POSITION: u32 = 2;
     }
-    pub mod diagram_layout_paused {
+    pub struct DiagramLayoutPaused {}
+    impl DiagramLayoutPaused {
         pub const NO: u32 = 0;
         pub const YES: u32 = 1;
     }
-    pub mod component_prop_ref {
+    pub struct ComponentPropRef {}
+    impl ComponentPropRef {
         pub const NODE_FIELD: u32 = 1;
         pub const DEF_ID: u32 = 2;
         pub const ZOMBIE_FALLBACK_NAME: u32 = 3;
         pub const COMPONENT_PROP_NODE_FIELD: u32 = 4;
         pub const IS_DELETED: u32 = 5;
     }
-    pub mod component_prop_node_field {
+    pub struct ComponentPropNodeField {}
+    impl ComponentPropNodeField {
         pub const VISIBLE: u32 = 0;
         pub const TEXT_DATA: u32 = 1;
         pub const OVERRIDDEN_SYMBOL_ID: u32 = 2;
         pub const INHERIT_FILL_STYLE_ID: u32 = 3;
         pub const SLOT_CONTENT_ID: u32 = 4;
     }
-    pub mod component_prop_assignment {
+    pub struct ComponentPropAssignment {}
+    impl ComponentPropAssignment {
         pub const DEF_ID: u32 = 1;
         pub const VALUE: u32 = 2;
         pub const VAR_VALUE: u32 = 3;
         pub const LEGACY_DERIVED_TEXT_DATA: u32 = 4;
     }
-    pub mod component_prop_def {
+    pub struct ComponentPropDef {}
+    impl ComponentPropDef {
         pub const ID: u32 = 1;
         pub const NAME: u32 = 2;
         pub const INITIAL_VALUE: u32 = 3;
@@ -38448,7 +38772,8 @@ pub mod kiwi_records {
         pub const SLOT_PROP_CONFIG: u32 = 12;
         pub const COLOR_ARRAY_CONFIG: u32 = 13;
     }
-    pub mod component_prop_value {
+    pub struct ComponentPropValue {}
+    impl ComponentPropValue {
         pub const BOOL_VALUE: u32 = 1;
         pub const TEXT_VALUE: u32 = 2;
         pub const GUID_VALUE: u32 = 3;
@@ -38462,35 +38787,43 @@ pub mod kiwi_records {
         pub const GRADIENT_VALUE: u32 = 11;
         pub const COLOR_POINT_VALUE: u32 = 12;
     }
-    pub mod timeline_data {
+    pub struct TimelineData {}
+    impl TimelineData {
         pub const DURATION_US: u32 = 1;
         pub const DEFAULT_TIMELINE: u32 = 2;
         pub const PARENT_TIMELINE_DEF_ID: u32 = 3;
         pub const PLAYBACK_STYLE: u32 = 4;
     }
-    pub mod timeline_definitions_map {
+    pub struct TimelineDefinitionsMap {}
+    impl TimelineDefinitionsMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod timeline_definitions_map_entry {
+    pub struct TimelineDefinitionsMapEntry {}
+    impl TimelineDefinitionsMapEntry {
         pub const ID: u32 = 1;
         pub const DATA: u32 = 2;
     }
-    pub mod timeline_assignment_key {
+    pub struct TimelineAssignmentKey {}
+    impl TimelineAssignmentKey {
         pub const ASSIGNED_TIMELINE_ID: u32 = 1;
         pub const CONTAINING_TIMELINE_ID: u32 = 2;
     }
-    pub mod timeline_binding_data {
+    pub struct TimelineBindingData {}
+    impl TimelineBindingData {
         pub const OFFSET_US: u32 = 1;
         pub const DISABLED: u32 = 2;
     }
-    pub mod timeline_assignments_map {
+    pub struct TimelineAssignmentsMap {}
+    impl TimelineAssignmentsMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod timeline_assignments_map_entry {
+    pub struct TimelineAssignmentsMapEntry {}
+    impl TimelineAssignmentsMapEntry {
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod component_prop_type {
+    pub struct ComponentPropType {}
+    impl ComponentPropType {
         pub const BOOL: u32 = 0;
         pub const TEXT: u32 = 1;
         pub const COLOR: u32 = 2;
@@ -38509,11 +38842,13 @@ pub mod kiwi_records {
         pub const GRADIENT: u32 = 15;
         pub const COLOR_POINT: u32 = 16;
     }
-    pub mod component_prop_preferred_values {
+    pub struct ComponentPropPreferredValues {}
+    impl ComponentPropPreferredValues {
         pub const STRING_VALUES: u32 = 1;
         pub const INSTANCE_SWAP_VALUES: u32 = 2;
     }
-    pub mod parameter_config {
+    pub struct ParameterConfig {}
+    impl ParameterConfig {
         pub const NUMBER_PROP_CONFIG: u32 = 1;
         pub const CONTROL: u32 = 2;
         pub const SLIDER_CONFIG: u32 = 3;
@@ -38528,139 +38863,167 @@ pub mod kiwi_records {
         pub const COLOR_POINT_CONFIG: u32 = 12;
         pub const SHOW_DIVIDER_ABOVE: u32 = 13;
     }
-    pub mod parameter_config_control {
+    pub struct ParameterConfigControl {}
+    impl ParameterConfigControl {
         pub const DEFAULT: u32 = 0;
         pub const SLIDER: u32 = 1;
         pub const INPUT: u32 = 2;
         pub const SELECT: u32 = 3;
     }
-    pub mod input_config {
+    pub struct InputConfig {}
+    impl InputConfig {
         pub const UNIT: u32 = 1;
         pub const MIN: u32 = 2;
         pub const MAX: u32 = 3;
     }
-    pub mod slider_config {
+    pub struct SliderConfig {}
+    impl SliderConfig {
         pub const MIN: u32 = 1;
         pub const MAX: u32 = 2;
         pub const STEP: u32 = 3;
         pub const UNIT: u32 = 4;
     }
-    pub mod point_mode {
+    pub struct PointMode {}
+    impl PointMode {
         pub const CANVAS_AND_UI: u32 = 0;
         pub const CANVAS: u32 = 1;
         pub const UI: u32 = 2;
     }
-    pub mod point_config {
+    pub struct PointConfig {}
+    impl PointConfig {
         pub const MODE: u32 = 1;
         pub const UNIT: u32 = 2;
     }
-    pub mod line {
+    pub struct Line {}
+    impl Line {
         pub const A: u32 = 1;
         pub const B: u32 = 2;
     }
-    pub mod line_config {
+    pub struct LineConfig {}
+    impl LineConfig {
         pub const MODE: u32 = 1;
         pub const UNIT: u32 = 2;
     }
-    pub mod circle {
+    pub struct Circle {}
+    impl Circle {
         pub const CENTER: u32 = 1;
         pub const RADIUS: u32 = 2;
     }
-    pub mod point_radius_config {
+    pub struct PointRadiusConfig {}
+    impl PointRadiusConfig {
         pub const MODE: u32 = 1;
         pub const POSITION_UNIT: u32 = 2;
         pub const RADIUS_UNIT: u32 = 3;
         pub const MIN_RADIUS: u32 = 4;
         pub const MAX_RADIUS: u32 = 5;
     }
-    pub mod rotation3_d {
+    pub struct Rotation3D {}
+    impl Rotation3D {
         pub const X: u32 = 1;
         pub const Y: u32 = 2;
         pub const Z: u32 = 3;
         pub const TRANSLATE_Z: u32 = 4;
     }
-    pub mod rotation3_d_config {
+    pub struct Rotation3DConfig {}
+    impl Rotation3DConfig {
         pub const MODE: u32 = 1;
     }
-    pub mod circle_point {
+    pub struct CirclePoint {}
+    impl CirclePoint {
         pub const CENTER: u32 = 1;
         pub const RADIUS: u32 = 2;
         pub const ANGLE: u32 = 3;
     }
-    pub mod circle_point_config {
+    pub struct CirclePointConfig {}
+    impl CirclePointConfig {
         pub const MODE: u32 = 1;
         pub const POSITION_UNIT: u32 = 2;
         pub const RADIUS_UNIT: u32 = 3;
         pub const MIN_RADIUS: u32 = 4;
         pub const MAX_RADIUS: u32 = 5;
     }
-    pub mod color_point {
+    pub struct ColorPoint {}
+    impl ColorPoint {
         pub const POINT: u32 = 1;
         pub const COLOR: u32 = 2;
     }
-    pub mod color_point_config {
+    pub struct ColorPointConfig {}
+    impl ColorPointConfig {
         pub const MODE: u32 = 1;
         pub const UNIT: u32 = 2;
     }
-    pub mod gradient {
+    pub struct Gradient {}
+    impl Gradient {
         pub const STOPS: u32 = 1;
     }
-    pub mod gradient_stop {
+    pub struct GradientStop {}
+    impl GradientStop {
         pub const POSITION: u32 = 1;
         pub const COLOR: u32 = 2;
     }
-    pub mod select_option {
+    pub struct SelectOption {}
+    impl SelectOption {
         pub const VALUE: u32 = 1;
         pub const LABEL: u32 = 2;
     }
-    pub mod select_config {
+    pub struct SelectConfig {}
+    impl SelectConfig {
         pub const OPTIONS: u32 = 1;
     }
-    pub mod color_array_config {
+    pub struct ColorArrayConfig {}
+    impl ColorArrayConfig {
         pub const MIN_LENGTH: u32 = 1;
         pub const MAX_LENGTH: u32 = 2;
     }
-    pub mod slot_prop_config {
+    pub struct SlotPropConfig {}
+    impl SlotPropConfig {
         pub const STRETCH_CHILD_ON_INSERT: u32 = 1;
         pub const DISPLAY_BY_DEFAULT: u32 = 2;
         pub const MIN_CHILDREN: u32 = 3;
         pub const MAX_CHILDREN: u32 = 4;
         pub const ALLOW_PREFERRED_VALUES_ONLY: u32 = 5;
     }
-    pub mod number_prop_config {
+    pub struct NumberPropConfig {}
+    impl NumberPropConfig {
         pub const CONTROL: u32 = 1;
         pub const MIN: u32 = 2;
         pub const MAX: u32 = 3;
         pub const STEP: u32 = 4;
     }
-    pub mod instance_swap_preferred_value {
+    pub struct InstanceSwapPreferredValue {}
+    impl InstanceSwapPreferredValue {
         pub const TYPE: u32 = 1;
         pub const KEY: u32 = 2;
     }
-    pub mod instance_swap_preferred_value_type {
+    pub struct InstanceSwapPreferredValueType {}
+    impl InstanceSwapPreferredValueType {
         pub const COMPONENT: u32 = 0;
         pub const STATE_GROUP: u32 = 1;
     }
-    pub mod widget_event {
+    pub struct WidgetEvent {}
+    impl WidgetEvent {
         pub const MOUSE_DOWN: u32 = 0;
         pub const CLICK: u32 = 1;
         pub const TEXT_EDIT_END: u32 = 2;
         pub const ATTACHED_STICKABLES_CHANGED: u32 = 3;
         pub const STUCK_STATUS_CHANGED: u32 = 4;
     }
-    pub mod widget_input_behavior {
+    pub struct WidgetInputBehavior {}
+    impl WidgetInputBehavior {
         pub const WRAP: u32 = 0;
         pub const TRUNCATE: u32 = 1;
         pub const MULTILINE: u32 = 2;
     }
-    pub mod widget_metadata {
+    pub struct WidgetMetadata {}
+    impl WidgetMetadata {
         pub const PLUGIN_ID: u32 = 1;
         pub const PLUGIN_VERSION_ID: u32 = 2;
         pub const WIDGET_NAME: u32 = 3;
         pub const IS_RESIZABLE: u32 = 4;
         pub const IS_ROTATABLE: u32 = 5;
     }
-    pub mod widget_property_menu_item_type {
+    pub struct WidgetPropertyMenuItemType {}
+    impl WidgetPropertyMenuItemType {
         pub const ACTION: u32 = 0;
         pub const SEPARATOR: u32 = 1;
         pub const COLOR: u32 = 2;
@@ -38669,15 +39032,18 @@ pub mod kiwi_records {
         pub const TOGGLE: u32 = 5;
         pub const LINK: u32 = 6;
     }
-    pub mod widget_property_menu_selector_option {
+    pub struct WidgetPropertyMenuSelectorOption {}
+    impl WidgetPropertyMenuSelectorOption {
         pub const OPTION: u32 = 1;
         pub const TOOLTIP: u32 = 2;
     }
-    pub mod widget_input_text_node_type {
+    pub struct WidgetInputTextNodeType {}
+    impl WidgetInputTextNodeType {
         pub const WIDGET_CONTROLLED: u32 = 0;
         pub const RICH_TEXT: u32 = 1;
     }
-    pub mod widget_property_menu_item {
+    pub struct WidgetPropertyMenuItem {}
+    impl WidgetPropertyMenuItem {
         pub const PROPERTY_NAME: u32 = 1;
         pub const TOOLTIP: u32 = 2;
         pub const ITEM_TYPE: u32 = 3;
@@ -38688,7 +39054,8 @@ pub mod kiwi_records {
         pub const HREF: u32 = 8;
         pub const ALLOW_CUSTOM_COLOR: u32 = 9;
     }
-    pub mod code_block_language {
+    pub struct CodeBlockLanguage {}
+    impl CodeBlockLanguage {
         pub const TYPESCRIPT: u32 = 0;
         pub const CPP: u32 = 1;
         pub const RUBY: u32 = 2;
@@ -38707,7 +39074,8 @@ pub mod kiwi_records {
         pub const PLAINTEXT: u32 = 15;
         pub const MARKDOWN: u32 = 16;
     }
-    pub mod code_block_theme {
+    pub struct CodeBlockTheme {}
+    impl CodeBlockTheme {
         pub const FIGJAM_DARK: u32 = 0;
         pub const DRACULA: u32 = 1;
         pub const DUOTONE_SEA: u32 = 2;
@@ -38716,7 +39084,8 @@ pub mod kiwi_records {
         pub const DUOTONE_FOREST: u32 = 5;
         pub const DUOTONE_LIGHT: u32 = 6;
     }
-    pub mod spec_block_type {
+    pub struct SpecBlockType {}
+    impl SpecBlockType {
         pub const DEFAULT: u32 = 0;
         pub const PARAGRAPH: u32 = 1;
         pub const HEADING_1: u32 = 2;
@@ -38739,44 +39108,53 @@ pub mod kiwi_records {
         pub const IMAGE: u32 = 19;
         pub const EMBED: u32 = 20;
     }
-    pub mod internal_enum_for_test {
+    pub struct InternalEnumForTest {}
+    impl InternalEnumForTest {
         pub const OLD: u32 = 1;
     }
-    pub mod internal_data_for_test {
+    pub struct InternalDataForTest {}
+    impl InternalDataForTest {
         pub const TEST_FIELD_A: u32 = 1;
     }
-    pub mod state_group_property_value_order {
+    pub struct StateGroupPropertyValueOrder {}
+    impl StateGroupPropertyValueOrder {
         pub const PROPERTY: u32 = 1;
         pub const VALUES: u32 = 2;
     }
-    pub mod backfill_error {
+    pub struct BackfillError {}
+    impl BackfillError {
         pub const NONE: u32 = 0;
         pub const TRANSIENT_RETRYING: u32 = 1;
         pub const PERMANENTLY_FAILED: u32 = 2;
         pub const PASTE_FAILED: u32 = 3;
     }
-    pub mod partial_paste_annotation {
+    pub struct PartialPasteAnnotation {}
+    impl PartialPasteAnnotation {
         pub const IS_PARTIAL: u32 = 1;
         pub const ANNOTATED_AT: u32 = 2;
         pub const ERROR_STATE: u32 = 3;
     }
-    pub mod variant_prop_spec {
+    pub struct VariantPropSpec {}
+    impl VariantPropSpec {
         pub const PROP_DEF_ID: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod text_list_data {
+    pub struct TextListData {}
+    impl TextListData {
         pub const LIST_ID: u32 = 1;
         pub const BULLET_TYPE: u32 = 2;
         pub const INDENTATION_LEVEL: u32 = 3;
         pub const LINE_NUMBER: u32 = 4;
     }
-    pub mod bullet_type {
+    pub struct BulletType {}
+    impl BulletType {
         pub const ORDERED: u32 = 0;
         pub const UNORDERED: u32 = 1;
         pub const INDENT: u32 = 2;
         pub const NO_LIST: u32 = 3;
     }
-    pub mod text_line_data {
+    pub struct TextLineData {}
+    impl TextLineData {
         pub const LINE_TYPE: u32 = 1;
         pub const INDENTATION_LEVEL: u32 = 2;
         pub const DIRECTIONALITY: u32 = 3;
@@ -38788,37 +39166,44 @@ pub mod kiwi_records {
         pub const SOURCE_DIRECTIONALITY: u32 = 9;
         pub const STYLE_ID: u32 = 10;
     }
-    pub mod derived_text_line_data {
+    pub struct DerivedTextLineData {}
+    impl DerivedTextLineData {
         pub const DIRECTIONALITY: u32 = 1;
     }
-    pub mod line_type {
+    pub struct LineType {}
+    impl LineType {
         pub const PLAIN: u32 = 0;
         pub const ORDERED_LIST: u32 = 1;
         pub const UNORDERED_LIST: u32 = 2;
         pub const BLOCKQUOTE: u32 = 3;
         pub const HEADER: u32 = 4;
     }
-    pub mod source_directionality {
+    pub struct SourceDirectionality {}
+    impl SourceDirectionality {
         pub const AUTO: u32 = 0;
         pub const LTR: u32 = 1;
         pub const RTL: u32 = 2;
     }
-    pub mod directionality {
+    pub struct Directionality {}
+    impl Directionality {
         pub const LTR: u32 = 0;
         pub const RTL: u32 = 1;
     }
-    pub mod directionality_intent {
+    pub struct DirectionalityIntent {}
+    impl DirectionalityIntent {
         pub const IMPLICIT: u32 = 0;
         pub const EXPLICIT: u32 = 1;
     }
-    pub mod prototype_interaction {
+    pub struct PrototypeInteraction {}
+    impl PrototypeInteraction {
         pub const ID: u32 = 1;
         pub const EVENT: u32 = 2;
         pub const ACTIONS: u32 = 3;
         pub const IS_DELETED: u32 = 4;
         pub const STATE_MANAGEMENT_VERSION: u32 = 5;
     }
-    pub mod prototype_event {
+    pub struct PrototypeEvent {}
+    impl PrototypeEvent {
         pub const INTERACTION_TYPE: u32 = 1;
         pub const INTERACTION_MAINTAINED: u32 = 2;
         pub const INTERACTION_DURATION: u32 = 3;
@@ -38827,15 +39212,18 @@ pub mod kiwi_records {
         pub const TRANSITION_TIMEOUT: u32 = 6;
         pub const MEDIA_HIT_TIME: u32 = 7;
     }
-    pub mod prototype_variable_target {
+    pub struct PrototypeVariableTarget {}
+    impl PrototypeVariableTarget {
         pub const ID: u32 = 1;
         pub const NODE_FIELD_ALIAS: u32 = 2;
     }
-    pub mod conditional_actions {
+    pub struct ConditionalActions {}
+    impl ConditionalActions {
         pub const ACTIONS: u32 = 1;
         pub const CONDITION: u32 = 2;
     }
-    pub mod prototype_action {
+    pub struct PrototypeAction {}
+    impl PrototypeAction {
         pub const TRANSITION_NODE_ID: u32 = 1;
         pub const TRANSITION_TYPE: u32 = 2;
         pub const TRANSITION_DURATION: u32 = 3;
@@ -38879,11 +39267,13 @@ pub mod kiwi_records {
         pub const ANIMATION_TIMELINE_DEF_ID: u32 = 41;
         pub const TRANSITION_OVERRIDES_ENABLED: u32 = 42;
     }
-    pub mod animation_phase {
+    pub struct AnimationPhase {}
+    impl AnimationPhase {
         pub const IN: u32 = 0;
         pub const OUT: u32 = 1;
     }
-    pub mod animation_type {
+    pub struct AnimationType {}
+    impl AnimationType {
         pub const NONE: u32 = 0;
         pub const FADE: u32 = 1;
         pub const SLIDE_FROM_LEFT: u32 = 2;
@@ -38891,43 +39281,51 @@ pub mod kiwi_records {
         pub const SLIDE_FROM_TOP: u32 = 4;
         pub const SLIDE_FROM_BOTTOM: u32 = 5;
     }
-    pub mod animation_state {
+    pub struct AnimationState {}
+    impl AnimationState {
         pub const OPACITY: u32 = 1;
         pub const TRANSFORM: u32 = 2;
     }
-    pub mod prototype_starting_point {
+    pub struct PrototypeStartingPoint {}
+    impl PrototypeStartingPoint {
         pub const NAME: u32 = 1;
         pub const DESCRIPTION: u32 = 2;
         pub const POSITION: u32 = 3;
     }
-    pub mod trigger_device {
+    pub struct TriggerDevice {}
+    impl TriggerDevice {
         pub const KEYBOARD: u32 = 0;
         pub const UNKNOWN_CONTROLLER: u32 = 1;
         pub const XBOX_ONE: u32 = 2;
         pub const PS4: u32 = 3;
         pub const SWITCH_PRO: u32 = 4;
     }
-    pub mod key_trigger {
+    pub struct KeyTrigger {}
+    impl KeyTrigger {
         pub const KEY_CODES: u32 = 1;
         pub const TRIGGER_DEVICE: u32 = 2;
     }
-    pub mod hyperlink {
+    pub struct Hyperlink {}
+    impl Hyperlink {
         pub const URL: u32 = 1;
         pub const GUID: u32 = 2;
         pub const OPEN_IN_NEW_TAB: u32 = 3;
         pub const CMS_TARGET: u32 = 4;
     }
-    pub mod cms_item_page_target {
+    pub struct CmsItemPageTarget {}
+    impl CmsItemPageTarget {
         pub const NODE_ID: u32 = 1;
         pub const CMS_ITEM_ID: u32 = 2;
         pub const FIELD_SCHEMA_ID: u32 = 3;
     }
-    pub mod mention_source {
+    pub struct MentionSource {}
+    impl MentionSource {
         pub const DEFAULT: u32 = 0;
         pub const COPY_DUPLICATE: u32 = 1;
         pub const SILENT_INSERT: u32 = 2;
     }
-    pub mod mention {
+    pub struct Mention {}
+    impl Mention {
         pub const ID: u32 = 1;
         pub const MENTIONED_USER_ID: u32 = 2;
         pub const MENTIONED_BY_USER_ID: u32 = 3;
@@ -38937,7 +39335,8 @@ pub mod kiwi_records {
         pub const MENTIONED_BY_USER_ID_INT: u32 = 7;
         pub const MENTIONED_USER_GROUP_ID: u32 = 8;
     }
-    pub mod embed_data {
+    pub struct EmbedData {}
+    impl EmbedData {
         pub const URL: u32 = 1;
         pub const SRC_URL: u32 = 2;
         pub const TITLE: u32 = 3;
@@ -38953,12 +39352,14 @@ pub mod kiwi_records {
         pub const EMBED_VERSION_ID: u32 = 13;
         pub const IS_PUBLISHED_SITE: u32 = 14;
     }
-    pub mod stamp_data {
+    pub struct StampData {}
+    impl StampData {
         pub const USER_ID: u32 = 1;
         pub const VOTING_SESSION_ID: u32 = 2;
         pub const STAMPED_BY_USER_ID: u32 = 3;
     }
-    pub mod link_preview_data {
+    pub struct LinkPreviewData {}
+    impl LinkPreviewData {
         pub const URL: u32 = 1;
         pub const TITLE: u32 = 2;
         pub const PROVIDER: u32 = 3;
@@ -38968,71 +39369,84 @@ pub mod kiwi_records {
         pub const THUMBNAIL_IMAGE_WIDTH: u32 = 7;
         pub const THUMBNAIL_IMAGE_HEIGHT: u32 = 8;
     }
-    pub mod viewport {
+    pub struct Viewport {}
+    impl Viewport {
         pub const CANVAS_SPACE_BOUNDS: u32 = 1;
         pub const PIXEL_PREVIEW: u32 = 2;
         pub const PIXEL_DENSITY: u32 = 3;
         pub const CANVAS_GUID: u32 = 4;
     }
-    pub mod mouse {
+    pub struct Mouse {}
+    impl Mouse {
         pub const CURSOR: u32 = 1;
         pub const CANVAS_SPACE_LOCATION: u32 = 2;
         pub const CANVAS_SPACE_SELECTION_BOX: u32 = 3;
         pub const CANVAS_GUID: u32 = 4;
         pub const CURSOR_HIDDEN_REASON: u32 = 5;
     }
-    pub mod click {
+    pub struct Click {}
+    impl Click {
         pub const ID: u32 = 1;
         pub const POINT: u32 = 2;
     }
-    pub mod scroll_position {
+    pub struct ScrollPosition {}
+    impl ScrollPosition {
         pub const NODE: u32 = 1;
         pub const SCROLL_OFFSET: u32 = 2;
     }
-    pub mod triggered_overlay {
+    pub struct TriggeredOverlay {}
+    impl TriggeredOverlay {
         pub const OVERLAY_GUID: u32 = 1;
         pub const HOTSPOT_GUID: u32 = 2;
         pub const SWAP_GUID: u32 = 3;
     }
-    pub mod triggered_overlay_data {
+    pub struct TriggeredOverlayData {}
+    impl TriggeredOverlayData {
         pub const OVERLAY_GUID: u32 = 1;
         pub const HOTSPOT_GUID: u32 = 2;
         pub const SWAP_GUID: u32 = 3;
         pub const PROTOTYPE_INTERACTION_GUID: u32 = 4;
         pub const HOTSPOT_BLUEPRINT_ID: u32 = 5;
     }
-    pub mod triggered_set_variable_action_data {
+    pub struct TriggeredSetVariableActionData {}
+    impl TriggeredSetVariableActionData {
         pub const NODE_FOR_FINDING_TOPMOST_SCREEN_ID: u32 = 1;
         pub const TARGET_VARIABLE_ID: u32 = 2;
         pub const TARGET_VARIABLE_DATA: u32 = 3;
         pub const RESOLVED_VARIABLE_MODES: u32 = 4;
     }
-    pub mod triggered_set_variable_mode_action_data {
+    pub struct TriggeredSetVariableModeActionData {}
+    impl TriggeredSetVariableModeActionData {
         pub const NODE_FOR_FINDING_TOPMOST_SCREEN_ID: u32 = 1;
         pub const TARGET_VARIABLE_SET_KEY: u32 = 2;
         pub const TARGET_VARIABLE_MODE_ID: u32 = 3;
         pub const TARGET_VARIABLE_SET_ID: u32 = 4;
     }
-    pub mod video_state_change_data {
+    pub struct VideoStateChangeData {}
+    impl VideoStateChangeData {
         pub const TARGET_NODE_ID: u32 = 1;
         pub const IS_PLAYING: u32 = 2;
         pub const IS_PLAYING_SOUND: u32 = 3;
         pub const CURRENT_TIMES: u32 = 4;
         pub const ACTION_TAKEN_TIMESTAMP: u32 = 5;
     }
-    pub mod embedded_prototype_data {
+    pub struct EmbeddedPrototypeData {}
+    impl EmbeddedPrototypeData {
         pub const NODE_ID: u32 = 1;
         pub const SESSION_ID: u32 = 2;
     }
-    pub mod presented_state {
+    pub struct PresentedState {}
+    impl PresentedState {
         pub const BASE_SCREEN_ID: u32 = 1;
         pub const OVERLAYS: u32 = 2;
     }
-    pub mod transition_direction {
+    pub struct TransitionDirection {}
+    impl TransitionDirection {
         pub const FORWARD: u32 = 0;
         pub const REVERSE: u32 = 1;
     }
-    pub mod top_level_playback_change {
+    pub struct TopLevelPlaybackChange {}
+    impl TopLevelPlaybackChange {
         pub const OLD_STATE: u32 = 1;
         pub const NEW_STATE: u32 = 2;
         pub const HOTSPOT_BLUEPRINT_ID: u32 = 3;
@@ -39041,19 +39455,22 @@ pub mod kiwi_records {
         pub const DIRECTION: u32 = 6;
         pub const INSTANCE_STABLE_PATH: u32 = 7;
     }
-    pub mod instance_state_change {
+    pub struct InstanceStateChange {}
+    impl InstanceStateChange {
         pub const STATE_ID: u32 = 1;
         pub const INTERACTION_ID: u32 = 2;
         pub const HOTSPOT_STABLE_PATH: u32 = 3;
         pub const INSTANCE_STABLE_PATH: u32 = 4;
         pub const PHASE: u32 = 5;
     }
-    pub mod text_cursor {
+    pub struct TextCursor {}
+    impl TextCursor {
         pub const SELECTION_BOX: u32 = 1;
         pub const CANVAS_GUID: u32 = 2;
         pub const TEXT_NODE_GUID: u32 = 3;
     }
-    pub mod text_selection {
+    pub struct TextSelection {}
+    impl TextSelection {
         pub const SELECTION_BOXES: u32 = 1;
         pub const CANVAS_GUID: u32 = 2;
         pub const TEXT_NODE_GUID: u32 = 3;
@@ -39062,28 +39479,33 @@ pub mod kiwi_records {
         pub const TABLE_CELL_ROW_ID: u32 = 6;
         pub const TABLE_CELL_COL_ID: u32 = 7;
     }
-    pub mod playback_change_phase {
+    pub struct PlaybackChangePhase {}
+    impl PlaybackChangePhase {
         pub const INITIATED: u32 = 0;
         pub const ABORTED: u32 = 1;
         pub const COMMITTED: u32 = 2;
     }
-    pub mod playback_change_keyframe {
+    pub struct PlaybackChangeKeyframe {}
+    impl PlaybackChangeKeyframe {
         pub const PHASE: u32 = 1;
         pub const PROGRESS: u32 = 2;
         pub const TIMESTAMP: u32 = 3;
     }
-    pub mod state_mapping {
+    pub struct StateMapping {}
+    impl StateMapping {
         pub const STABLE_PATH: u32 = 1;
         pub const LAST_TOP_LEVEL_CHANGE: u32 = 2;
         pub const LAST_TOP_LEVEL_CHANGE_STATUS: u32 = 3;
         pub const TIMESTAMP: u32 = 4;
     }
-    pub mod scroll_mapping {
+    pub struct ScrollMapping {}
+    impl ScrollMapping {
         pub const BLUEPRINT_ID: u32 = 1;
         pub const OVERLAY_INDEX: u32 = 2;
         pub const SCROLL_OFFSET: u32 = 3;
     }
-    pub mod playback_update {
+    pub struct PlaybackUpdate {}
+    impl PlaybackUpdate {
         pub const LAST_TOP_LEVEL_CHANGE: u32 = 1;
         pub const LAST_TOP_LEVEL_CHANGE_STATUS: u32 = 2;
         pub const SCROLL_MAPPINGS: u32 = 3;
@@ -39092,26 +39514,32 @@ pub mod kiwi_records {
         pub const IS_TOP_LEVEL_FRAME_CHANGE: u32 = 6;
         pub const STATE_MAPPINGS: u32 = 7;
     }
-    pub mod chat_message {
+    pub struct ChatMessage {}
+    impl ChatMessage {
         pub const TEXT: u32 = 1;
         pub const PREVIOUS_TEXT: u32 = 2;
     }
-    pub mod voice_metadata {
+    pub struct VoiceMetadata {}
+    impl VoiceMetadata {
         pub const CONNECTED_CALL_ID: u32 = 1;
     }
-    pub mod april_fun_cursor {
+    pub struct AprilFunCursor {}
+    impl AprilFunCursor {
         pub const ID: u32 = 1;
         pub const TRAIL_ENABLED: u32 = 2;
     }
-    pub mod april_fun_fig_pal {
+    pub struct AprilFunFigPal {}
+    impl AprilFunFigPal {
         pub const CUSTOMIZATION: u32 = 1;
         pub const NAME: u32 = 2;
     }
-    pub mod heartbeat {
+    pub struct Heartbeat {}
+    impl Heartbeat {
         pub const FOREGROUND: u32 = 0;
         pub const BACKGROUND: u32 = 1;
     }
-    pub mod sites_view_state {
+    pub struct SitesViewState {}
+    impl SitesViewState {
         pub const FILE: u32 = 0;
         pub const CODE: u32 = 1;
         pub const DAKOTA: u32 = 2;
@@ -39119,17 +39547,20 @@ pub mod kiwi_records {
         pub const INSERT: u32 = 4;
         pub const VARIABLES: u32 = 5;
     }
-    pub mod design_full_page_view_state {
+    pub struct DesignFullPageViewState {}
+    impl DesignFullPageViewState {
         pub const NONE: u32 = 0;
         pub const DESIGN_SYSTEM: u32 = 1;
         pub const VARIABLES: u32 = 2;
     }
-    pub mod agent_info {
+    pub struct AgentInfo {}
+    impl AgentInfo {
         pub const NAME: u32 = 1;
         pub const LOGO: u32 = 2;
         pub const OAUTH_CLIENT_ID: u32 = 3;
     }
-    pub mod user_change {
+    pub struct UserChange {}
+    impl UserChange {
         pub const SESSION_ID: u32 = 1;
         pub const CONNECTED: u32 = 2;
         pub const NAME: u32 = 3;
@@ -39177,46 +39608,56 @@ pub mod kiwi_records {
         pub const DESIGN_FULL_PAGE_VIEW_STATE: u32 = 45;
         pub const AGENT_INFO: u32 = 46;
     }
-    pub mod interactive_slide_element_change {
+    pub struct InteractiveSlideElementChange {}
+    impl InteractiveSlideElementChange {
         pub const USER_ID: u32 = 1;
         pub const ANONYMOUS_USER_ID: u32 = 2;
         pub const NODE_ID: u32 = 3;
         pub const RESPONSE_DATA: u32 = 4;
     }
-    pub mod node_status_change {
+    pub struct NodeStatusChange {}
+    impl NodeStatusChange {
         pub const NODE_IDS: u32 = 1;
         pub const STATUS_INFO: u32 = 2;
     }
-    pub mod buzz_approval_asset_entry {
+    pub struct BuzzApprovalAssetEntry {}
+    impl BuzzApprovalAssetEntry {
         pub const ASSET_NODE_ID: u32 = 1;
         pub const APPROVED: u32 = 2;
     }
-    pub mod buzz_approval_change {
+    pub struct BuzzApprovalChange {}
+    impl BuzzApprovalChange {
         pub const ASSET_ENTRIES: u32 = 1;
         pub const CANVAS_GRID_NODE_ID: u32 = 2;
         pub const REQUEST_ID: u32 = 3;
     }
-    pub mod scene_graph_query_behavior {
+    pub struct SceneGraphQueryBehavior {}
+    impl SceneGraphQueryBehavior {
         pub const DEFAULT: u32 = 0;
         pub const CONTAINING_PAGE: u32 = 1;
         pub const PLUGIN: u32 = 2;
     }
-    pub mod scene_graph_query_mode {
+    pub struct SceneGraphQueryMode {}
+    impl SceneGraphQueryMode {
         pub const ADD: u32 = 0;
         pub const SET: u32 = 1;
     }
-    pub mod scene_graph_query {
+    pub struct SceneGraphQuery {}
+    impl SceneGraphQuery {
         pub const STARTING_NODE: u32 = 1;
         pub const DEPTH: u32 = 2;
         pub const BEHAVIOR: u32 = 3;
     }
-    pub mod node_changes_metadata {
+    pub struct NodeChangesMetadata {}
+    impl NodeChangesMetadata {
         pub const BLOBS_FIELD_OFFSET: u32 = 1;
     }
-    pub mod cursor_reaction {
+    pub struct CursorReaction {}
+    impl CursorReaction {
         pub const IMAGE_URL: u32 = 1;
     }
-    pub mod timer_info {
+    pub struct TimerInfo {}
+    impl TimerInfo {
         pub const IS_PAUSED: u32 = 1;
         pub const TIME_REMAINING_MS: u32 = 2;
         pub const TOTAL_TIME_MS: u32 = 3;
@@ -39226,23 +39667,27 @@ pub mod kiwi_records {
         pub const LAST_RECEIVED_SONG_TIMESTAMP_MS: u32 = 7;
         pub const SONG_UUID: u32 = 8;
     }
-    pub mod music_info {
+    pub struct MusicInfo {}
+    impl MusicInfo {
         pub const IS_PAUSED: u32 = 1;
         pub const MESSAGE_ID: u32 = 2;
         pub const SONG_ID: u32 = 3;
         pub const LAST_RECEIVED_SONG_TIMESTAMP_MS: u32 = 4;
         pub const IS_STOPPED: u32 = 5;
     }
-    pub mod presenter_nomination {
+    pub struct PresenterNomination {}
+    impl PresenterNomination {
         pub const SESSION_ID: u32 = 1;
         pub const IS_CANCELLED: u32 = 2;
     }
-    pub mod presenter_info {
+    pub struct PresenterInfo {}
+    impl PresenterInfo {
         pub const SESSION_ID: u32 = 1;
         pub const NOMINATION: u32 = 2;
         pub const IS_RECONNECTED: u32 = 3;
     }
-    pub mod client_broadcast {
+    pub struct ClientBroadcast {}
+    impl ClientBroadcast {
         pub const SESSION_ID: u32 = 1;
         pub const CURSOR_REACTION: u32 = 2;
         pub const TIMER: u32 = 3;
@@ -39250,7 +39695,8 @@ pub mod kiwi_records {
         pub const PROTOTYPE_PRESENTER: u32 = 5;
         pub const MUSIC: u32 = 6;
     }
-    pub mod paste_asset_type {
+    pub struct PasteAssetType {}
+    impl PasteAssetType {
         pub const UNKNOWN: u32 = 0;
         pub const VARIABLE: u32 = 1;
         pub const STYLE_PROPERTIES: u32 = 2;
@@ -39258,7 +39704,8 @@ pub mod kiwi_records {
         pub const STYLE_PROPERTIES_STROKE: u32 = 4;
         pub const STYLE_PROPERTIES_EFFECT: u32 = 5;
     }
-    pub mod message {
+    pub struct Message {}
+    impl Message {
         pub const TYPE: u32 = 1;
         pub const SESSION_ID: u32 = 2;
         pub const ACK_ID: u32 = 3;
@@ -39305,25 +39752,30 @@ pub mod kiwi_records {
         pub const BUZZ_APPROVAL_CHANGE: u32 = 44;
         pub const SCENE_GRAPH_QUERY_MODE: u32 = 45;
     }
-    pub mod encoded_offsets_index {
+    pub struct EncodedOffsetsIndex {}
+    impl EncodedOffsetsIndex {
         pub const NODE_CHANGES_FIELD_OFFSET: u32 = 1;
         pub const NODE_CHANGES_FIELD_LENGTH: u32 = 2;
         pub const BLOBS_FIELD_OFFSET: u32 = 3;
         pub const NODE_CHANGE_OFFSETS: u32 = 4;
     }
-    pub mod guid_and_encoded_offset {
+    pub struct GuidAndEncodedOffset {}
+    impl GuidAndEncodedOffset {
         pub const GUID: u32 = 1;
         pub const OFFSET: u32 = 2;
     }
-    pub mod rich_media_type {
+    pub struct RichMediaType {}
+    impl RichMediaType {
         pub const ANIMATED_IMAGE: u32 = 0;
         pub const VIDEO: u32 = 1;
     }
-    pub mod rich_media_data {
+    pub struct RichMediaData {}
+    impl RichMediaData {
         pub const MEDIA_HASH: u32 = 1;
         pub const RICH_MEDIA_TYPE: u32 = 2;
     }
-    pub mod variable_data_type {
+    pub struct VariableDataType {}
+    impl VariableDataType {
         pub const BOOLEAN: u32 = 0;
         pub const FLOAT: u32 = 1;
         pub const STRING: u32 = 2;
@@ -39357,7 +39809,8 @@ pub mod kiwi_records {
         pub const GRADIENT: u32 = 30;
         pub const COLOR_POINT: u32 = 31;
     }
-    pub mod variable_resolved_data_type {
+    pub struct VariableResolvedDataType {}
+    impl VariableResolvedDataType {
         pub const BOOLEAN: u32 = 0;
         pub const FLOAT: u32 = 1;
         pub const STRING: u32 = 2;
@@ -39383,7 +39836,8 @@ pub mod kiwi_records {
         pub const GRADIENT: u32 = 23;
         pub const COLOR_POINT: u32 = 24;
     }
-    pub mod variable_any_value {
+    pub struct VariableAnyValue {}
+    impl VariableAnyValue {
         pub const BOOL_VALUE: u32 = 1;
         pub const TEXT_VALUE: u32 = 2;
         pub const FLOAT_VALUE: u32 = 3;
@@ -39414,7 +39868,8 @@ pub mod kiwi_records {
         pub const GRADIENT_VALUE: u32 = 28;
         pub const COLOR_POINT_VALUE: u32 = 29;
     }
-    pub mod expression_function {
+    pub struct ExpressionFunction {}
+    impl ExpressionFunction {
         pub const ADDITION: u32 = 0;
         pub const SUBTRACTION: u32 = 1;
         pub const RESOLVE_VARIANT: u32 = 2;
@@ -39437,27 +39892,33 @@ pub mod kiwi_records {
         pub const KEYFRAME: u32 = 19;
         pub const COMPOSE_COLOR: u32 = 20;
     }
-    pub mod expression {
+    pub struct Expression {}
+    impl Expression {
         pub const EXPRESSION_FUNCTION: u32 = 1;
         pub const EXPRESSION_ARGUMENTS: u32 = 2;
     }
-    pub mod variable_map_value {
+    pub struct VariableMapValue {}
+    impl VariableMapValue {
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
         pub const GUID_KEY: u32 = 3;
     }
-    pub mod variable_map {
+    pub struct VariableMap {}
+    impl VariableMap {
         pub const VALUES: u32 = 1;
     }
-    pub mod color_array {
+    pub struct ColorArray {}
+    impl ColorArray {
         pub const COLORS: u32 = 1;
     }
-    pub mod variable_font_style {
+    pub struct VariableFontStyle {}
+    impl VariableFontStyle {
         pub const AS_STRING: u32 = 1;
         pub const AS_FLOAT: u32 = 2;
         pub const AS_VARIATIONS: u32 = 3;
     }
-    pub mod image_parameter_value {
+    pub struct ImageParameterValue {}
+    impl ImageParameterValue {
         pub const IMAGE: u32 = 1;
         pub const IMAGE_THUMBNAIL: u32 = 2;
         pub const ALT_TEXT: u32 = 3;
@@ -39466,93 +39927,114 @@ pub mod kiwi_records {
         pub const ANIMATED_IMAGE: u32 = 6;
         pub const ANIMATION_FRAME: u32 = 7;
     }
-    pub mod thumbnail_info {
+    pub struct ThumbnailInfo {}
+    impl ThumbnailInfo {
         pub const NODE_ID: u32 = 1;
         pub const THUMBNAIL_VERSION: u32 = 2;
     }
-    pub mod ai_canvas_prompt {
+    pub struct AiCanvasPrompt {}
+    impl AiCanvasPrompt {
         pub const USER_PROMPT: u32 = 1;
         pub const AUTHOR_ID: u32 = 2;
         pub const PARENT_NODE_IDS: u32 = 3;
     }
-    pub mod node_field_alias {
+    pub struct NodeFieldAlias {}
+    impl NodeFieldAlias {
         pub const STABLE_PATH_TO_NODE: u32 = 1;
         pub const NODE_FIELD: u32 = 2;
         pub const INDEX_OR_KEY: u32 = 3;
     }
-    pub mod node_field_alias_type {
+    pub struct NodeFieldAliasType {}
+    impl NodeFieldAliasType {
         pub const MISSING: u32 = 0;
         pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 1;
     }
-    pub mod cms_alias {
+    pub struct CmsAlias {}
+    impl CmsAlias {
         pub const COLLECTION_ID: u32 = 1;
         pub const ITEM_ID: u32 = 2;
         pub const FIELD_ID: u32 = 3;
         pub const TYPE: u32 = 4;
     }
-    pub mod js_runtime_alias {
+    pub struct JsRuntimeAlias {}
+    impl JsRuntimeAlias {
         pub const LOOKUP_KEY: u32 = 1;
     }
-    pub mod prop_ref_value {
+    pub struct PropRefValue {}
+    impl PropRefValue {
         pub const DEF_ID: u32 = 1;
     }
-    pub mod managed_string_id {
+    pub struct ManagedStringId {}
+    impl ManagedStringId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod managed_string_placeholder_map_entry {
+    pub struct ManagedStringPlaceholderMapEntry {}
+    impl ManagedStringPlaceholderMapEntry {
         pub const KEY: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod slot_content_id {
+    pub struct SlotContentId {}
+    impl SlotContentId {
         pub const GUID: u32 = 1;
     }
-    pub mod managed_string_alias {
+    pub struct ManagedStringAlias {}
+    impl ManagedStringAlias {
         pub const MANAGED_STRING_ID: u32 = 1;
         pub const PLACEHOLDER_VALUES: u32 = 2;
     }
-    pub mod keyframe_track_id {
+    pub struct KeyframeTrackId {}
+    impl KeyframeTrackId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod animation_preset_id {
+    pub struct AnimationPresetId {}
+    impl AnimationPresetId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod tool_id {
+    pub struct ToolId {}
+    impl ToolId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod custom_effect_id {
+    pub struct CustomEffectId {}
+    impl CustomEffectId {
         pub const GUID: u32 = 1;
         pub const ASSET_REF: u32 = 2;
     }
-    pub mod trss_transform2_d {
+    pub struct TrssTransform2D {}
+    impl TrssTransform2D {
         pub const TRANSLATION: u32 = 1;
         pub const ROTATION: u32 = 2;
         pub const SCALE: u32 = 3;
         pub const SHEAR_X: u32 = 4;
     }
-    pub mod variable_data {
+    pub struct VariableData {}
+    impl VariableData {
         pub const VALUE: u32 = 1;
         pub const DATA_TYPE: u32 = 2;
         pub const RESOLVED_DATA_TYPE: u32 = 3;
     }
-    pub mod variable_set_mode {
+    pub struct VariableSetMode {}
+    impl VariableSetMode {
         pub const ID: u32 = 1;
         pub const NAME: u32 = 2;
         pub const SORT_POSITION: u32 = 3;
         pub const PARENT_VARIABLE_SET_ID: u32 = 4;
         pub const PARENT_MODE_ID: u32 = 5;
     }
-    pub mod variable_data_values {
+    pub struct VariableDataValues {}
+    impl VariableDataValues {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod variable_data_values_entry {
+    pub struct VariableDataValuesEntry {}
+    impl VariableDataValuesEntry {
         pub const MODE_ID: u32 = 1;
         pub const VARIABLE_DATA: u32 = 2;
     }
-    pub mod variable_scope {
+    pub struct VariableScope {}
+    impl VariableScope {
         pub const ALL_SCOPES: u32 = 0;
         pub const TEXT_CONTENT: u32 = 1;
         pub const CORNER_RADIUS: u32 = 2;
@@ -39577,93 +40059,114 @@ pub mod kiwi_records {
         pub const FONT_VARIATIONS: u32 = 21;
         pub const TRANSFORM: u32 = 22;
     }
-    pub mod keyframe_any_value {
+    pub struct KeyframeAnyValue {}
+    impl KeyframeAnyValue {
         pub const FLOAT_VALUE: u32 = 1;
         pub const COLOR_VALUE: u32 = 2;
         pub const TEXT_DATA_VALUE: u32 = 3;
         pub const VECTOR_VALUE: u32 = 4;
     }
-    pub mod keyframe_value_type {
+    pub struct KeyframeValueType {}
+    impl KeyframeValueType {
         pub const FLOAT: u32 = 0;
         pub const INVALID: u32 = 1;
         pub const COLOR: u32 = 2;
         pub const TEXT_DATA: u32 = 3;
         pub const VECTOR: u32 = 4;
     }
-    pub mod keyframe_value_data {
+    pub struct KeyframeValueData {}
+    impl KeyframeValueData {
         pub const VALUE: u32 = 1;
         pub const VALUE_TYPE: u32 = 2;
     }
-    pub mod keyframe_track_parameter_type {
+    pub struct KeyframeTrackParameterType {}
+    impl KeyframeTrackParameterType {
         pub const INVALID: u32 = 0;
         pub const MANUAL: u32 = 1;
         pub const ANIMATION_PRESET: u32 = 2;
     }
-    pub mod manual_keyframe_track_parameter {
+    pub struct ManualKeyframeTrackParameter {}
+    impl ManualKeyframeTrackParameter {
         pub const KEYFRAME_TRACK_ID: u32 = 1;
         pub const TIMELINE_DEF_ID: u32 = 2;
     }
-    pub mod animation_preset_keyframe_track_parameter {
+    pub struct AnimationPresetKeyframeTrackParameter {}
+    impl AnimationPresetKeyframeTrackParameter {
         pub const ANIMATION_PRESET_ID: u32 = 1;
         pub const KEYFRAME_TRACK_ID: u32 = 2;
         pub const TIMELINE_DEF_ID: u32 = 3;
     }
-    pub mod keyframe_track_any_parameter {
+    pub struct KeyframeTrackAnyParameter {}
+    impl KeyframeTrackAnyParameter {
         pub const MANUAL: u32 = 1;
         pub const ANIMATION_PRESET: u32 = 2;
         pub const ANIMATION_STYLE_BINDING_ID: u32 = 3;
     }
-    pub mod keyframe_track_parameter {
+    pub struct KeyframeTrackParameter {}
+    impl KeyframeTrackParameter {
         pub const VALUE: u32 = 1;
         pub const TYPE: u32 = 2;
     }
-    pub mod keyframe_track_parameter_value {
+    pub struct KeyframeTrackParameterValue {}
+    impl KeyframeTrackParameterValue {
         pub const PARAMETERS: u32 = 1;
     }
-    pub mod animation_presets {
+    pub struct AnimationPresets {}
+    impl AnimationPresets {
         pub const PRESETS: u32 = 1;
     }
-    pub mod animation_preset_data {
+    pub struct AnimationPresetData {}
+    impl AnimationPresetData {
         pub const ANIMATION_PRESET_ID: u32 = 1;
         pub const TIMELINE_DEF_ID: u32 = 2;
     }
-    pub mod style_animation {
+    pub struct StyleAnimation {}
+    impl StyleAnimation {
         pub const ANIMATION_PRESET_ID: u32 = 1;
     }
-    pub mod style_id_for_animation {
+    pub struct StyleIdForAnimation {}
+    impl StyleIdForAnimation {
         pub const ID: u32 = 1;
         pub const TIMELINE_DEF_ID: u32 = 2;
         pub const ANIMATION_STYLE_ID: u32 = 3;
         pub const TIMELINE_OFFSET: u32 = 4;
     }
-    pub mod tools {
+    pub struct Tools {}
+    impl Tools {
         pub const TOOLS: u32 = 1;
     }
-    pub mod tool_data {
+    pub struct ToolData {}
+    impl ToolData {
         pub const TOOL_ID: u32 = 1;
         pub const BACKING_CODE_COMPONENT_ID: u32 = 2;
         pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 3;
     }
-    pub mod custom_effects {
+    pub struct CustomEffects {}
+    impl CustomEffects {
         pub const CUSTOM_EFFECTS: u32 = 1;
     }
-    pub mod custom_effect_data {
+    pub struct CustomEffectData {}
+    impl CustomEffectData {
         pub const CUSTOM_EFFECT_ID: u32 = 1;
     }
-    pub mod spring_params {
+    pub struct SpringParams {}
+    impl SpringParams {
         pub const STIFFNESS: u32 = 1;
         pub const DAMPING: u32 = 2;
         pub const MASS: u32 = 3;
     }
-    pub mod transition_easing_any_value {
+    pub struct TransitionEasingAnyValue {}
+    impl TransitionEasingAnyValue {
         pub const SPRING_EASING: u32 = 1;
         pub const BEZIER_EASING: u32 = 2;
     }
-    pub mod easing_data {
+    pub struct EasingData {}
+    impl EasingData {
         pub const EASING_TYPE: u32 = 1;
         pub const EASING_VALUE: u32 = 2;
     }
-    pub mod transition_override {
+    pub struct TransitionOverride {}
+    impl TransitionOverride {
         pub const ID: u32 = 1;
         pub const DURATION: u32 = 2;
         pub const DURATION_VAR: u32 = 3;
@@ -39675,31 +40178,36 @@ pub mod kiwi_records {
         pub const INTERACTION_I_DS: u32 = 9;
         pub const DISABLED: u32 = 10;
     }
-    pub mod transition_override_data {
+    pub struct TransitionOverrideData {}
+    impl TransitionOverrideData {
         pub const ALL: u32 = 1;
         pub const PROPERTY_OVERRIDES: u32 = 2;
     }
-    pub mod transition_override_prop {
+    pub struct TransitionOverrideProp {}
+    impl TransitionOverrideProp {
         pub const ALL: u32 = 0;
         pub const OPACITY: u32 = 1;
         pub const TRANSLATION: u32 = 2;
         pub const ROTATION: u32 = 3;
         pub const SCALE: u32 = 4;
     }
-    pub mod transition_override_binding_top_level_field {
+    pub struct TransitionOverrideBindingTopLevelField {}
+    impl TransitionOverrideBindingTopLevelField {
         pub const MISSING: u32 = 0;
         pub const PARAMETER_CONSUMPTION_MAP: u32 = 1;
         pub const EFFECT_DATA: u32 = 2;
         pub const FILL_PAINT_DATA: u32 = 3;
         pub const STROKE_PAINT_DATA: u32 = 4;
     }
-    pub mod transition_override_binding_location {
+    pub struct TransitionOverrideBindingLocation {}
+    impl TransitionOverrideBindingLocation {
         pub const TOP_LEVEL_FIELD: u32 = 1;
         pub const PARAMETER_FIELD_VALUE: u32 = 2;
         pub const INDEX: u32 = 3;
         pub const EFFECT_PARAMETRIZED_FIELD_VALUE: u32 = 4;
     }
-    pub mod keyframe_binding_effect_parametrized_field {
+    pub struct KeyframeBindingEffectParametrizedField {}
+    impl KeyframeBindingEffectParametrizedField {
         pub const MISSING: u32 = 0;
         pub const OFFSET_X: u32 = 1;
         pub const OFFSET_Y: u32 = 2;
@@ -39723,30 +40231,36 @@ pub mod kiwi_records {
         pub const EFFECT_OPACITY: u32 = 20;
         pub const SECONDARY_COLOR: u32 = 21;
     }
-    pub mod node_contents_keyframe_binding_location {
+    pub struct NodeContentsKeyframeBindingLocation {}
+    impl NodeContentsKeyframeBindingLocation {
         pub const TOP_LEVEL_FIELD: u32 = 1;
         pub const PARAMETER_FIELD_VALUE: u32 = 2;
         pub const INDEX: u32 = 3;
         pub const EFFECT_PARAMETRIZED_FIELD_VALUE: u32 = 4;
     }
-    pub mod transition_override_prop_map {
+    pub struct TransitionOverridePropMap {}
+    impl TransitionOverridePropMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod transition_override_prop_map_entry {
+    pub struct TransitionOverridePropMapEntry {}
+    impl TransitionOverridePropMapEntry {
         pub const PROP: u32 = 1;
         pub const OVERRIDES: u32 = 2;
         pub const BINDING_LOCATION: u32 = 3;
         pub const NODE_CONTENTS_BINDING_LOCATION: u32 = 4;
     }
-    pub mod code_syntax_platform {
+    pub struct CodeSyntaxPlatform {}
+    impl CodeSyntaxPlatform {
         pub const WEB: u32 = 0;
         pub const ANDROID: u32 = 1;
         pub const I_OS: u32 = 2;
     }
-    pub mod optional_vector {
+    pub struct OptionalVector {}
+    impl OptionalVector {
         pub const VALUE: u32 = 1;
     }
-    pub mod html_tag {
+    pub struct HtmlTag {}
+    impl HtmlTag {
         pub const AUTO: u32 = 0;
         pub const ARTICLE: u32 = 1;
         pub const SECTION: u32 = 2;
@@ -39825,7 +40339,8 @@ pub mod kiwi_records {
         pub const LEGEND: u32 = 75;
         pub const VIDEO: u32 = 76;
     }
-    pub mod aria_role {
+    pub struct AriaRole {}
+    impl AriaRole {
         pub const AUTO: u32 = 0;
         pub const BUTTON: u32 = 1;
         pub const CHECKBOX: u32 = 2;
@@ -39923,72 +40438,88 @@ pub mod kiwi_records {
         pub const TABLE_CELL: u32 = 94;
         pub const WIDGET: u32 = 95;
     }
-    pub mod migration_status {
+    pub struct MigrationStatus {}
+    impl MigrationStatus {
         pub const DSD_CLEANUP: u32 = 1;
     }
-    pub mod color_profile {
+    pub struct ColorProfile {}
+    impl ColorProfile {
         pub const SRGB: u32 = 0;
         pub const DISPLAY_P3: u32 = 1;
     }
-    pub mod document_color_profile {
+    pub struct DocumentColorProfile {}
+    impl DocumentColorProfile {
         pub const LEGACY: u32 = 0;
         pub const SRGB: u32 = 1;
         pub const DISPLAY_P3: u32 = 2;
     }
-    pub mod child_reading_direction {
+    pub struct ChildReadingDirection {}
+    impl ChildReadingDirection {
         pub const NONE: u32 = 0;
         pub const LEFT_TO_RIGHT: u32 = 1;
         pub const RIGHT_TO_LEFT: u32 = 2;
     }
-    pub mod aria_attribute_any_value {
+    pub struct AriaAttributeAnyValue {}
+    impl AriaAttributeAnyValue {
         pub const BOOL_VALUE: u32 = 1;
         pub const STRING_VALUE: u32 = 2;
         pub const FLOAT_VALUE: u32 = 3;
         pub const INT_VALUE: u32 = 4;
         pub const STRING_ARRAY_VALUE: u32 = 5;
     }
-    pub mod aria_attribute_data_type {
+    pub struct AriaAttributeDataType {}
+    impl AriaAttributeDataType {
         pub const BOOLEAN: u32 = 0;
         pub const STRING: u32 = 1;
         pub const FLOAT: u32 = 2;
         pub const INT: u32 = 3;
         pub const STRING_LIST: u32 = 4;
     }
-    pub mod aria_attribute_data {
+    pub struct AriaAttributeData {}
+    impl AriaAttributeData {
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod aria_attributes_map {
+    pub struct AriaAttributesMap {}
+    impl AriaAttributesMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod aria_attributes_map_entry {
+    pub struct AriaAttributesMapEntry {}
+    impl AriaAttributesMapEntry {
         pub const ATTRIBUTE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod handoff_status_map_entry {
+    pub struct HandoffStatusMapEntry {}
+    impl HandoffStatusMapEntry {
         pub const GUID: u32 = 1;
         pub const HANDOFF_STATUS: u32 = 2;
     }
-    pub mod handoff_status_map {
+    pub struct HandoffStatusMap {}
+    impl HandoffStatusMap {
         pub const ENTRIES: u32 = 1;
     }
-    pub mod edit_scope_info {
+    pub struct EditScopeInfo {}
+    impl EditScopeInfo {
         pub const EDIT_SCOPE_STACKS: u32 = 1;
         pub const SNAPSHOTS: u32 = 2;
     }
-    pub mod edit_scope_snapshot {
+    pub struct EditScopeSnapshot {}
+    impl EditScopeSnapshot {
         pub const FRAMES: u32 = 1;
         pub const NODE_CHANGE_FIELD_NUMBERS: u32 = 2;
     }
-    pub mod edit_scope_stack {
+    pub struct EditScopeStack {}
+    impl EditScopeStack {
         pub const STACK: u32 = 1;
     }
-    pub mod edit_scope {
+    pub struct EditScope {}
+    impl EditScope {
         pub const TYPE: u32 = 1;
         pub const LABEL: u32 = 2;
         pub const EDITOR_TYPE: u32 = 3;
     }
-    pub mod edit_scope_type {
+    pub struct EditScopeType {}
+    impl EditScopeType {
         pub const INVALID: u32 = 0;
         pub const TEST_SETUP: u32 = 1;
         pub const USER: u32 = 2;
@@ -39999,74 +40530,89 @@ pub mod kiwi_records {
         pub const AUTOSAVE: u32 = 7;
         pub const AI: u32 = 8;
     }
-    pub mod section_preset_state {
+    pub struct SectionPresetState {}
+    impl SectionPresetState {
         pub const INSERTED: u32 = 0;
         pub const USER_EDITED: u32 = 1;
     }
-    pub mod emoji_image_set {
+    pub struct EmojiImageSet {}
+    impl EmojiImageSet {
         pub const APPLE: u32 = 0;
         pub const NOTO: u32 = 1;
     }
-    pub mod selection_region_focus_type {
+    pub struct SelectionRegionFocusType {}
+    impl SelectionRegionFocusType {
         pub const NONE: u32 = 0;
         pub const PRIMARY: u32 = 1;
         pub const SECONDARY: u32 = 2;
     }
-    pub mod section_preset_info {
+    pub struct SectionPresetInfo {}
+    impl SectionPresetInfo {
         pub const SHELF_ID: u32 = 1;
         pub const TEMPLATE_ID: u32 = 2;
         pub const TEMPLATE_NAME: u32 = 3;
         pub const STATE: u32 = 4;
     }
-    pub mod clipboard_selection_region {
+    pub struct ClipboardSelectionRegion {}
+    impl ClipboardSelectionRegion {
         pub const PARENT: u32 = 1;
         pub const NODES: u32 = 2;
         pub const ENCLOSING_FRAME_OFFSET: u32 = 3;
         pub const PASTE_IS_PARTIALLY_OUTSIDE_ENCLOSING_FRAME: u32 = 4;
         pub const FOCUS_TYPE: u32 = 5;
     }
-    pub mod first_draft_kit_type {
+    pub struct FirstDraftKitType {}
+    impl FirstDraftKitType {
         pub const LOCAL: u32 = 0;
         pub const LIBRARY: u32 = 1;
         pub const NONE: u32 = 2;
     }
-    pub mod first_draft_kit {
+    pub struct FirstDraftKit {}
+    impl FirstDraftKit {
         pub const KEY: u32 = 1;
         pub const TYPE: u32 = 2;
     }
-    pub mod first_draft_data {
+    pub struct FirstDraftData {}
+    impl FirstDraftData {
         pub const GENERATION_ID: u32 = 1;
         pub const KIT: u32 = 2;
     }
-    pub mod first_draft_kit_element_type {
+    pub struct FirstDraftKitElementType {}
+    impl FirstDraftKitElementType {
         pub const NONE: u32 = 0;
         pub const BUILDING_BLOCK: u32 = 1;
         pub const GROUPED_COMPONENT: u32 = 2;
     }
-    pub mod first_draft_kit_element_data {
+    pub struct FirstDraftKitElementData {}
+    impl FirstDraftKitElementData {
         pub const TYPE: u32 = 1;
     }
-    pub mod platform_shape_property {
+    pub struct PlatformShapeProperty {}
+    impl PlatformShapeProperty {
         pub const FILL: u32 = 0;
         pub const STROKE: u32 = 1;
         pub const TEXT: u32 = 2;
         pub const STROKE_COLOR: u32 = 3;
     }
-    pub mod platform_shape_behavior_type {
+    pub struct PlatformShapeBehaviorType {}
+    impl PlatformShapeBehaviorType {
         pub const SHAPE: u32 = 0;
         pub const CONTAINER: u32 = 1;
         pub const ADVANCED_CONTAINER: u32 = 2;
     }
-    pub mod platform_shape_property_map_entry {
+    pub struct PlatformShapePropertyMapEntry {}
+    impl PlatformShapePropertyMapEntry {
         pub const PROPERTY: u32 = 1;
         pub const NODE_PATHS: u32 = 2;
     }
-    pub mod platform_shape_definition {
+    pub struct PlatformShapeDefinition {}
+    impl PlatformShapeDefinition {
         pub const PROPERTY_MAP_ENTRIES: u32 = 1;
         pub const BEHAVIOR_TYPE: u32 = 2;
         pub const THUMBNAIL_NODE: u32 = 3;
     }
-    pub mod node_behaviors {
+    pub struct NodeBehaviors {}
+    impl NodeBehaviors {
         pub const LINK: u32 = 1;
         pub const APPEAR: u32 = 2;
         pub const HOVER: u32 = 3;
@@ -40078,7 +40624,8 @@ pub mod kiwi_records {
         pub const MARQUEE: u32 = 9;
         pub const CODE: u32 = 10;
     }
-    pub mod behavior_transition {
+    pub struct BehaviorTransition {}
+    impl BehaviorTransition {
         pub const EASING_TYPE: u32 = 1;
         pub const EASING_FUNCTION: u32 = 2;
         pub const TRANSITION_DURATION: u32 = 3;
@@ -40086,19 +40633,22 @@ pub mod kiwi_records {
         pub const TRANSITION_DURATION_VAR: u32 = 5;
         pub const DELAY_VAR: u32 = 6;
     }
-    pub mod appear_behavior_trigger {
+    pub struct AppearBehaviorTrigger {}
+    impl AppearBehaviorTrigger {
         pub const PAGE_LOAD: u32 = 1;
         pub const THIS_LAYER_IN_VIEW: u32 = 2;
         pub const OTHER_LAYER_IN_VIEW: u32 = 3;
         pub const SCROLL_DIRECTION: u32 = 4;
     }
-    pub mod relative_direction {
+    pub struct RelativeDirection {}
+    impl RelativeDirection {
         pub const UP: u32 = 1;
         pub const DOWN: u32 = 2;
         pub const LEFT: u32 = 3;
         pub const RIGHT: u32 = 4;
     }
-    pub mod appear_behavior {
+    pub struct AppearBehavior {}
+    impl AppearBehavior {
         pub const TRIGGER: u32 = 1;
         pub const DIRECTION: u32 = 2;
         pub const OTHER_LAYER: u32 = 3;
@@ -40110,34 +40660,40 @@ pub mod kiwi_records {
         pub const PLAYS_ONCE_VAR: u32 = 9;
         pub const IS_DELETED: u32 = 10;
     }
-    pub mod hover_behavior {
+    pub struct HoverBehavior {}
+    impl HoverBehavior {
         pub const TRANSITION: u32 = 1;
         pub const STATE: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
-    pub mod press_behavior {
+    pub struct PressBehavior {}
+    impl PressBehavior {
         pub const TRANSITION: u32 = 1;
         pub const STATE: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
-    pub mod focus_behavior {
+    pub struct FocusBehavior {}
+    impl FocusBehavior {
         pub const TRANSITION: u32 = 1;
         pub const STATE: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
-    pub mod scroll_parallax_behavior {
+    pub struct ScrollParallaxBehavior {}
+    impl ScrollParallaxBehavior {
         pub const AXIS: u32 = 1;
         pub const SPEED: u32 = 2;
         pub const RELATIVE_TO_PAGE: u32 = 3;
         pub const SPEED_VAR: u32 = 4;
         pub const IS_DELETED: u32 = 5;
     }
-    pub mod scroll_transform_behavior_trigger {
+    pub struct ScrollTransformBehaviorTrigger {}
+    impl ScrollTransformBehaviorTrigger {
         pub const PAGE_HEIGHT: u32 = 1;
         pub const THIS_LAYER_IN_VIEW: u32 = 2;
         pub const OTHER_LAYER_IN_VIEW: u32 = 3;
     }
-    pub mod scroll_transform_behavior {
+    pub struct ScrollTransformBehavior {}
+    impl ScrollTransformBehavior {
         pub const TRIGGER: u32 = 1;
         pub const OTHER_LAYER: u32 = 2;
         pub const TRANSITION: u32 = 3;
@@ -40148,13 +40704,15 @@ pub mod kiwi_records {
         pub const PLAYS_ONCE_VAR2: u32 = 8;
         pub const IS_DELETED: u32 = 9;
     }
-    pub mod cursor_behavior {
+    pub struct CursorBehavior {}
+    impl CursorBehavior {
         pub const HOTSPOT_X: u32 = 1;
         pub const HOTSPOT_Y: u32 = 2;
         pub const CURSOR_GUID: u32 = 3;
         pub const IS_DELETED: u32 = 4;
     }
-    pub mod marquee_behavior {
+    pub struct MarqueeBehavior {}
+    impl MarqueeBehavior {
         pub const DIRECTION: u32 = 1;
         pub const SPEED: u32 = 2;
         pub const SHOULD_LOOP_INFINITELY: u32 = 3;
@@ -40163,36 +40721,43 @@ pub mod kiwi_records {
         pub const PAUSE_ON_HOVER: u32 = 6;
         pub const IS_DELETED: u32 = 7;
     }
-    pub mod code_behavior {
+    pub struct CodeBehavior {}
+    impl CodeBehavior {
         pub const CODE_COMPONENT_ID: u32 = 1;
         pub const COMPONENT_PROP_ASSIGNMENTS: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
-    pub mod client_rendered_metadata {
+    pub struct ClientRenderedMetadata {}
+    impl ClientRenderedMetadata {
         pub const LOAD_ID: u32 = 1;
         pub const TRACKING_SESSION_ID: u32 = 2;
         pub const TRACKING_SESSION_SEQUENCE_ID: u32 = 3;
         pub const RECONNECT_ID: u32 = 4;
     }
-    pub mod link_behavior_type {
+    pub struct LinkBehaviorType {}
+    impl LinkBehaviorType {
         pub const URL: u32 = 1;
         pub const PAGE: u32 = 2;
     }
-    pub mod link_behavior {
+    pub struct LinkBehavior {}
+    impl LinkBehavior {
         pub const TYPE: u32 = 1;
         pub const URL: u32 = 2;
         pub const PAGE: u32 = 3;
         pub const OPEN_IN_NEW_WINDOW: u32 = 4;
     }
-    pub mod variable_id_or_variable_override_id {
+    pub struct VariableIdOrVariableOverrideId {}
+    impl VariableIdOrVariableOverrideId {
         pub const VARIABLE_ID: u32 = 1;
         pub const VARIABLE_OVERRIDE_ID: u32 = 2;
     }
-    pub mod slide_theme_data {
+    pub struct SlideThemeData {}
+    impl SlideThemeData {
         pub const THEME_ID: u32 = 1;
         pub const VERSION: u32 = 2;
     }
-    pub mod slide_number {
+    pub struct SlideNumber {}
+    impl SlideNumber {
         pub const NONE: u32 = 0;
         pub const SLIDE: u32 = 1;
         pub const SECTION: u32 = 2;
@@ -40200,13 +40765,15 @@ pub mod kiwi_records {
         pub const TOTAL_WITHIN_DECK: u32 = 4;
         pub const TOTAL_WITHIN_SECTION: u32 = 5;
     }
-    pub mod node_chat_message_type {
+    pub struct NodeChatMessageType {}
+    impl NodeChatMessageType {
         pub const USER_MESSAGE: u32 = 0;
         pub const ASSISTANT_MESSAGE: u32 = 1;
         pub const TOOL_MESSAGE: u32 = 2;
         pub const SYSTEM_MESSAGE: u32 = 3;
     }
-    pub mod node_chat_message {
+    pub struct NodeChatMessage {}
+    impl NodeChatMessage {
         pub const ID: u32 = 1;
         pub const TYPE: u32 = 2;
         pub const USER_ID: u32 = 3;
@@ -40216,61 +40783,73 @@ pub mod kiwi_records {
         pub const TOOL_RESULTS: u32 = 7;
         pub const SENT_AT64: u32 = 8;
     }
-    pub mod node_chat_tool_call {
+    pub struct NodeChatToolCall {}
+    impl NodeChatToolCall {
         pub const TOOL_CALL_ID: u32 = 1;
         pub const TOOL_NAME: u32 = 2;
         pub const ARGS_JSON: u32 = 3;
     }
-    pub mod node_chat_tool_result {
+    pub struct NodeChatToolResult {}
+    impl NodeChatToolResult {
         pub const TOOL_CALL_ID: u32 = 1;
         pub const TOOL_NAME: u32 = 2;
         pub const RESULT_JSON: u32 = 3;
     }
-    pub mod node_chat_exchange {
+    pub struct NodeChatExchange {}
+    impl NodeChatExchange {
         pub const NODE: u32 = 1;
         pub const MESSAGES: u32 = 2;
         pub const IS_TYPING: u32 = 3;
         pub const FILE_UPDATES: u32 = 4;
     }
-    pub mod node_chat_compression_state {
+    pub struct NodeChatCompressionState {}
+    impl NodeChatCompressionState {
         pub const START_INDEX: u32 = 1;
         pub const SUMMARY: u32 = 2;
     }
-    pub mod file_update {
+    pub struct FileUpdate {}
+    impl FileUpdate {
         pub const NAME: u32 = 1;
         pub const CONTENTS: u32 = 2;
         pub const IS_DELETED: u32 = 3;
     }
-    pub mod ai_chat_content_part {
+    pub struct AiChatContentPart {}
+    impl AiChatContentPart {
         pub const TYPE: u32 = 1;
         pub const VALUE: u32 = 2;
     }
-    pub mod ai_chat_content_part_type {
+    pub struct AiChatContentPartType {}
+    impl AiChatContentPartType {
         pub const INVALID: u32 = 0;
         pub const TEXT: u32 = 1;
         pub const SELECTED_NODE_IDS: u32 = 2;
     }
-    pub mod ai_chat_content_part_any_value {
+    pub struct AiChatContentPartAnyValue {}
+    impl AiChatContentPartAnyValue {
         pub const TEXT_VALUE: u32 = 1;
         pub const SELECTED_NODE_IDS: u32 = 2;
     }
-    pub mod ai_chat_message_role {
+    pub struct AiChatMessageRole {}
+    impl AiChatMessageRole {
         pub const USER: u32 = 0;
         pub const ASSISTANT: u32 = 1;
         pub const TOOL: u32 = 2;
         pub const SYSTEM: u32 = 3;
     }
-    pub mod ai_chat_message {
+    pub struct AiChatMessage {}
+    impl AiChatMessage {
         pub const CREATED_AT_MS: u32 = 1;
         pub const ROLE: u32 = 2;
         pub const CONTENT: u32 = 3;
         pub const CLIENT_ID: u32 = 4;
         pub const CREATED_AT_MS64: u32 = 5;
     }
-    pub mod ai_chat_thread {
+    pub struct AiChatThread {}
+    impl AiChatThread {
         pub const MESSAGES: u32 = 1;
     }
-    pub mod cooper_template_type {
+    pub struct CooperTemplateType {}
+    impl CooperTemplateType {
         pub const CUSTOM: u32 = 0;
         pub const TWITTER_POST: u32 = 1;
         pub const LINKEDIN_POST: u32 = 2;
@@ -40337,37 +40916,45 @@ pub mod kiwi_records {
         pub const PINTEREST_AD_SQUARE: u32 = 64;
         pub const PRINT_A4: u32 = 65;
     }
-    pub mod cooper_template_data {
+    pub struct CooperTemplateData {}
+    impl CooperTemplateData {
         pub const TYPE: u32 = 1;
     }
-    pub mod image_import_map {
+    pub struct ImageImportMap {}
+    impl ImageImportMap {
         pub const IMPORTS: u32 = 1;
     }
-    pub mod image_import {
+    pub struct ImageImport {}
+    impl ImageImport {
         pub const NAME: u32 = 1;
         pub const IMAGE: u32 = 2;
     }
-    pub mod interpolation_type {
+    pub struct InterpolationType {}
+    impl InterpolationType {
         pub const HOLD: u32 = 0;
         pub const BEZIER: u32 = 1;
         pub const SPRING: u32 = 2;
     }
-    pub mod bezier_handles {
+    pub struct BezierHandles {}
+    impl BezierHandles {
         pub const P1X: u32 = 1;
         pub const P1Y: u32 = 2;
         pub const P2X: u32 = 3;
         pub const P2Y: u32 = 4;
     }
-    pub mod keyframe_operation {
+    pub struct KeyframeOperation {}
+    impl KeyframeOperation {
         pub const SET: u32 = 0;
         pub const SCALE: u32 = 1;
         pub const OFFSET: u32 = 2;
     }
-    pub mod timeline_position_type {
+    pub struct TimelinePositionType {}
+    impl TimelinePositionType {
         pub const ABSOLUTE: u32 = 0;
         pub const RELATIVE: u32 = 1;
     }
-    pub mod playback_style {
+    pub struct PlaybackStyle {}
+    impl PlaybackStyle {
         pub const ONCE: u32 = 0;
         pub const LOOP: u32 = 1;
         pub const BOOMERANG: u32 = 2;
@@ -43670,9 +44257,9 @@ pub mod graph {
     fn guid_key(guid: Option<&KiwiRecord>) -> Option<GuidKey> {
         match guid {
             Some(guid) => {
-                match guid.uint(kiwi_records::guid::SESSION_ID) {
+                match guid.uint(kiwi_records::Guid::SESSION_ID) {
                     Some(session) => {
-                        match guid.uint(kiwi_records::guid::LOCAL_ID) {
+                        match guid.uint(kiwi_records::Guid::LOCAL_ID) {
                             Some(local) => Some((session, local)),
                             _ => None,
                         }
@@ -43684,19 +44271,17 @@ pub mod graph {
         }
     }
     fn record_id(record: &KiwiRecord) -> Option<GuidKey> {
-        guid_key(record.record(kiwi_records::node_change::GUID))
+        guid_key(record.record(kiwi_records::NodeChange::GUID))
     }
     fn parent_id(record: &KiwiRecord) -> Option<GuidKey> {
-        match record.record(kiwi_records::node_change::PARENT_INDEX) {
-            Some(parent) => guid_key(parent.record(kiwi_records::parent_index::GUID)),
+        match record.record(kiwi_records::NodeChange::PARENT_INDEX) {
+            Some(parent) => guid_key(parent.record(kiwi_records::ParentIndex::GUID)),
             None => None,
         }
     }
     fn position(record: &KiwiRecord) -> &str {
-        match record.record(kiwi_records::node_change::PARENT_INDEX) {
-            Some(parent) => {
-                parent.str(kiwi_records::parent_index::POSITION).unwrap_or("")
-            }
+        match record.record(kiwi_records::NodeChange::PARENT_INDEX) {
+            Some(parent) => parent.str(kiwi_records::ParentIndex::POSITION).unwrap_or(""),
             None => "",
         }
     }
@@ -43705,8 +44290,8 @@ pub mod graph {
     pub type Styles = HashMap<GuidKey, KiwiRecord>;
     fn prepare(records: Vec<KiwiRecord>, styles: bool) -> NifResult<Vec<KiwiRecord>> {
         let normalized = records
-            .iter()
-            .map(|record| normalize(record))
+            .into_iter()
+            .map(|record| normalize(&record))
             .collect::<Vec<KiwiRecord>>();
         let inherited = inherit_property_definitions(normalized)?;
         if styles { Ok(apply_styles(inherited)) } else { Ok(inherited) }
@@ -43715,58 +44300,55 @@ pub mod graph {
         put_prop_refs(
                 record
                     .map_records(
-                        kiwi_records::node_change::COMPONENT_PROP_DEFS,
+                        kiwi_records::NodeChange::COMPONENT_PROP_DEFS,
                         |definition| normalize_default(definition),
                     ),
             )
             .map_record(
-                kiwi_records::node_change::SYMBOL_DATA,
+                kiwi_records::NodeChange::SYMBOL_DATA,
                 |data| {
                     data.map_records(
-                        kiwi_records::symbol_data::SYMBOL_OVERRIDES,
+                        kiwi_records::SymbolData::SYMBOL_OVERRIDES,
                         |layer| normalize(layer),
                     )
                 },
             )
             .map_records(
-                kiwi_records::node_change::DERIVED_SYMBOL_DATA,
+                kiwi_records::NodeChange::DERIVED_SYMBOL_DATA,
                 |derived| normalize(derived),
             )
             .map_record(
-                kiwi_records::node_change::TEXT_DATA,
+                kiwi_records::NodeChange::TEXT_DATA,
                 |text| {
                     text.map_records(
-                        kiwi_records::text_data::STYLE_OVERRIDE_TABLE,
+                        kiwi_records::TextData::STYLE_OVERRIDE_TABLE,
                         |style| normalize(style),
                     )
                 },
             )
     }
     fn normalize_default(definition: &KiwiRecord) -> KiwiRecord {
-        if definition.has(kiwi_records::component_prop_def::INITIAL_VALUE) {
+        if definition.has(kiwi_records::ComponentPropDef::INITIAL_VALUE) {
             definition.clone()
         } else {
             match default_value(definition) {
                 Some(value) => {
                     definition
-                        .put_record(
-                            kiwi_records::component_prop_def::INITIAL_VALUE,
-                            value,
-                        )
+                        .put_record(kiwi_records::ComponentPropDef::INITIAL_VALUE, value)
                 }
                 None => definition.clone(),
             }
         }
     }
     fn default_value(definition: &KiwiRecord) -> Option<KiwiRecord> {
-        match definition.record(kiwi_records::component_prop_def::VAR_VALUE) {
+        match definition.record(kiwi_records::ComponentPropDef::VAR_VALUE) {
             Some(variable) => {
-                match variable.record(kiwi_records::variable_data::VALUE) {
+                match variable.record(kiwi_records::VariableData::VALUE) {
                     Some(value) => {
                         match value
-                            .record(kiwi_records::variable_any_value::SYMBOL_ID_VALUE)
+                            .record(kiwi_records::VariableAnyValue::SYMBOL_ID_VALUE)
                             .and_then(|symbol| {
-                                symbol.record(kiwi_records::symbol_id::GUID)
+                                symbol.record(kiwi_records::SymbolId::GUID)
                             })
                         {
                             Some(guid) => {
@@ -43775,7 +44357,7 @@ pub mod graph {
                                             kiwi_record_definitions::COMPONENT_PROP_VALUE,
                                         )
                                         .put_record(
-                                            kiwi_records::component_prop_value::GUID_VALUE,
+                                            kiwi_records::ComponentPropValue::GUID_VALUE,
                                             guid.clone(),
                                         ),
                                 )
@@ -43791,13 +44373,13 @@ pub mod graph {
     }
     fn put_prop_refs(record: KiwiRecord) -> KiwiRecord {
         let entries = match record
-            .record(kiwi_records::node_change::PARAMETER_CONSUMPTION_MAP)
+            .record(kiwi_records::NodeChange::PARAMETER_CONSUMPTION_MAP)
         {
-            Some(map) => map.records(kiwi_records::variable_data_map::ENTRIES),
+            Some(map) => map.records(kiwi_records::VariableDataMap::ENTRIES),
             None => Vec::new(),
         };
         let saved = record
-            .records(kiwi_records::node_change::COMPONENT_PROP_REFS)
+            .records(kiwi_records::NodeChange::COMPONENT_PROP_REFS)
             .into_iter()
             .cloned()
             .collect::<Vec<_>>();
@@ -43808,40 +44390,39 @@ pub mod graph {
         if refs.is_empty() {
             record
         } else {
-            record.put_records(kiwi_records::node_change::COMPONENT_PROP_REFS, refs)
+            record.put_records(kiwi_records::NodeChange::COMPONENT_PROP_REFS, refs)
         }
     }
     fn prop_ref(entry: &&KiwiRecord) -> Option<KiwiRecord> {
-        match entry.enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD) {
+        match entry.enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD) {
             Some(variable_field) => {
                 match node_field(variable_field) {
                     Some(field) => {
                         match entry
-                            .record(kiwi_records::variable_data_map_entry::VARIABLE_DATA)
+                            .record(kiwi_records::VariableDataMapEntry::VARIABLE_DATA)
                         {
                             Some(variable) => {
-                                match variable.record(kiwi_records::variable_data::VALUE) {
+                                match variable.record(kiwi_records::VariableData::VALUE) {
                                     Some(value) => {
                                         match value
-                                            .record(kiwi_records::variable_any_value::PROP_REF_VALUE)
+                                            .record(kiwi_records::VariableAnyValue::PROP_REF_VALUE)
                                         {
                                             Some(reference) => {
-                                                match reference.record(kiwi_records::prop_ref_value::DEF_ID)
-                                                {
+                                                match reference.record(kiwi_records::PropRefValue::DEF_ID) {
                                                     Some(def_id) => {
                                                         match variable
-                                                            .enum_value(kiwi_records::variable_data::DATA_TYPE)
-                                                            == Some(kiwi_records::variable_data_type::PROP_REF)
+                                                            .enum_value(kiwi_records::VariableData::DATA_TYPE)
+                                                            == Some(kiwi_records::VariableDataType::PROP_REF)
                                                         {
                                                             true => {
                                                                 Some(
                                                                     KiwiRecord::new(kiwi_record_definitions::COMPONENT_PROP_REF)
                                                                         .put_record(
-                                                                            kiwi_records::component_prop_ref::DEF_ID,
+                                                                            kiwi_records::ComponentPropRef::DEF_ID,
                                                                             def_id.clone(),
                                                                         )
                                                                         .put_enum(
-                                                                            kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD,
+                                                                            kiwi_records::ComponentPropRef::COMPONENT_PROP_NODE_FIELD,
                                                                             field,
                                                                             kiwi_record_definitions::COMPONENT_PROP_NODE_FIELD,
                                                                         ),
@@ -43870,30 +44451,30 @@ pub mod graph {
     }
     fn node_field(field: u32) -> Option<u32> {
         match field {
-            kiwi_records::variable_field::VISIBLE => {
-                Some(kiwi_records::component_prop_node_field::VISIBLE)
+            kiwi_records::VariableField::VISIBLE => {
+                Some(kiwi_records::ComponentPropNodeField::VISIBLE)
             }
-            kiwi_records::variable_field::TEXT_DATA => {
-                Some(kiwi_records::component_prop_node_field::TEXT_DATA)
+            kiwi_records::VariableField::TEXT_DATA => {
+                Some(kiwi_records::ComponentPropNodeField::TEXT_DATA)
             }
-            kiwi_records::variable_field::OVERRIDDEN_SYMBOL_ID => {
-                Some(kiwi_records::component_prop_node_field::OVERRIDDEN_SYMBOL_ID)
+            kiwi_records::VariableField::OVERRIDDEN_SYMBOL_ID => {
+                Some(kiwi_records::ComponentPropNodeField::OVERRIDDEN_SYMBOL_ID)
             }
-            kiwi_records::variable_field::SLOT_CONTENT_ID => {
-                Some(kiwi_records::component_prop_node_field::SLOT_CONTENT_ID)
+            kiwi_records::VariableField::SLOT_CONTENT_ID => {
+                Some(kiwi_records::ComponentPropNodeField::SLOT_CONTENT_ID)
             }
             _ => None,
         }
     }
     fn upsert_ref(mut refs: Vec<KiwiRecord>, prop_ref: KiwiRecord) -> Vec<KiwiRecord> {
         let field = prop_ref
-            .enum_value(kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD);
+            .enum_value(kiwi_records::ComponentPropRef::COMPONENT_PROP_NODE_FIELD);
         match refs
             .iter()
             .rposition(|saved| {
                 saved
                     .enum_value(
-                        kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD,
+                        kiwi_records::ComponentPropRef::COMPONENT_PROP_NODE_FIELD,
                     ) == field
             })
         {
@@ -43911,9 +44492,9 @@ pub mod graph {
     fn inherit_property_definitions(
         records: Vec<KiwiRecord>,
     ) -> NifResult<Vec<KiwiRecord>> {
-        if records.iter().any(|record| linked_definitions(record)) {
-            let by_id = records_by_id(&&records);
-            let mut resolved = HashMap::new();
+        if records.iter().any(linked_definitions) {
+            let by_id = records_by_id(&records);
+            let mut resolved: Resolved = HashMap::new();
             records
                 .iter()
                 .map(|record| resolve(record, &by_id, &mut resolved, &HashSet::new()))
@@ -43924,10 +44505,10 @@ pub mod graph {
     }
     fn linked_definitions(record: &KiwiRecord) -> bool {
         record
-            .records(kiwi_records::node_change::COMPONENT_PROP_DEFS)
-            .iter()
+            .records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS)
+            .into_iter()
             .any(|definition| {
-                definition.has(kiwi_records::component_prop_def::PARENT_PROP_DEF_ID)
+                definition.has(kiwi_records::ComponentPropDef::PARENT_PROP_DEF_ID)
             })
     }
     fn resolve(
@@ -43990,11 +44571,11 @@ pub mod graph {
         ancestors: &[KiwiRecord],
     ) -> NifResult<KiwiRecord> {
         let definitions = inherit_definitions(record, ancestors)?;
-        if record.has(kiwi_records::node_change::COMPONENT_PROP_DEFS) {
+        if record.has(kiwi_records::NodeChange::COMPONENT_PROP_DEFS) {
             Ok(
                 record
                     .put_records(
-                        kiwi_records::node_change::COMPONENT_PROP_DEFS,
+                        kiwi_records::NodeChange::COMPONENT_PROP_DEFS,
                         definitions,
                     ),
             )
@@ -44007,7 +44588,7 @@ pub mod graph {
         ancestors: &[KiwiRecord],
     ) -> NifResult<KiwiRecord> {
         match guid_key(
-            definition.record(kiwi_records::component_prop_def::PARENT_PROP_DEF_ID),
+            definition.record(kiwi_records::ComponentPropDef::PARENT_PROP_DEF_ID),
         ) {
             None => Ok(definition.clone()),
             Some(parent_id) => {
@@ -44042,20 +44623,30 @@ pub mod graph {
         } else {
             let keys = style_keys(&&records);
             records
-                .iter()
-                .map(|record| apply_style_refs(record, &styles, &keys))
-                .collect()
+                .into_iter()
+                .map(|record| apply_style_refs(&record, &styles, &keys))
+                .collect::<Vec<KiwiRecord>>()
         }
     }
     fn style_records(records: &[KiwiRecord]) -> Styles {
         records
             .iter()
-            .filter(|record| record.has(kiwi_records::node_change::STYLE_TYPE))
-            .filter_map(|record| record_id(record).map(|id| (id, record.clone())))
+            .filter_map(|item| match item {
+                record if record.has(kiwi_records::NodeChange::STYLE_TYPE) => {
+                    Some(record)
+                }
+                _ => None,
+            })
+            .map(|record| (record, record_id(record)))
+            .filter_map(|item| match item {
+                (record, Some(id)) => Some((record, id)),
+                _ => None,
+            })
+            .map(|(record, id)| (id, record.clone()))
             .collect()
     }
     fn style_keys(records: &[KiwiRecord]) -> StyleKeys {
-        records.iter().flat_map(|record| style_names(record)).collect()
+        records.iter().flat_map(style_names).collect()
     }
     fn apply_style_refs(
         record: &KiwiRecord,
@@ -44064,46 +44655,46 @@ pub mod graph {
     ) -> KiwiRecord {
         let fill = style_field(
             record.clone(),
-            kiwi_records::node_change::STYLE_ID_FOR_FILL,
-            kiwi_records::style_type::FILL,
-            kiwi_records::node_change::FILL_PAINTS,
-            kiwi_records::node_change::FILL_PAINTS,
+            kiwi_records::NodeChange::STYLE_ID_FOR_FILL,
+            kiwi_records::StyleType::FILL,
+            kiwi_records::NodeChange::FILL_PAINTS,
+            kiwi_records::NodeChange::FILL_PAINTS,
             styles,
             keys,
         );
         let stroke = style_field(
             fill,
-            kiwi_records::node_change::STYLE_ID_FOR_STROKE_FILL,
-            kiwi_records::style_type::FILL,
-            kiwi_records::node_change::FILL_PAINTS,
-            kiwi_records::node_change::STROKE_PAINTS,
+            kiwi_records::NodeChange::STYLE_ID_FOR_STROKE_FILL,
+            kiwi_records::StyleType::FILL,
+            kiwi_records::NodeChange::FILL_PAINTS,
+            kiwi_records::NodeChange::STROKE_PAINTS,
             styles,
             keys,
         );
         let effect = style_field(
             stroke,
-            kiwi_records::node_change::STYLE_ID_FOR_EFFECT,
-            kiwi_records::style_type::EFFECT,
-            kiwi_records::node_change::EFFECTS,
-            kiwi_records::node_change::EFFECTS,
+            kiwi_records::NodeChange::STYLE_ID_FOR_EFFECT,
+            kiwi_records::StyleType::EFFECT,
+            kiwi_records::NodeChange::EFFECTS,
+            kiwi_records::NodeChange::EFFECTS,
             styles,
             keys,
         );
         let grid = style_field(
             effect,
-            kiwi_records::node_change::STYLE_ID_FOR_GRID,
-            kiwi_records::style_type::GRID,
-            kiwi_records::node_change::LAYOUT_GRIDS,
-            kiwi_records::node_change::LAYOUT_GRIDS,
+            kiwi_records::NodeChange::STYLE_ID_FOR_GRID,
+            kiwi_records::StyleType::GRID,
+            kiwi_records::NodeChange::LAYOUT_GRIDS,
+            kiwi_records::NodeChange::LAYOUT_GRIDS,
             styles,
             keys,
         );
         text_style(grid, styles, keys)
             .map_record(
-                kiwi_records::node_change::SYMBOL_DATA,
+                kiwi_records::NodeChange::SYMBOL_DATA,
                 |data| {
                     data.map_records(
-                        kiwi_records::symbol_data::SYMBOL_OVERRIDES,
+                        kiwi_records::SymbolData::SYMBOL_OVERRIDES,
                         |layer| apply_style_refs(layer, styles, keys),
                     )
                 },
@@ -44122,7 +44713,7 @@ pub mod graph {
             Some(style) => {
                 match style.get(source) {
                     Some(value) => {
-                        if style.enum_value(kiwi_records::node_change::STYLE_TYPE)
+                        if style.enum_value(kiwi_records::NodeChange::STYLE_TYPE)
                             == Some(style_type)
                         {
                             record.put(target, value.clone())
@@ -44139,15 +44730,15 @@ pub mod graph {
     fn text_style(record: KiwiRecord, styles: &Styles, keys: &StyleKeys) -> KiwiRecord {
         match referenced_style(
             &record,
-            kiwi_records::node_change::STYLE_ID_FOR_TEXT,
+            kiwi_records::NodeChange::STYLE_ID_FOR_TEXT,
             styles,
             keys,
         ) {
             Some(style) => {
-                if style.enum_value(kiwi_records::node_change::TYPE)
-                    == Some(kiwi_records::node_type::TEXT)
-                    && style.enum_value(kiwi_records::node_change::STYLE_TYPE)
-                        == Some(kiwi_records::style_type::TEXT)
+                if style.enum_value(kiwi_records::NodeChange::TYPE)
+                    == Some(kiwi_records::NodeType::TEXT)
+                    && style.enum_value(kiwi_records::NodeChange::STYLE_TYPE)
+                        == Some(kiwi_records::StyleType::TEXT)
                 {
                     with_text_style(record, &style)
                 } else {
@@ -44166,10 +44757,10 @@ pub mod graph {
         match record.record(field) {
             None => None,
             Some(reference) => {
-                match guid_key(reference.record(kiwi_records::style_id::GUID)) {
+                match guid_key(reference.record(kiwi_records::StyleId::GUID)) {
                     Some(id) => style_by_id(styles, id),
                     None => {
-                        match reference.record(kiwi_records::style_id::ASSET_REF) {
+                        match reference.record(kiwi_records::StyleId::ASSET_REF) {
                             Some(asset) => asset_style(asset, styles, keys),
                             None => None,
                         }
@@ -44183,10 +44774,10 @@ pub mod graph {
         styles: &Styles,
         keys: &StyleKeys,
     ) -> Option<KiwiRecord> {
-        match asset.str(kiwi_records::asset_ref::KEY) {
+        match asset.str(kiwi_records::AssetRef::KEY) {
             None => None,
             Some(key) => {
-                match asset.str(kiwi_records::asset_ref::VERSION) {
+                match asset.str(kiwi_records::AssetRef::VERSION) {
                     Some(version) => {
                         match keys.get(&format!("{key}@{version}")) {
                             Some(id) => style_by_id(styles, *id),
@@ -44201,7 +44792,12 @@ pub mod graph {
     fn records_by_id(records: &[KiwiRecord]) -> HashMap<GuidKey, &KiwiRecord> {
         records
             .iter()
-            .filter_map(|record| record_id(record).map(|id| (id, record)))
+            .map(|record| (record, record_id(record)))
+            .filter_map(|item| match item {
+                (record, Some(id)) => Some((record, id)),
+                _ => None,
+            })
+            .map(|(record, id)| (id, record))
             .collect()
     }
     fn inherit_definitions(
@@ -44209,39 +44805,39 @@ pub mod graph {
         ancestors: &[KiwiRecord],
     ) -> NifResult<Vec<KiwiRecord>> {
         record
-            .records(kiwi_records::node_change::COMPONENT_PROP_DEFS)
+            .records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS)
             .into_iter()
             .map(|definition| inherit_definition(definition, ancestors))
             .collect()
     }
     fn definitions_named(ancestor: &KiwiRecord, id: GuidKey) -> Vec<&KiwiRecord> {
         ancestor
-            .records(kiwi_records::node_change::COMPONENT_PROP_DEFS)
-            .into_iter()
+            .records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS)
+            .iter()
             .filter(|definition| {
-                guid_key(definition.record(kiwi_records::component_prop_def::ID))
+                guid_key(definition.record(kiwi_records::ComponentPropDef::ID))
                     == Some(id)
             })
-            .collect()
+            .cloned()
+            .collect::<Vec<&KiwiRecord>>()
     }
     fn with_text_style(record: KiwiRecord, style: &KiwiRecord) -> KiwiRecord {
         let text = style
             .take(
                 &[
-                    kiwi_records::node_change::FONT_SIZE,
-                    kiwi_records::node_change::FONT_NAME,
-                    kiwi_records::node_change::LINE_HEIGHT,
-                    kiwi_records::node_change::LETTER_SPACING,
-                    kiwi_records::node_change::TEXT_CASE,
+                    kiwi_records::NodeChange::FONT_SIZE,
+                    kiwi_records::NodeChange::FONT_NAME,
+                    kiwi_records::NodeChange::LINE_HEIGHT,
+                    kiwi_records::NodeChange::LETTER_SPACING,
+                    kiwi_records::NodeChange::TEXT_CASE,
                 ],
             );
         let merged = record.merge(&text);
-        match style.get(kiwi_records::node_change::TEXT_DECORATION) {
+        match style.get(kiwi_records::NodeChange::TEXT_DECORATION) {
             Some(decoration) => {
-                merged
-                    .put(kiwi_records::node_change::TEXT_DECORATION, decoration.clone())
+                merged.put(kiwi_records::NodeChange::TEXT_DECORATION, decoration.clone())
             }
-            None => merged.delete(kiwi_records::node_change::TEXT_DECORATION),
+            None => merged.delete(kiwi_records::NodeChange::TEXT_DECORATION),
         }
     }
     fn cached(resolved: &Resolved, id: GuidKey) -> NifResult<KiwiRecord> {
@@ -44267,11 +44863,11 @@ pub mod graph {
         }
     }
     fn style_names(record: &KiwiRecord) -> Vec<(String, GuidKey)> {
-        match record.str(kiwi_records::node_change::KEY) {
+        match record.str(kiwi_records::NodeChange::KEY) {
             Some(key) => {
                 match record_id(record) {
                     Some(id) => {
-                        match record.str(kiwi_records::node_change::VERSION) {
+                        match record.str(kiwi_records::NodeChange::VERSION) {
                             Some(version) => {
                                 vec![
                                     (key.to_string(), id), (format!("{key}@{version}"), id)
@@ -44316,12 +44912,12 @@ pub mod graph {
         }
     }
     fn live(record: &KiwiRecord) -> bool {
-        record.enum_value(kiwi_records::node_change::PHASE)
-            != Some(kiwi_records::node_phase::REMOVED)
+        record.enum_value(kiwi_records::NodeChange::PHASE)
+            != Some(kiwi_records::NodePhase::REMOVED)
     }
     fn live_records(message: &KiwiRecord) -> Vec<&KiwiRecord> {
         message
-            .records(kiwi_records::message::NODE_CHANGES)
+            .records(kiwi_records::Message::NODE_CHANGES)
             .into_iter()
             .filter_map(|item| match item {
                 record if live(record) => Some(record),
@@ -44334,7 +44930,15 @@ pub mod graph {
         ids.len() != id_set(&&ids).len()
     }
     fn record_ids(records: &[&KiwiRecord]) -> Vec<GuidKey> {
-        records.iter().filter_map(|record| record_id(record)).collect()
+        records
+            .iter()
+            .map(|record| (record, record_id(record)))
+            .filter_map(|item| match item {
+                (record, Some(id)) => Some((record, id)),
+                _ => None,
+            })
+            .map(|(_, id)| id)
+            .collect()
     }
     fn id_set(ids: &[GuidKey]) -> HashSet<GuidKey> {
         ids.iter().copied().collect()
@@ -44342,7 +44946,12 @@ pub mod graph {
     fn sources(records: &[KiwiRecord]) -> Sources {
         records
             .iter()
-            .filter_map(|record| record_id(record).map(|id| (id, record.clone())))
+            .map(|record| (record, record_id(record)))
+            .filter_map(|item| match item {
+                (record, Some(id)) => Some((record, id)),
+                _ => None,
+            })
+            .map(|(record, id)| (id, record.clone()))
             .collect()
     }
     fn children(records: &[KiwiRecord]) -> Children {
@@ -44353,19 +44962,24 @@ pub mod graph {
         children
     }
     fn child_pairs(records: &[KiwiRecord]) -> Vec<(GuidKey, GuidKey)> {
-        let mut ordered = record_refs(records);
-        ordered.sort_by_key(|record| position(record));
+        let ordered = {
+            let mut rustq_updated = record_refs(records);
+            rustq_updated.sort_by_key(|rustq_item| position(rustq_item));
+            rustq_updated
+        };
         ordered
-            .iter()
-            .filter_map(|record| match record_id(record) {
-                Some(id) => {
-                    match parent_id(record) {
-                        Some(parent) => Some((parent, id)),
-                        _ => None,
-                    }
-                }
+            .into_iter()
+            .map(|record| (record, record_id(record)))
+            .filter_map(|item| match item {
+                (record, Some(id)) => Some((record, id)),
                 _ => None,
             })
+            .map(|(record, id)| ((record, id), parent_id(record)))
+            .filter_map(|item| match item {
+                ((record, id), Some(parent)) => Some((record, id, parent)),
+                _ => None,
+            })
+            .map(|(_, id, parent)| (parent, id))
             .collect()
     }
     fn record_refs(records: &[KiwiRecord]) -> Vec<&KiwiRecord> {
@@ -44382,11 +44996,11 @@ pub mod graph {
     }
     fn symbol_id(record: &KiwiRecord) -> Option<GuidKey> {
         record
-            .record(kiwi_records::node_change::SYMBOL_DATA)
-            .and_then(|data| guid_key(data.record(kiwi_records::symbol_data::SYMBOL_ID)))
+            .record(kiwi_records::NodeChange::SYMBOL_DATA)
+            .and_then(|data| guid_key(data.record(kiwi_records::SymbolData::SYMBOL_ID)))
     }
     fn override_key(record: &KiwiRecord) -> Option<GuidKey> {
-        guid_key(record.record(kiwi_records::node_change::OVERRIDE_KEY))
+        guid_key(record.record(kiwi_records::NodeChange::OVERRIDE_KEY))
             .filter(|key| *key != (4294967295, 4294967295))
     }
     fn matches(record: &KiwiRecord, guid: GuidKey) -> bool {
@@ -44657,31 +45271,31 @@ pub mod graph {
     }
     fn component_identity() -> &'static [u32] {
         &[
-            kiwi_records::node_change::COMPONENT_KEY,
-            kiwi_records::node_change::SOURCE_LIBRARY_KEY,
-            kiwi_records::node_change::PUBLISH_ID,
-            kiwi_records::node_change::PUBLISHED_VERSION,
-            kiwi_records::node_change::SHARED_SYMBOL_VERSION,
-            kiwi_records::node_change::IS_SYMBOL_PUBLISHABLE,
-            kiwi_records::node_change::VARIANT_PROP_SPECS,
-            kiwi_records::node_change::COMPONENT_PROP_DEFS,
-            kiwi_records::node_change::OVERRIDE_KEY,
+            kiwi_records::NodeChange::COMPONENT_KEY,
+            kiwi_records::NodeChange::SOURCE_LIBRARY_KEY,
+            kiwi_records::NodeChange::PUBLISH_ID,
+            kiwi_records::NodeChange::PUBLISHED_VERSION,
+            kiwi_records::NodeChange::SHARED_SYMBOL_VERSION,
+            kiwi_records::NodeChange::IS_SYMBOL_PUBLISHABLE,
+            kiwi_records::NodeChange::VARIANT_PROP_SPECS,
+            kiwi_records::NodeChange::COMPONENT_PROP_DEFS,
+            kiwi_records::NodeChange::OVERRIDE_KEY,
         ]
     }
     fn text_shaping() -> &'static [u32] {
         &[
-            kiwi_records::node_change::FONT_SIZE,
-            kiwi_records::node_change::FONT_NAME,
-            kiwi_records::node_change::FONT_VARIATIONS,
-            kiwi_records::node_change::LETTER_SPACING,
-            kiwi_records::node_change::LINE_HEIGHT,
-            kiwi_records::node_change::TEXT_CASE,
-            kiwi_records::node_change::TEXT_ALIGN_HORIZONTAL,
-            kiwi_records::node_change::TEXT_ALIGN_VERTICAL,
-            kiwi_records::node_change::TEXT_AUTO_RESIZE,
-            kiwi_records::node_change::STYLE_ID_FOR_TEXT,
-            kiwi_records::node_change::FONT_VARIANT_COMMON_LIGATURES,
-            kiwi_records::node_change::FONT_VARIANT_CONTEXTUAL_LIGATURES,
+            kiwi_records::NodeChange::FONT_SIZE,
+            kiwi_records::NodeChange::FONT_NAME,
+            kiwi_records::NodeChange::FONT_VARIATIONS,
+            kiwi_records::NodeChange::LETTER_SPACING,
+            kiwi_records::NodeChange::LINE_HEIGHT,
+            kiwi_records::NodeChange::TEXT_CASE,
+            kiwi_records::NodeChange::TEXT_ALIGN_HORIZONTAL,
+            kiwi_records::NodeChange::TEXT_ALIGN_VERTICAL,
+            kiwi_records::NodeChange::TEXT_AUTO_RESIZE,
+            kiwi_records::NodeChange::STYLE_ID_FOR_TEXT,
+            kiwi_records::NodeChange::FONT_VARIANT_COMMON_LIGATURES,
+            kiwi_records::NodeChange::FONT_VARIANT_CONTEXTUAL_LIGATURES,
         ]
     }
     fn retained(props: &KiwiRecord, target: &Occurrence, owner_rank: u32) -> KiwiRecord {
@@ -44704,7 +45318,7 @@ pub mod graph {
             Some(consumption) => {
                 merged
                     .put_record(
-                        kiwi_records::node_change::PARAMETER_CONSUMPTION_MAP,
+                        kiwi_records::NodeChange::PARAMETER_CONSUMPTION_MAP,
                         consumption,
                     )
             }
@@ -44712,25 +45326,25 @@ pub mod graph {
         };
         target.properties = properties;
         target.has_own_name = target.has_own_name
-            || props.has(kiwi_records::node_change::NAME);
+            || props.has(kiwi_records::NodeChange::NAME);
         target.overridden.extend(props.field_ids());
     }
     fn invalidate_inherited_text(
         properties: &KiwiRecord,
         patch: &KiwiRecord,
     ) -> KiwiRecord {
-        if !patch.has(kiwi_records::node_change::DERIVED_TEXT_DATA)
+        if !patch.has(kiwi_records::NodeChange::DERIVED_TEXT_DATA)
             && (changed_text(properties, patch) || changed_shaping(properties, patch))
         {
-            properties.delete(kiwi_records::node_change::DERIVED_TEXT_DATA)
+            properties.delete(kiwi_records::NodeChange::DERIVED_TEXT_DATA)
         } else {
             properties.clone()
         }
     }
     fn changed_text(properties: &KiwiRecord, patch: &KiwiRecord) -> bool {
-        match patch.record(kiwi_records::node_change::TEXT_DATA) {
+        match patch.record(kiwi_records::NodeChange::TEXT_DATA) {
             Some(text) => {
-                match properties.record(kiwi_records::node_change::TEXT_DATA) {
+                match properties.record(kiwi_records::NodeChange::TEXT_DATA) {
                     Some(source) => {
                         text.fields()
                             .any(|(field, value)| source.get(field) != Some(value))
@@ -44761,7 +45375,7 @@ pub mod graph {
             Some(
                 KiwiRecord::new(kiwi_record_definitions::VARIABLE_DATA_MAP)
                     .put_records(
-                        kiwi_records::variable_data_map::ENTRIES,
+                        kiwi_records::VariableDataMap::ENTRIES,
                         dedupe_by_field(&entries),
                     ),
             )
@@ -44770,17 +45384,17 @@ pub mod graph {
     fn consumption_entries(record: &KiwiRecord) -> Vec<KiwiRecord> {
         let mut entries = map_entries(
             record,
-            kiwi_records::node_change::VARIABLE_CONSUMPTION_MAP,
+            kiwi_records::NodeChange::VARIABLE_CONSUMPTION_MAP,
         );
         entries
             .extend(
-                map_entries(record, kiwi_records::node_change::PARAMETER_CONSUMPTION_MAP),
+                map_entries(record, kiwi_records::NodeChange::PARAMETER_CONSUMPTION_MAP),
             );
         let mut unkeyed = entries
             .iter()
             .filter_map(|item| match item {
                 entry if entry
-                    .enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD)
+                    .enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD)
                     .is_none() => Some(entry),
                 _ => None,
             })
@@ -44790,7 +45404,7 @@ pub mod graph {
             .iter()
             .filter_map(|item| match item {
                 entry if entry
-                    .enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD)
+                    .enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD)
                     .is_some() => Some(entry),
                 _ => None,
             })
@@ -44802,7 +45416,7 @@ pub mod graph {
     fn map_entries(record: &KiwiRecord, field: u32) -> Vec<KiwiRecord> {
         match record.record(field) {
             Some(map) => {
-                map.records(kiwi_records::variable_data_map::ENTRIES)
+                map.records(kiwi_records::VariableDataMap::ENTRIES)
                     .into_iter()
                     .cloned()
                     .collect()
@@ -44814,7 +45428,7 @@ pub mod graph {
         let mut last = HashMap::new();
         for (index, entry) in entries.iter().enumerate() {
             if let Some(field) = entry
-                .enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD)
+                .enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD)
             {
                 last.insert(field, index);
             }
@@ -44822,8 +45436,7 @@ pub mod graph {
         let mut seen = HashSet::new();
         let mut kept = Vec::new();
         for entry in entries {
-            match entry.enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD)
-            {
+            match entry.enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD) {
                 Some(field) => {
                     if seen.insert(field) {
                         kept.push(entries[last[&field]].clone());
@@ -44864,55 +45477,57 @@ pub mod graph {
     fn component(definitions: &[&KiwiRecord]) -> Vec<Binding> {
         definitions
             .iter()
-            .filter_map(|definition| match guid_key(
-                definition.record(kiwi_records::component_prop_def::ID),
-            ) {
-                Some(id) => {
-                    match definition
-                        .record(kiwi_records::component_prop_def::INITIAL_VALUE)
-                    {
-                        Some(value) => {
-                            Some(Binding {
-                                id,
-                                value: prop_value(value),
-                                origin: Origin::Default,
-                                rank: None,
-                                superseded: Vec::new(),
-                            })
-                        }
-                        _ => None,
-                    }
-                }
+            .map(|definition| (
+                definition,
+                guid_key(definition.record(kiwi_records::ComponentPropDef::ID)),
+            ))
+            .filter_map(|item| match item {
+                (definition, Some(id)) => Some((definition, id)),
                 _ => None,
+            })
+            .map(|(definition, id)| (
+                (definition, id),
+                definition.record(kiwi_records::ComponentPropDef::INITIAL_VALUE),
+            ))
+            .filter_map(|item| match item {
+                ((definition, id), Some(value)) => Some((definition, id, value)),
+                _ => None,
+            })
+            .map(|(_, id, value)| Binding {
+                id,
+                value: prop_value(value),
+                origin: Origin::Default,
+                rank: None,
+                superseded: Vec::new(),
             })
             .collect()
     }
     fn prop_value(value: &KiwiRecord) -> PropValue {
         if value.definition() == kiwi_record_definitions::COMPONENT_PROP_VALUE {
             PropValue {
-                bool: value.bool(kiwi_records::component_prop_value::BOOL_VALUE),
+                bool: value.bool(kiwi_records::ComponentPropValue::BOOL_VALUE),
                 text: text_characters(
-                    value.record(kiwi_records::component_prop_value::TEXT_VALUE),
+                    value.record(kiwi_records::ComponentPropValue::TEXT_VALUE),
                 ),
                 guid: value
-                    .record(kiwi_records::component_prop_value::GUID_VALUE)
+                    .record(kiwi_records::ComponentPropValue::GUID_VALUE)
                     .cloned(),
                 ..empty_value()
             }
         } else {
-            let text = match value.str(kiwi_records::variable_any_value::TEXT_VALUE) {
+            let text = match value.str(kiwi_records::VariableAnyValue::TEXT_VALUE) {
                 Some(text) => Some(text.to_string()),
                 None => {
                     text_characters(
-                        value.record(kiwi_records::variable_any_value::TEXT_DATA_VALUE),
+                        value.record(kiwi_records::VariableAnyValue::TEXT_DATA_VALUE),
                     )
                 }
             };
             PropValue {
-                bool: value.bool(kiwi_records::variable_any_value::BOOL_VALUE),
+                bool: value.bool(kiwi_records::VariableAnyValue::BOOL_VALUE),
                 text,
                 has_slot_content: value
-                    .has(kiwi_records::variable_any_value::SLOT_CONTENT_ID_VALUE),
+                    .has(kiwi_records::VariableAnyValue::SLOT_CONTENT_ID_VALUE),
                 slot_content: slot_content(value),
                 ..empty_value()
             }
@@ -44945,7 +45560,7 @@ pub mod graph {
         rank: Option<u32>,
     ) -> Option<Binding> {
         match guid_key(
-            assignment.record(kiwi_records::component_prop_assignment::DEF_ID),
+            assignment.record(kiwi_records::ComponentPropAssignment::DEF_ID),
         ) {
             Some(id) => {
                 match assignment_value(assignment) {
@@ -44965,23 +45580,23 @@ pub mod graph {
         }
     }
     fn assignment_value(assignment: &KiwiRecord) -> Option<PropValue> {
-        let value = assignment.record(kiwi_records::component_prop_assignment::VALUE);
+        let value = assignment.record(kiwi_records::ComponentPropAssignment::VALUE);
         let variable = assignment
-            .record(kiwi_records::component_prop_assignment::VAR_VALUE)
-            .and_then(|variable| variable.record(kiwi_records::variable_data::VALUE));
+            .record(kiwi_records::ComponentPropAssignment::VAR_VALUE)
+            .and_then(|variable| variable.record(kiwi_records::VariableData::VALUE));
         let symbol = variable
             .and_then(|variable| {
-                variable.record(kiwi_records::variable_any_value::SYMBOL_ID_VALUE)
+                variable.record(kiwi_records::VariableAnyValue::SYMBOL_ID_VALUE)
             })
-            .and_then(|symbol| symbol.record(kiwi_records::symbol_id::GUID));
+            .and_then(|symbol| symbol.record(kiwi_records::SymbolId::GUID));
         match (value, symbol, variable) {
             (
                 Some(value),
                 _symbol,
                 _variable,
-            ) if value.has(kiwi_records::component_prop_value::BOOL_VALUE)
-                || value.has(kiwi_records::component_prop_value::TEXT_VALUE)
-                || value.has(kiwi_records::component_prop_value::GUID_VALUE) => {
+            ) if value.has(kiwi_records::ComponentPropValue::BOOL_VALUE)
+                || value.has(kiwi_records::ComponentPropValue::TEXT_VALUE)
+                || value.has(kiwi_records::ComponentPropValue::GUID_VALUE) => {
                 Some(prop_value(value))
             }
             (_value, Some(symbol), _variable) => {
@@ -44996,19 +45611,19 @@ pub mod graph {
     }
     fn variable_value(variable: &KiwiRecord) -> Option<PropValue> {
         let value = prop_value(variable);
-        if variable.has(kiwi_records::variable_any_value::BOOL_VALUE) {
+        if variable.has(kiwi_records::VariableAnyValue::BOOL_VALUE) {
             Some(PropValue {
                 bool: value.bool,
                 ..empty_value()
             })
-        } else if variable.has(kiwi_records::variable_any_value::TEXT_VALUE)
-            || variable.has(kiwi_records::variable_any_value::TEXT_DATA_VALUE)
+        } else if variable.has(kiwi_records::VariableAnyValue::TEXT_VALUE)
+            || variable.has(kiwi_records::VariableAnyValue::TEXT_DATA_VALUE)
         {
             Some(PropValue {
                 text: value.text,
                 ..empty_value()
             })
-        } else if variable.has(kiwi_records::variable_any_value::SLOT_CONTENT_ID_VALUE) {
+        } else if variable.has(kiwi_records::VariableAnyValue::SLOT_CONTENT_ID_VALUE) {
             Some(PropValue {
                 has_slot_content: true,
                 slot_content: value.slot_content,
@@ -45020,12 +45635,12 @@ pub mod graph {
     }
     fn slot_content(value: &KiwiRecord) -> Option<GuidKey> {
         value
-            .record(kiwi_records::variable_any_value::SLOT_CONTENT_ID_VALUE)
-            .and_then(|slot| guid_key(slot.record(kiwi_records::slot_content_id::GUID)))
+            .record(kiwi_records::VariableAnyValue::SLOT_CONTENT_ID_VALUE)
+            .and_then(|slot| guid_key(slot.record(kiwi_records::SlotContentId::GUID)))
             .filter(|key| *key != (4294967295, 4294967295))
     }
     fn text_characters(text: Option<&KiwiRecord>) -> Option<String> {
-        text.and_then(|text| text.str(kiwi_records::text_data::CHARACTERS))
+        text.and_then(|text| text.str(kiwi_records::TextData::CHARACTERS))
             .map(|characters| characters.to_string())
     }
     fn bind(
@@ -45034,7 +45649,7 @@ pub mod graph {
     ) -> (KiwiRecord, Vec<(BindingClaim, Binding)>) {
         let mut bound = record.clone();
         let mut claims = Vec::new();
-        for reference in record.records(kiwi_records::node_change::COMPONENT_PROP_REFS) {
+        for reference in record.records(kiwi_records::NodeChange::COMPONENT_PROP_REFS) {
             if let Some((next, claim, binding)) = bind_ref(&bound, reference, bindings) {
                 bound = next;
                 claims.push((claim, binding));
@@ -45047,13 +45662,11 @@ pub mod graph {
         reference: &KiwiRecord,
         bindings: &[Binding],
     ) -> Option<(KiwiRecord, BindingClaim, Binding)> {
-        match reference
-            .bool(kiwi_records::component_prop_ref::IS_DELETED)
-            .unwrap_or(false)
+        match reference.bool(kiwi_records::ComponentPropRef::IS_DELETED).unwrap_or(false)
         {
             false => {
                 match guid_key(
-                    reference.record(kiwi_records::component_prop_ref::DEF_ID),
+                    reference.record(kiwi_records::ComponentPropRef::DEF_ID),
                 ) {
                     Some(id) => {
                         match bindings.iter().find(|binding| binding.id == id) {
@@ -45086,36 +45699,36 @@ pub mod graph {
     ) -> Option<(KiwiRecord, BoundField)> {
         match (
             reference
-                .enum_value(kiwi_records::component_prop_ref::COMPONENT_PROP_NODE_FIELD),
+                .enum_value(kiwi_records::ComponentPropRef::COMPONENT_PROP_NODE_FIELD),
             &value.bool,
             &value.text,
             &value.guid,
         ) {
             (
-                Some(kiwi_records::component_prop_node_field::VISIBLE),
+                Some(kiwi_records::ComponentPropNodeField::VISIBLE),
                 Some(visible),
                 _text,
                 _guid,
             ) => {
                 Some((
-                    record.put_bool(kiwi_records::node_change::VISIBLE, *visible),
+                    record.put_bool(kiwi_records::NodeChange::VISIBLE, *visible),
                     BoundField::Visible,
                 ))
             }
             (
-                Some(kiwi_records::component_prop_node_field::TEXT_DATA),
+                Some(kiwi_records::ComponentPropNodeField::TEXT_DATA),
                 _visible,
                 Some(text),
                 _guid,
             ) => Some((bind_text(record, text), BoundField::TextData)),
             (
-                Some(kiwi_records::component_prop_node_field::OVERRIDDEN_SYMBOL_ID),
+                Some(kiwi_records::ComponentPropNodeField::OVERRIDDEN_SYMBOL_ID),
                 _visible,
                 _text,
                 Some(guid),
             ) => Some((bind_symbol(record, guid), BoundField::SymbolData)),
             (
-                Some(kiwi_records::component_prop_node_field::SLOT_CONTENT_ID),
+                Some(kiwi_records::ComponentPropNodeField::SLOT_CONTENT_ID),
                 _visible,
                 _text,
                 _guid,
@@ -45126,32 +45739,30 @@ pub mod graph {
         }
     }
     fn bind_symbol(record: &KiwiRecord, guid: &KiwiRecord) -> KiwiRecord {
-        let symbol_data = match record.record(kiwi_records::node_change::SYMBOL_DATA) {
+        let symbol_data = match record.record(kiwi_records::NodeChange::SYMBOL_DATA) {
             Some(data) => data.clone(),
             None => KiwiRecord::new(kiwi_record_definitions::SYMBOL_DATA),
         };
         record
             .put_record(
-                kiwi_records::node_change::SYMBOL_DATA,
-                symbol_data
-                    .put_record(kiwi_records::symbol_data::SYMBOL_ID, guid.clone()),
+                kiwi_records::NodeChange::SYMBOL_DATA,
+                symbol_data.put_record(kiwi_records::SymbolData::SYMBOL_ID, guid.clone()),
             )
     }
     fn bind_text(record: &KiwiRecord, text: &str) -> KiwiRecord {
-        let text_data = match record.record(kiwi_records::node_change::TEXT_DATA) {
+        let text_data = match record.record(kiwi_records::NodeChange::TEXT_DATA) {
             Some(text_data) => text_data.clone(),
             None => KiwiRecord::new(kiwi_record_definitions::TEXT_DATA),
         };
-        let record = if text_data.str(kiwi_records::text_data::CHARACTERS) != Some(text)
-        {
-            record.delete(kiwi_records::node_change::DERIVED_TEXT_DATA)
+        let record = if text_data.str(kiwi_records::TextData::CHARACTERS) != Some(text) {
+            record.delete(kiwi_records::NodeChange::DERIVED_TEXT_DATA)
         } else {
             record.clone()
         };
         record
             .put_record(
-                kiwi_records::node_change::TEXT_DATA,
-                text_data.put_str(kiwi_records::text_data::CHARACTERS, text),
+                kiwi_records::NodeChange::TEXT_DATA,
+                text_data.put_str(kiwi_records::TextData::CHARACTERS, text),
             )
     }
     #[derive(Clone, Debug)]
@@ -45179,13 +45790,18 @@ pub mod graph {
         pub rank: u32,
     }
     fn own(source: &KiwiRecord, owner: LayerOwner) -> (Vec<Layer>, Vec<Claim>) {
-        let overrides = match source.record(kiwi_records::node_change::SYMBOL_DATA) {
-            Some(data) => data.records(kiwi_records::symbol_data::SYMBOL_OVERRIDES),
+        let overrides = match source.record(kiwi_records::NodeChange::SYMBOL_DATA) {
+            Some(data) => data.records(kiwi_records::SymbolData::SYMBOL_OVERRIDES),
             None => Vec::new(),
         };
         let layers = overrides
             .iter()
-            .filter_map(|r#override| structural_layer(r#override, &owner))
+            .map(|r#override| (r#override, structural_layer(r#override, &owner)))
+            .filter_map(|item| match item {
+                (r#override, Some(layer)) => Some((r#override, layer)),
+                _ => None,
+            })
+            .map(|(_, layer)| layer)
             .collect::<Vec<Layer>>();
         let mut claims = mode_claims(source);
         for r#override in overrides {
@@ -45193,9 +45809,9 @@ pub mod graph {
             let props = r#override
                 .drop(
                     &[
-                        kiwi_records::node_change::GUID_PATH,
-                        kiwi_records::node_change::OVERRIDDEN_SYMBOL_ID,
-                        kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS,
+                        kiwi_records::NodeChange::GUID_PATH,
+                        kiwi_records::NodeChange::OVERRIDDEN_SYMBOL_ID,
+                        kiwi_records::NodeChange::COMPONENT_PROP_ASSIGNMENTS,
                     ],
                 );
             if !path.is_empty() && !props.is_empty() {
@@ -45205,17 +45821,17 @@ pub mod graph {
         (layers, claims)
     }
     fn mode_claims(source: &KiwiRecord) -> Vec<Claim> {
-        match source.enum_value(kiwi_records::node_change::TYPE)
-            == Some(kiwi_records::node_type::INSTANCE)
+        match source.enum_value(kiwi_records::NodeChange::TYPE)
+            == Some(kiwi_records::NodeType::INSTANCE)
         {
             true => {
-                match source.has(kiwi_records::node_change::VARIABLE_MODE_BY_SET_MAP) {
+                match source.has(kiwi_records::NodeChange::VARIABLE_MODE_BY_SET_MAP) {
                     true => {
                         match symbol_id(source) {
                             Some(symbol_id) => {
                                 vec![
                                     Claim { path : vec![symbol_id], props : source.take(&
-                                    [kiwi_records::node_change::VARIABLE_MODE_BY_SET_MAP]) }
+                                    [kiwi_records::NodeChange::VARIABLE_MODE_BY_SET_MAP]) }
                                 ]
                             }
                             _ => Vec::new(),
@@ -45228,11 +45844,16 @@ pub mod graph {
         }
     }
     fn override_path(r#override: &KiwiRecord) -> Vec<GuidKey> {
-        match r#override.record(kiwi_records::node_change::GUID_PATH) {
+        match r#override.record(kiwi_records::NodeChange::GUID_PATH) {
             Some(path) => {
-                path.records(kiwi_records::guid_path::GUIDS)
+                path.records(kiwi_records::GuidPath::GUIDS)
                     .into_iter()
-                    .filter_map(|guid| guid_key(Some(guid)))
+                    .map(|guid| (guid, guid_key(Some(guid))))
+                    .filter_map(|item| match item {
+                        (guid, Some(key)) => Some((guid, key)),
+                        _ => None,
+                    })
+                    .map(|(_, key)| key)
                     .collect()
             }
             None => Vec::new(),
@@ -45241,10 +45862,10 @@ pub mod graph {
     fn structural_layer(r#override: &KiwiRecord, owner: &LayerOwner) -> Option<Layer> {
         let path = override_path(r#override);
         let swap = guid_key(
-            r#override.record(kiwi_records::node_change::OVERRIDDEN_SYMBOL_ID),
+            r#override.record(kiwi_records::NodeChange::OVERRIDDEN_SYMBOL_ID),
         );
         let assignments = r#override
-            .records(kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS)
+            .records(kiwi_records::NodeChange::COMPONENT_PROP_ASSIGNMENTS)
             .into_iter()
             .cloned()
             .collect::<Vec<KiwiRecord>>();
@@ -45263,74 +45884,74 @@ pub mod graph {
     }
     fn descend(layer: &Layer) -> Layer {
         Layer {
-            path: layer.path.iter().skip(1).copied().collect(),
+            path: layer.path.iter().cloned().skip(1).collect(),
             ..layer.clone()
         }
     }
     fn visual_lengths() -> &'static [u32] {
         &[
-            kiwi_records::node_change::STROKE_WEIGHT,
-            kiwi_records::node_change::CORNER_RADIUS,
-            kiwi_records::node_change::RECTANGLE_TOP_LEFT_CORNER_RADIUS,
-            kiwi_records::node_change::RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
-            kiwi_records::node_change::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
-            kiwi_records::node_change::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS,
+            kiwi_records::NodeChange::STROKE_WEIGHT,
+            kiwi_records::NodeChange::CORNER_RADIUS,
+            kiwi_records::NodeChange::RECTANGLE_TOP_LEFT_CORNER_RADIUS,
+            kiwi_records::NodeChange::RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
+            kiwi_records::NodeChange::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
+            kiwi_records::NodeChange::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS,
         ]
     }
     fn layout_distances() -> &'static [u32] {
         &[
-            kiwi_records::node_change::STACK_PADDING,
-            kiwi_records::node_change::STACK_SPACING,
-            kiwi_records::node_change::STACK_COUNTER_SPACING,
-            kiwi_records::node_change::STACK_HORIZONTAL_PADDING,
-            kiwi_records::node_change::STACK_VERTICAL_PADDING,
-            kiwi_records::node_change::STACK_PADDING_RIGHT,
-            kiwi_records::node_change::STACK_PADDING_BOTTOM,
+            kiwi_records::NodeChange::STACK_PADDING,
+            kiwi_records::NodeChange::STACK_SPACING,
+            kiwi_records::NodeChange::STACK_COUNTER_SPACING,
+            kiwi_records::NodeChange::STACK_HORIZONTAL_PADDING,
+            kiwi_records::NodeChange::STACK_VERTICAL_PADDING,
+            kiwi_records::NodeChange::STACK_PADDING_RIGHT,
+            kiwi_records::NodeChange::STACK_PADDING_BOTTOM,
         ]
     }
     fn scaled_fields() -> &'static [u32] {
         &[
-            kiwi_records::node_change::STACK_PADDING,
-            kiwi_records::node_change::STACK_SPACING,
-            kiwi_records::node_change::STACK_COUNTER_SPACING,
-            kiwi_records::node_change::STACK_HORIZONTAL_PADDING,
-            kiwi_records::node_change::STACK_VERTICAL_PADDING,
-            kiwi_records::node_change::STACK_PADDING_RIGHT,
-            kiwi_records::node_change::STACK_PADDING_BOTTOM,
-            kiwi_records::node_change::STROKE_WEIGHT,
-            kiwi_records::node_change::CORNER_RADIUS,
-            kiwi_records::node_change::RECTANGLE_TOP_LEFT_CORNER_RADIUS,
-            kiwi_records::node_change::RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
-            kiwi_records::node_change::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
-            kiwi_records::node_change::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS,
-            kiwi_records::node_change::FONT_SIZE,
-            kiwi_records::node_change::LINE_HEIGHT,
-            kiwi_records::node_change::LETTER_SPACING,
-            kiwi_records::node_change::TEXT_DATA,
-            kiwi_records::node_change::DERIVED_TEXT_DATA,
-            kiwi_records::node_change::DASH_PATTERN,
-            kiwi_records::node_change::EFFECTS,
-            kiwi_records::node_change::SIZE,
-            kiwi_records::node_change::TRANSFORM,
+            kiwi_records::NodeChange::STACK_PADDING,
+            kiwi_records::NodeChange::STACK_SPACING,
+            kiwi_records::NodeChange::STACK_COUNTER_SPACING,
+            kiwi_records::NodeChange::STACK_HORIZONTAL_PADDING,
+            kiwi_records::NodeChange::STACK_VERTICAL_PADDING,
+            kiwi_records::NodeChange::STACK_PADDING_RIGHT,
+            kiwi_records::NodeChange::STACK_PADDING_BOTTOM,
+            kiwi_records::NodeChange::STROKE_WEIGHT,
+            kiwi_records::NodeChange::CORNER_RADIUS,
+            kiwi_records::NodeChange::RECTANGLE_TOP_LEFT_CORNER_RADIUS,
+            kiwi_records::NodeChange::RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
+            kiwi_records::NodeChange::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
+            kiwi_records::NodeChange::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS,
+            kiwi_records::NodeChange::FONT_SIZE,
+            kiwi_records::NodeChange::LINE_HEIGHT,
+            kiwi_records::NodeChange::LETTER_SPACING,
+            kiwi_records::NodeChange::TEXT_DATA,
+            kiwi_records::NodeChange::DERIVED_TEXT_DATA,
+            kiwi_records::NodeChange::DASH_PATTERN,
+            kiwi_records::NodeChange::EFFECTS,
+            kiwi_records::NodeChange::SIZE,
+            kiwi_records::NodeChange::TRANSFORM,
         ]
     }
     fn derived_fields() -> &'static [u32] {
         &[
-            kiwi_records::node_change::DERIVED_TEXT_DATA,
-            kiwi_records::node_change::FONT_SIZE,
-            kiwi_records::node_change::LINE_HEIGHT,
-            kiwi_records::node_change::LETTER_SPACING,
-            kiwi_records::node_change::SIZE,
-            kiwi_records::node_change::TRANSFORM,
-            kiwi_records::node_change::FILL_GEOMETRY,
-            kiwi_records::node_change::STROKE_GEOMETRY,
-            kiwi_records::node_change::VECTOR_DATA,
+            kiwi_records::NodeChange::DERIVED_TEXT_DATA,
+            kiwi_records::NodeChange::FONT_SIZE,
+            kiwi_records::NodeChange::LINE_HEIGHT,
+            kiwi_records::NodeChange::LETTER_SPACING,
+            kiwi_records::NodeChange::SIZE,
+            kiwi_records::NodeChange::TRANSFORM,
+            kiwi_records::NodeChange::FILL_GEOMETRY,
+            kiwi_records::NodeChange::STROKE_GEOMETRY,
+            kiwi_records::NodeChange::VECTOR_DATA,
         ]
     }
     fn uniform_scale(record: &KiwiRecord) -> f64 {
         match record
-            .record(kiwi_records::node_change::SYMBOL_DATA)
-            .and_then(|data| data.float(kiwi_records::symbol_data::UNIFORM_SCALE_FACTOR))
+            .record(kiwi_records::NodeChange::SYMBOL_DATA)
+            .and_then(|data| data.float(kiwi_records::SymbolData::UNIFORM_SCALE_FACTOR))
         {
             Some(factor) => factor as f64,
             None => 1.0,
@@ -45382,22 +46003,22 @@ pub mod graph {
                     layout_distances(),
                     factor,
                 ),
-                kiwi_records::node_change::DASH_PATTERN,
+                kiwi_records::NodeChange::DASH_PATTERN,
                 factor,
             )
             .map_records(
-                kiwi_records::node_change::EFFECTS,
+                kiwi_records::NodeChange::EFFECTS,
                 |effect| scale_effect(effect, factor),
             )
             .map_record(
-                kiwi_records::node_change::SIZE,
+                kiwi_records::NodeChange::SIZE,
                 |size| scale_vector(size, factor),
             )
             .map_record(
-                kiwi_records::node_change::TRANSFORM,
+                kiwi_records::NodeChange::TRANSFORM,
                 |transform| scale_numbers(
                     transform,
-                    &[kiwi_records::matrix::M02, kiwi_records::matrix::M12],
+                    &[kiwi_records::Matrix::M02, kiwi_records::Matrix::M12],
                     factor,
                 ),
             )
@@ -45406,10 +46027,10 @@ pub mod graph {
         scale_numbers(
             &effect
                 .map_record(
-                    kiwi_records::effect::OFFSET,
+                    kiwi_records::Effect::OFFSET,
                     |offset| scale_vector(offset, factor),
                 ),
-            &[kiwi_records::effect::RADIUS, kiwi_records::effect::SPREAD],
+            &[kiwi_records::Effect::RADIUS, kiwi_records::Effect::SPREAD],
             factor,
         )
     }
@@ -45418,26 +46039,26 @@ pub mod graph {
                 scale_pixel_value(
                     scale_numbers(
                         properties,
-                        &[kiwi_records::node_change::FONT_SIZE],
+                        &[kiwi_records::NodeChange::FONT_SIZE],
                         factor,
                     ),
-                    kiwi_records::node_change::LINE_HEIGHT,
+                    kiwi_records::NodeChange::LINE_HEIGHT,
                     factor,
                 ),
-                kiwi_records::node_change::LETTER_SPACING,
+                kiwi_records::NodeChange::LETTER_SPACING,
                 factor,
             )
             .map_record(
-                kiwi_records::node_change::TEXT_DATA,
+                kiwi_records::NodeChange::TEXT_DATA,
                 |text| {
                     text.map_records(
-                        kiwi_records::text_data::STYLE_OVERRIDE_TABLE,
+                        kiwi_records::TextData::STYLE_OVERRIDE_TABLE,
                         |style| scale_text_layout(style, factor),
                     )
                 },
             )
             .map_record(
-                kiwi_records::node_change::DERIVED_TEXT_DATA,
+                kiwi_records::NodeChange::DERIVED_TEXT_DATA,
                 |derived| scale_derived_text(derived, factor),
             )
     }
@@ -45445,18 +46066,18 @@ pub mod graph {
         scale_numbers(
                 &derived
                     .map_record(
-                        kiwi_records::derived_text_data::LAYOUT_SIZE,
+                        kiwi_records::DerivedTextData::LAYOUT_SIZE,
                         |size| scale_vector(size, factor),
                     ),
-                &[kiwi_records::derived_text_data::TRUNCATED_HEIGHT],
+                &[kiwi_records::DerivedTextData::TRUNCATED_HEIGHT],
                 factor,
             )
             .map_records(
-                kiwi_records::derived_text_data::GLYPHS,
+                kiwi_records::DerivedTextData::GLYPHS,
                 |glyph| scale_glyph(glyph, factor),
             )
             .map_records(
-                kiwi_records::derived_text_data::BASELINES,
+                kiwi_records::DerivedTextData::BASELINES,
                 |baseline| scale_baseline(baseline, factor),
             )
     }
@@ -45464,10 +46085,10 @@ pub mod graph {
         scale_numbers(
             &glyph
                 .map_record(
-                    kiwi_records::glyph::POSITION,
+                    kiwi_records::Glyph::POSITION,
                     |position| scale_vector(position, factor),
                 ),
-            &[kiwi_records::glyph::FONT_SIZE],
+            &[kiwi_records::Glyph::FONT_SIZE],
             factor,
         )
     }
@@ -45475,14 +46096,14 @@ pub mod graph {
         scale_numbers(
             &baseline
                 .map_record(
-                    kiwi_records::baseline::POSITION,
+                    kiwi_records::Baseline::POSITION,
                     |position| scale_vector(position, factor),
                 ),
             &[
-                kiwi_records::baseline::WIDTH,
-                kiwi_records::baseline::LINE_HEIGHT,
-                kiwi_records::baseline::LINE_ASCENT,
-                kiwi_records::baseline::LINE_Y,
+                kiwi_records::Baseline::WIDTH,
+                kiwi_records::Baseline::LINE_HEIGHT,
+                kiwi_records::Baseline::LINE_ASCENT,
+                kiwi_records::Baseline::LINE_Y,
             ],
             factor,
         )
@@ -45492,10 +46113,10 @@ pub mod graph {
             .map_record(
                 field,
                 |metric| {
-                    if metric.enum_value(kiwi_records::number::UNITS)
-                        == Some(kiwi_records::number_units::PIXELS)
+                    if metric.enum_value(kiwi_records::Number::UNITS)
+                        == Some(kiwi_records::NumberUnits::PIXELS)
                     {
-                        scale_numbers(metric, &[kiwi_records::number::VALUE], factor)
+                        scale_numbers(metric, &[kiwi_records::Number::VALUE], factor)
                     } else {
                         metric.clone()
                     }
@@ -45518,7 +46139,7 @@ pub mod graph {
     fn scale_vector(vector: &KiwiRecord, factor: f64) -> KiwiRecord {
         scale_numbers(
             vector,
-            &[kiwi_records::vector::X, kiwi_records::vector::Y],
+            &[kiwi_records::Vector::X, kiwi_records::Vector::Y],
             factor,
         )
     }
@@ -45536,8 +46157,8 @@ pub mod graph {
     }
     fn vector_size(vector: &KiwiRecord) -> (f64, f64) {
         (
-            vector.float(kiwi_records::vector::X).unwrap_or(0.0) as f64,
-            vector.float(kiwi_records::vector::Y).unwrap_or(0.0) as f64,
+            vector.float(kiwi_records::Vector::X).unwrap_or(0.0) as f64,
+            vector.float(kiwi_records::Vector::Y).unwrap_or(0.0) as f64,
         )
     }
     fn apply_placed_constraints(
@@ -45547,9 +46168,9 @@ pub mod graph {
     ) -> Occurrence {
         match base {
             Some(base) => {
-                match base.properties.record(kiwi_records::node_change::SIZE) {
+                match base.properties.record(kiwi_records::NodeChange::SIZE) {
                     Some(base_size) => {
-                        match source.record(kiwi_records::node_change::SIZE) {
+                        match source.record(kiwi_records::NodeChange::SIZE) {
                             Some(size) => {
                                 let (width, height) = vector_size(base_size);
                                 let factor = uniform_scale(source);
@@ -45578,9 +46199,9 @@ pub mod graph {
         } else {
             let auto_layout = match root
                 .properties
-                .enum_value(kiwi_records::node_change::STACK_MODE)
+                .enum_value(kiwi_records::NodeChange::STACK_MODE)
             {
-                Some(kiwi_records::stack_mode::NONE) => false,
+                Some(kiwi_records::StackMode::NONE) => false,
                 Some(_mode) => true,
                 None => false,
             };
@@ -45600,10 +46221,10 @@ pub mod graph {
     ) -> Occurrence {
         let absolute = child
             .properties
-            .enum_value(kiwi_records::node_change::STACK_POSITIONING)
-            == Some(kiwi_records::stack_positioning::ABSOLUTE);
+            .enum_value(kiwi_records::NodeChange::STACK_POSITIONING)
+            == Some(kiwi_records::StackPositioning::ABSOLUTE);
         if auto_layout && !absolute
-            || !child.properties.has(kiwi_records::node_change::SIZE)
+            || !child.properties.has(kiwi_records::NodeChange::SIZE)
         {
             child
         } else {
@@ -45617,12 +46238,12 @@ pub mod graph {
     ) -> Occurrence {
         let transform = match child
             .properties
-            .record(kiwi_records::node_change::TRANSFORM)
+            .record(kiwi_records::NodeChange::TRANSFORM)
         {
             Some(transform) => transform.clone(),
             None => identity_matrix(),
         };
-        let size = match child.properties.record(kiwi_records::node_change::SIZE) {
+        let size = match child.properties.record(kiwi_records::NodeChange::SIZE) {
             Some(size) => size.clone(),
             None => KiwiRecord::new(kiwi_record_definitions::VECTOR),
         };
@@ -45630,30 +46251,30 @@ pub mod graph {
         let (before_width, before_height) = before_size;
         let (after_width, after_height) = after_size;
         let (x, new_width) = constrained_axis(
-            transform.float(kiwi_records::matrix::M02).unwrap_or(0.0) as f64,
+            transform.float(kiwi_records::Matrix::M02).unwrap_or(0.0) as f64,
             width,
             before_width,
             after_width,
-            child.properties.enum_value(kiwi_records::node_change::HORIZONTAL_CONSTRAINT),
+            child.properties.enum_value(kiwi_records::NodeChange::HORIZONTAL_CONSTRAINT),
         );
         let (y, new_height) = constrained_axis(
-            transform.float(kiwi_records::matrix::M12).unwrap_or(0.0) as f64,
+            transform.float(kiwi_records::Matrix::M12).unwrap_or(0.0) as f64,
             height,
             before_height,
             after_height,
-            child.properties.enum_value(kiwi_records::node_change::VERTICAL_CONSTRAINT),
+            child.properties.enum_value(kiwi_records::NodeChange::VERTICAL_CONSTRAINT),
         );
         let child = resize(child, (width, height), (new_width, new_height));
         let new_size = size
-            .put_float(kiwi_records::vector::X, new_width as f32)
-            .put_float(kiwi_records::vector::Y, new_height as f32);
+            .put_float(kiwi_records::Vector::X, new_width as f32)
+            .put_float(kiwi_records::Vector::Y, new_height as f32);
         let placed = transform
-            .put_float(kiwi_records::matrix::M02, x as f32)
-            .put_float(kiwi_records::matrix::M12, y as f32);
+            .put_float(kiwi_records::Matrix::M02, x as f32)
+            .put_float(kiwi_records::Matrix::M12, y as f32);
         let properties = child
             .properties
-            .put_record(kiwi_records::node_change::SIZE, new_size)
-            .put_record(kiwi_records::node_change::TRANSFORM, placed);
+            .put_record(kiwi_records::NodeChange::SIZE, new_size)
+            .put_record(kiwi_records::NodeChange::TRANSFORM, placed);
         Occurrence { properties, ..child }
     }
     fn constrained_axis(
@@ -45665,15 +46286,15 @@ pub mod graph {
     ) -> (f64, f64) {
         let delta = after_size - before_size;
         match constraint {
-            Some(kiwi_records::constraint_type::SCALE) if before_size > 0.0 => {
+            Some(kiwi_records::ConstraintType::SCALE) if before_size > 0.0 => {
                 (
                     position * (after_size / before_size),
                     size * (after_size / before_size),
                 )
             }
-            Some(kiwi_records::constraint_type::MAX) => (position + delta, size),
-            Some(kiwi_records::constraint_type::CENTER) => (position + delta / 2.0, size),
-            Some(kiwi_records::constraint_type::STRETCH) => {
+            Some(kiwi_records::ConstraintType::MAX) => (position + delta, size),
+            Some(kiwi_records::ConstraintType::CENTER) => (position + delta / 2.0, size),
+            Some(kiwi_records::ConstraintType::STRETCH) => {
                 (position, (size + delta).max(0.0))
             }
             _ => (position, size),
@@ -45681,16 +46302,16 @@ pub mod graph {
     }
     fn identity_matrix() -> KiwiRecord {
         KiwiRecord::new(kiwi_record_definitions::MATRIX)
-            .put_float(kiwi_records::matrix::M00, 1.0)
-            .put_float(kiwi_records::matrix::M01, 0.0)
-            .put_float(kiwi_records::matrix::M02, 0.0)
-            .put_float(kiwi_records::matrix::M10, 0.0)
-            .put_float(kiwi_records::matrix::M11, 1.0)
-            .put_float(kiwi_records::matrix::M12, 0.0)
+            .put_float(kiwi_records::Matrix::M00, 1.0)
+            .put_float(kiwi_records::Matrix::M01, 0.0)
+            .put_float(kiwi_records::Matrix::M02, 0.0)
+            .put_float(kiwi_records::Matrix::M10, 0.0)
+            .put_float(kiwi_records::Matrix::M11, 1.0)
+            .put_float(kiwi_records::Matrix::M12, 0.0)
     }
     fn apply_derived_entry(target: &mut Occurrence, entry: &KiwiRecord) {
         let derived = entry.take(derived_fields());
-        if let Some(size) = derived.record(kiwi_records::node_change::SIZE) {
+        if let Some(size) = derived.record(kiwi_records::NodeChange::SIZE) {
             target.derived_size = Some(size.clone());
         }
         target.properties = target.properties.merge(&derived);
@@ -45765,16 +46386,16 @@ pub mod graph {
         Ok((drop_slot_content(index, occurrence), state.diagnostics))
     }
     fn drop_slot_content(index: &SourceIndex, occurrence: Occurrence) -> Occurrence {
-        if node_type(index, occurrence.source_id)
-            == Some(kiwi_records::node_type::CANVAS)
+        if node_type(index, occurrence.source_id) == Some(kiwi_records::NodeType::CANVAS)
         {
             let children = occurrence
                 .children
-                .into_iter()
+                .iter()
+                .cloned()
                 .filter_map(|item| match item {
                     child if !child
                         .properties
-                        .bool(kiwi_records::node_change::IS_SLOT_CONTENT)
+                        .bool(kiwi_records::NodeChange::IS_SLOT_CONTENT)
                         .unwrap_or(false) => Some(child),
                     _ => None,
                 })
@@ -45816,7 +46437,7 @@ pub mod graph {
         let owner = LayerOwner { id, rank };
         let (mut structural, own_claims) = own(&record.source, owner.clone());
         structural.extend(layers);
-        structural.sort_by(|left, right| right.owner.rank.cmp(&left.owner.rank));
+        structural.sort_by_key(|rustq_item| std::cmp::Reverse(rustq_item.owner.rank));
         let root = resolve_root(index, raw, &record, structural, rank)?;
         let (subtree, children) = expand_subtree(
             index,
@@ -45893,8 +46514,8 @@ pub mod graph {
                 rank,
                 state,
             )
-        } else if record.source.enum_value(kiwi_records::node_change::TYPE)
-            == Some(kiwi_records::node_type::SYMBOL)
+        } else if record.source.enum_value(kiwi_records::NodeChange::TYPE)
+            == Some(kiwi_records::NodeType::SYMBOL)
         {
             expand_children_of(
                 index,
@@ -45988,16 +46609,16 @@ pub mod graph {
     }
     fn bound_node_field(field: BoundField) -> Option<u32> {
         match field {
-            BoundField::Visible => Some(kiwi_records::node_change::VISIBLE),
-            BoundField::TextData => Some(kiwi_records::node_change::TEXT_DATA),
-            BoundField::SymbolData => Some(kiwi_records::node_change::SYMBOL_DATA),
+            BoundField::Visible => Some(kiwi_records::NodeChange::VISIBLE),
+            BoundField::TextData => Some(kiwi_records::NodeChange::TEXT_DATA),
+            BoundField::SymbolData => Some(kiwi_records::NodeChange::SYMBOL_DATA),
             BoundField::SlotContent => None,
         }
     }
     fn assigned_visibility(claims: &[BindingClaim]) -> HashSet<u32> {
         let mut overridden: HashSet<u32> = HashSet::new();
-        if claims.iter().any(|claim| assigned_visible(claim)) {
-            overridden.insert(kiwi_records::node_change::VISIBLE);
+        if claims.iter().any(assigned_visible) {
+            overridden.insert(kiwi_records::NodeChange::VISIBLE);
         }
         overridden
     }
@@ -46031,7 +46652,7 @@ pub mod graph {
         keys.extend(component_keys(index, effective));
         let assignments = record
             .source
-            .records(kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS)
+            .records(kiwi_records::NodeChange::COMPONENT_PROP_ASSIGNMENTS)
             .into_iter()
             .cloned()
             .collect::<Vec<KiwiRecord>>();
@@ -46114,12 +46735,13 @@ pub mod graph {
         }
     }
     fn scoped_bindings(source: &KiwiRecord, groups: &[Group]) -> Vec<Binding> {
+        let defaults = component(
+            &source.records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS),
+        );
         groups
             .iter()
             .fold(
-                component(
-                    &source.records(kiwi_records::node_change::COMPONENT_PROP_DEFS),
-                ),
+                defaults,
                 |bindings, group| assign(
                     bindings,
                     &group.assignments.iter().collect::<Vec<_>>(),
@@ -46338,7 +46960,7 @@ pub mod graph {
                         .or(base.override_key),
                     property_claims: base.property_claims.clone(),
                     has_own_name: node_type(index, base.source_id)
-                        == Some(kiwi_records::node_type::INSTANCE) && base.has_own_name,
+                        == Some(kiwi_records::NodeType::INSTANCE) && base.has_own_name,
                     ..occurrence
                 };
                 rename_swapped(inherited, base, &&root.replaced)
@@ -46359,14 +46981,14 @@ pub mod graph {
         root: &Root,
     ) -> KiwiRecord {
         let placed = if base.is_some() && original != root.effective
-            && source.enum_value(kiwi_records::node_change::TYPE)
-                == Some(kiwi_records::node_type::INSTANCE)
+            && source.enum_value(kiwi_records::NodeChange::TYPE)
+                == Some(kiwi_records::NodeType::INSTANCE)
         {
             source
                 .drop(
                     &[
-                        kiwi_records::node_change::FILL_PAINTS,
-                        kiwi_records::node_change::STYLE_ID_FOR_FILL,
+                        kiwi_records::NodeChange::FILL_PAINTS,
+                        kiwi_records::NodeChange::STYLE_ID_FOR_FILL,
                     ],
                 )
         } else {
@@ -46385,7 +47007,7 @@ pub mod graph {
             Some(consumption) => {
                 properties
                     .put_record(
-                        kiwi_records::node_change::PARAMETER_CONSUMPTION_MAP,
+                        kiwi_records::NodeChange::PARAMETER_CONSUMPTION_MAP,
                         consumption,
                     )
             }
@@ -46398,14 +47020,14 @@ pub mod graph {
         effective: Option<GuidKey>,
         source: &KiwiRecord,
     ) -> KiwiRecord {
-        match (effective, source.record(kiwi_records::node_change::SYMBOL_DATA)) {
+        match (effective, source.record(kiwi_records::NodeChange::SYMBOL_DATA)) {
             (Some(effective), Some(symbol_data)) => {
                 properties
                     .put_record(
-                        kiwi_records::node_change::SYMBOL_DATA,
+                        kiwi_records::NodeChange::SYMBOL_DATA,
                         symbol_data
                             .put_record(
-                                kiwi_records::symbol_data::SYMBOL_ID,
+                                kiwi_records::SymbolData::SYMBOL_ID,
                                 guid_record(effective),
                             ),
                     )
@@ -46416,8 +47038,8 @@ pub mod graph {
     fn guid_record(guid: GuidKey) -> KiwiRecord {
         let (session_id, local_id) = guid;
         KiwiRecord::new(kiwi_record_definitions::GUID)
-            .put_uint(kiwi_records::guid::SESSION_ID, session_id)
-            .put_uint(kiwi_records::guid::LOCAL_ID, local_id)
+            .put_uint(kiwi_records::Guid::SESSION_ID, session_id)
+            .put_uint(kiwi_records::Guid::LOCAL_ID, local_id)
     }
     fn put_assignments(
         index: &SourceIndex,
@@ -46425,8 +47047,8 @@ pub mod graph {
         source: &KiwiRecord,
         groups: &[Group],
     ) -> KiwiRecord {
-        if source.enum_value(kiwi_records::node_change::TYPE)
-            == Some(kiwi_records::node_type::INSTANCE)
+        if source.enum_value(kiwi_records::NodeChange::TYPE)
+            == Some(kiwi_records::NodeType::INSTANCE)
         {
             let assignments = groups
                 .iter()
@@ -46445,7 +47067,7 @@ pub mod graph {
                 .collect::<Vec<KiwiRecord>>();
             properties
                 .put_records(
-                    kiwi_records::node_change::COMPONENT_PROP_ASSIGNMENTS,
+                    kiwi_records::NodeChange::COMPONENT_PROP_ASSIGNMENTS,
                     assignments,
                 )
         } else {
@@ -46454,8 +47076,8 @@ pub mod graph {
     }
     fn missing_slot_content(index: &SourceIndex, assignment: &KiwiRecord) -> bool {
         assignment
-            .record(kiwi_records::component_prop_assignment::VAR_VALUE)
-            .and_then(|variable| variable.record(kiwi_records::variable_data::VALUE))
+            .record(kiwi_records::ComponentPropAssignment::VAR_VALUE)
+            .and_then(|variable| variable.record(kiwi_records::VariableData::VALUE))
             .and_then(|value| slot_content(value))
             .is_some_and(|content| !index.sources.contains_key(&content))
     }
@@ -46471,15 +47093,15 @@ pub mod graph {
                 Some(name) => Some(name.clone()),
                 None => {
                     base.properties
-                        .str(kiwi_records::node_change::NAME)
+                        .str(kiwi_records::NodeChange::NAME)
                         .map(|name| name.to_string())
                 }
             };
             let properties = match name {
                 Some(name) => {
-                    occurrence.properties.put_str(kiwi_records::node_change::NAME, &name)
+                    occurrence.properties.put_str(kiwi_records::NodeChange::NAME, &name)
                 }
-                None => occurrence.properties.delete(kiwi_records::node_change::NAME),
+                None => occurrence.properties.delete(kiwi_records::NodeChange::NAME),
             };
             Occurrence {
                 properties,
@@ -46498,14 +47120,14 @@ pub mod graph {
             Some(
                 set,
             ) if node_type(index, occurrence.source_id)
-                != Some(kiwi_records::node_type::INSTANCE)
-                && set.bool(kiwi_records::node_change::IS_STATE_GROUP) == Some(true) => {
-                set.str(kiwi_records::node_change::NAME).map(|name| name.to_string())
+                != Some(kiwi_records::NodeType::INSTANCE)
+                && set.bool(kiwi_records::NodeChange::IS_STATE_GROUP) == Some(true) => {
+                set.str(kiwi_records::NodeChange::NAME).map(|name| name.to_string())
             }
             _ => {
                 occurrence
                     .properties
-                    .str(kiwi_records::node_change::NAME)
+                    .str(kiwi_records::NodeChange::NAME)
                     .map(|name| name.to_string())
             }
         }
@@ -46543,15 +47165,15 @@ pub mod graph {
         }
     }
     fn put_instance_size(occurrence: Occurrence, source: &KiwiRecord) -> Occurrence {
-        match source.record(kiwi_records::node_change::SIZE) {
+        match source.record(kiwi_records::NodeChange::SIZE) {
             Some(
                 size,
-            ) if source.enum_value(kiwi_records::node_change::TYPE)
-                == Some(kiwi_records::node_type::INSTANCE) => {
+            ) if source.enum_value(kiwi_records::NodeChange::TYPE)
+                == Some(kiwi_records::NodeType::INSTANCE) => {
                 Occurrence {
                     properties: occurrence
                         .properties
-                        .put_record(kiwi_records::node_change::SIZE, size.clone()),
+                        .put_record(kiwi_records::NodeChange::SIZE, size.clone()),
                     derived_size: Some(size.clone()),
                     ..occurrence
                 }
@@ -46626,14 +47248,14 @@ pub mod graph {
     ) -> bool {
         match path.get(position) {
             Some(segment) => {
-                let rest = path.iter().skip(position).copied().collect::<Vec<_>>();
+                let rest = path.iter().cloned().skip(position).collect::<Vec<GuidKey>>();
                 if current
                     .replaced_components
                     .iter()
                     .any(|component| resolves_in_source_component(
                         index,
                         *component,
-                        &rest,
+                        &&rest,
                     ))
                 {
                     true
@@ -46663,7 +47285,7 @@ pub mod graph {
         state: &mut State,
     ) -> Occurrence {
         let mut tables = HashMap::new();
-        for entry in source.records(kiwi_records::node_change::DERIVED_SYMBOL_DATA) {
+        for entry in source.records(kiwi_records::NodeChange::DERIVED_SYMBOL_DATA) {
             let path = override_path(entry);
             if !path.is_empty() {
                 match resolve_claim_target(index, &owner, &&path, state, &mut tables) {
@@ -46685,7 +47307,7 @@ pub mod graph {
     }
     fn node_type(index: &SourceIndex, id: GuidKey) -> Option<u32> {
         source(index, id)
-            .and_then(|record| record.enum_value(kiwi_records::node_change::TYPE))
+            .and_then(|record| record.enum_value(kiwi_records::NodeChange::TYPE))
     }
     fn new_occurrence(
         id: GuidKey,
@@ -46793,8 +47415,8 @@ pub mod graph {
         let collections = records
             .iter()
             .filter(|(_id, record)| {
-                record.enum_value(kiwi_records::node_change::TYPE)
-                    == Some(kiwi_records::node_type::VARIABLE_SET)
+                record.enum_value(kiwi_records::NodeChange::TYPE)
+                    == Some(kiwi_records::NodeType::VARIABLE_SET)
             })
             .filter_map(|(id, record)| {
                 collection(record).map(|collection| (*id, collection))
@@ -46812,8 +47434,8 @@ pub mod graph {
                 (
                     id,
                     record,
-                ) if record.enum_value(kiwi_records::node_change::TYPE)
-                    == Some(kiwi_records::node_type::VARIABLE) => Some((id, record)),
+                ) if record.enum_value(kiwi_records::NodeChange::TYPE)
+                    == Some(kiwi_records::NodeType::VARIABLE) => Some((id, record)),
                 _ => None,
             })
             .map(|(id, _)| *id)
@@ -46827,9 +47449,9 @@ pub mod graph {
     fn asset_keys(records: &Sources) -> HashMap<String, HashMap<String, GuidKey>> {
         let mut keys: HashMap<String, HashMap<String, GuidKey>> = HashMap::new();
         for (id, record) in records.iter() {
-            if let Some(key) = record.str(kiwi_records::node_change::KEY) {
+            if let Some(key) = record.str(kiwi_records::NodeChange::KEY) {
                 let version = record
-                    .str(kiwi_records::node_change::VERSION)
+                    .str(kiwi_records::NodeChange::VERSION)
                     .unwrap_or("");
                 keys.entry(key.to_string())
                     .or_default()
@@ -46839,21 +47461,21 @@ pub mod graph {
         keys
     }
     fn reference(vars: &Variables, reference: &KiwiRecord) -> Option<GuidKey> {
-        match guid_key(reference.record(kiwi_records::variable_id::GUID)) {
+        match guid_key(reference.record(kiwi_records::VariableId::GUID)) {
             Some(id) => Some(id),
             None => {
                 reference
-                    .record(kiwi_records::variable_id::ASSET_REF)
+                    .record(kiwi_records::VariableId::ASSET_REF)
                     .and_then(|asset| asset_reference(vars, asset))
             }
         }
     }
     fn asset_reference(vars: &Variables, asset: &KiwiRecord) -> Option<GuidKey> {
-        match asset.str(kiwi_records::asset_ref::KEY) {
+        match asset.str(kiwi_records::AssetRef::KEY) {
             Some(key) => {
                 match vars.keys.get(key) {
                     Some(versions) => {
-                        match asset.str(kiwi_records::asset_ref::VERSION) {
+                        match asset.str(kiwi_records::AssetRef::VERSION) {
                             Some(version) if !version.is_empty() => {
                                 versions.get(version).copied()
                             }
@@ -46874,11 +47496,14 @@ pub mod graph {
     }
     fn collection(record: &KiwiRecord) -> Option<Collection> {
         let modes = record
-            .records(kiwi_records::node_change::VARIABLE_SET_MODES)
-            .iter()
-            .filter_map(|mode| guid_key(
-                mode.record(kiwi_records::variable_set_mode::ID),
-            ))
+            .records(kiwi_records::NodeChange::VARIABLE_SET_MODES)
+            .into_iter()
+            .map(|mode| (mode, guid_key(mode.record(kiwi_records::VariableSetMode::ID))))
+            .filter_map(|item| match item {
+                (mode, Some(id)) => Some((mode, id)),
+                _ => None,
+            })
+            .map(|(_, id)| id)
             .collect::<Vec<_>>();
         match modes.first() {
             Some(default) => {
@@ -46891,17 +47516,17 @@ pub mod graph {
         }
     }
     fn variable_type(record: &KiwiRecord) -> Option<VariableType> {
-        match record.enum_value(kiwi_records::node_change::VARIABLE_RESOLVED_TYPE) {
-            Some(kiwi_records::variable_resolved_data_type::FLOAT) => {
+        match record.enum_value(kiwi_records::NodeChange::VARIABLE_RESOLVED_TYPE) {
+            Some(kiwi_records::VariableResolvedDataType::FLOAT) => {
                 Some(VariableType::Float)
             }
-            Some(kiwi_records::variable_resolved_data_type::BOOLEAN) => {
+            Some(kiwi_records::VariableResolvedDataType::BOOLEAN) => {
                 Some(VariableType::Boolean)
             }
-            Some(kiwi_records::variable_resolved_data_type::STRING) => {
+            Some(kiwi_records::VariableResolvedDataType::STRING) => {
                 Some(VariableType::String)
             }
-            Some(kiwi_records::variable_resolved_data_type::COLOR) => {
+            Some(kiwi_records::VariableResolvedDataType::COLOR) => {
                 Some(VariableType::Color)
             }
             _ => None,
@@ -46909,7 +47534,7 @@ pub mod graph {
     }
     fn put_variable(vars: &mut Variables, record: &KiwiRecord) {
         let collection = record
-            .record(kiwi_records::node_change::VARIABLE_SET_ID)
+            .record(kiwi_records::NodeChange::VARIABLE_SET_ID)
             .and_then(|set| reference(vars, set))
             .or_else(|| parent_id(record));
         if let Some(id) = record_id(record) {
@@ -46945,24 +47570,23 @@ pub mod graph {
         modes: &[GuidKey],
     ) -> BTreeMap<GuidKey, Stored> {
         let mut values: BTreeMap<GuidKey, Stored> = BTreeMap::new();
-        let entries = match record
-            .record(kiwi_records::node_change::VARIABLE_DATA_VALUES)
+        let entries = match record.record(kiwi_records::NodeChange::VARIABLE_DATA_VALUES)
         {
             Some(data_values) => {
-                data_values.records(kiwi_records::variable_data_values::ENTRIES)
+                data_values.records(kiwi_records::VariableDataValues::ENTRIES)
             }
             None => Vec::new(),
         };
         for entry in entries {
             match guid_key(
-                entry.record(kiwi_records::variable_data_values_entry::MODE_ID),
+                entry.record(kiwi_records::VariableDataValuesEntry::MODE_ID),
             ) {
                 Some(mode) if modes.contains(&mode) => {
                     let stored = stored_value(
                         vars,
                         entry
                             .record(
-                                kiwi_records::variable_data_values_entry::VARIABLE_DATA,
+                                kiwi_records::VariableDataValuesEntry::VARIABLE_DATA,
                             ),
                         0,
                     );
@@ -46983,17 +47607,17 @@ pub mod graph {
     fn stored_value(vars: &Variables, data: Option<&KiwiRecord>, depth: u32) -> Stored {
         match data {
             Some(data) if depth <= 64 => {
-                let value = data.record(kiwi_records::variable_data::VALUE);
+                let value = data.record(kiwi_records::VariableData::VALUE);
                 let data_type = data
-                    .enum_value(kiwi_records::variable_data::DATA_TYPE)
+                    .enum_value(kiwi_records::VariableData::DATA_TYPE)
                     .or_else(|| {
-                        data.enum_value(kiwi_records::variable_data::RESOLVED_DATA_TYPE)
+                        data.enum_value(kiwi_records::VariableData::RESOLVED_DATA_TYPE)
                     });
                 match (data_type, value) {
-                    (Some(kiwi_records::variable_data_type::ALIAS), Some(value)) => {
+                    (Some(kiwi_records::VariableDataType::ALIAS), Some(value)) => {
                         alias_value(vars, value)
                     }
-                    (Some(kiwi_records::variable_data_type::EXPRESSION), _value) => {
+                    (Some(kiwi_records::VariableDataType::EXPRESSION), _value) => {
                         expression(vars, data, depth)
                     }
                     (Some(data_type), Some(value)) => {
@@ -47011,34 +47635,34 @@ pub mod graph {
     fn literal(data_type: u32, value: &KiwiRecord) -> Option<VariableValue> {
         match (
             data_type,
-            value.record(kiwi_records::variable_any_value::COLOR_VALUE),
-            value.bool(kiwi_records::variable_any_value::BOOL_VALUE),
-            value.str(kiwi_records::variable_any_value::TEXT_VALUE),
-            value.float(kiwi_records::variable_any_value::FLOAT_VALUE),
+            value.record(kiwi_records::VariableAnyValue::COLOR_VALUE),
+            value.bool(kiwi_records::VariableAnyValue::BOOL_VALUE),
+            value.str(kiwi_records::VariableAnyValue::TEXT_VALUE),
+            value.float(kiwi_records::VariableAnyValue::FLOAT_VALUE),
         ) {
             (
-                kiwi_records::variable_data_type::COLOR,
+                kiwi_records::VariableDataType::COLOR,
                 Some(color),
                 _flag,
                 _text,
                 _number,
             ) => Some(VariableValue::Color(literal_color(color))),
             (
-                kiwi_records::variable_data_type::BOOLEAN,
+                kiwi_records::VariableDataType::BOOLEAN,
                 _color,
                 Some(flag),
                 _text,
                 _number,
             ) => Some(VariableValue::Boolean(flag)),
             (
-                kiwi_records::variable_data_type::STRING,
+                kiwi_records::VariableDataType::STRING,
                 _color,
                 _flag,
                 Some(text),
                 _number,
             ) => Some(VariableValue::String(text.to_string())),
             (
-                kiwi_records::variable_data_type::FLOAT,
+                kiwi_records::VariableDataType::FLOAT,
                 _color,
                 _flag,
                 _text,
@@ -47049,15 +47673,15 @@ pub mod graph {
     }
     fn literal_color(color: &KiwiRecord) -> Color {
         Color {
-            r: color.float(kiwi_records::color::R).unwrap_or(0.0) as f64,
-            g: color.float(kiwi_records::color::G).unwrap_or(0.0) as f64,
-            b: color.float(kiwi_records::color::B).unwrap_or(0.0) as f64,
-            a: color.float(kiwi_records::color::A).unwrap_or(1.0) as f64,
+            r: color.float(kiwi_records::Color::R).unwrap_or(0.0) as f64,
+            g: color.float(kiwi_records::Color::G).unwrap_or(0.0) as f64,
+            b: color.float(kiwi_records::Color::B).unwrap_or(0.0) as f64,
+            a: color.float(kiwi_records::Color::A).unwrap_or(1.0) as f64,
         }
     }
     fn alias_value(vars: &Variables, value: &KiwiRecord) -> Stored {
         match value
-            .record(kiwi_records::variable_any_value::ALIAS)
+            .record(kiwi_records::VariableAnyValue::ALIAS)
             .and_then(|variable| reference(vars, variable))
         {
             Some(id) => Stored::Alias(id),
@@ -47066,18 +47690,18 @@ pub mod graph {
     }
     fn expression(vars: &Variables, data: &KiwiRecord, depth: u32) -> Stored {
         match data
-            .record(kiwi_records::variable_data::VALUE)
+            .record(kiwi_records::VariableData::VALUE)
             .and_then(|value| {
-                value.record(kiwi_records::variable_any_value::EXPRESSION_VALUE)
+                value.record(kiwi_records::VariableAnyValue::EXPRESSION_VALUE)
             })
         {
             Some(expression) => {
                 let arguments = expression
-                    .records(kiwi_records::expression::EXPRESSION_ARGUMENTS);
+                    .records(kiwi_records::Expression::EXPRESSION_ARGUMENTS);
                 match expression
-                    .enum_value(kiwi_records::expression::EXPRESSION_FUNCTION)
+                    .enum_value(kiwi_records::Expression::EXPRESSION_FUNCTION)
                 {
-                    Some(kiwi_records::expression_function::COMPOSE_COLOR) => {
+                    Some(kiwi_records::ExpressionFunction::COMPOSE_COLOR) => {
                         compose_color(vars, &&arguments, depth)
                     }
                     Some(function) => formula(vars, function, &&arguments, depth),
@@ -47118,23 +47742,23 @@ pub mod graph {
         depth: u32,
     ) -> Stored {
         let supported = &[
-            kiwi_records::expression_function::ADDITION,
-            kiwi_records::expression_function::SUBTRACTION,
-            kiwi_records::expression_function::MULTIPLY,
-            kiwi_records::expression_function::DIVIDE,
-            kiwi_records::expression_function::NEGATE,
-            kiwi_records::expression_function::EQUALS,
-            kiwi_records::expression_function::NOT_EQUAL,
-            kiwi_records::expression_function::LESS_THAN,
-            kiwi_records::expression_function::LESS_THAN_OR_EQUAL,
-            kiwi_records::expression_function::GREATER_THAN,
-            kiwi_records::expression_function::GREATER_THAN_OR_EQUAL,
-            kiwi_records::expression_function::AND,
-            kiwi_records::expression_function::OR,
-            kiwi_records::expression_function::NOT,
-            kiwi_records::expression_function::STRINGIFY,
-            kiwi_records::expression_function::IS_TRUTHY,
-            kiwi_records::expression_function::TERNARY,
+            kiwi_records::ExpressionFunction::ADDITION,
+            kiwi_records::ExpressionFunction::SUBTRACTION,
+            kiwi_records::ExpressionFunction::MULTIPLY,
+            kiwi_records::ExpressionFunction::DIVIDE,
+            kiwi_records::ExpressionFunction::NEGATE,
+            kiwi_records::ExpressionFunction::EQUALS,
+            kiwi_records::ExpressionFunction::NOT_EQUAL,
+            kiwi_records::ExpressionFunction::LESS_THAN,
+            kiwi_records::ExpressionFunction::LESS_THAN_OR_EQUAL,
+            kiwi_records::ExpressionFunction::GREATER_THAN,
+            kiwi_records::ExpressionFunction::GREATER_THAN_OR_EQUAL,
+            kiwi_records::ExpressionFunction::AND,
+            kiwi_records::ExpressionFunction::OR,
+            kiwi_records::ExpressionFunction::NOT,
+            kiwi_records::ExpressionFunction::STRINGIFY,
+            kiwi_records::ExpressionFunction::IS_TRUTHY,
+            kiwi_records::ExpressionFunction::TERNARY,
         ];
         if supported.contains(&function) {
             match formula_operands(vars, arguments, depth) {
@@ -47370,16 +47994,16 @@ pub mod graph {
     }
     fn unary(operator: u32, operand: &VariableValue) -> Option<VariableValue> {
         match (operator, operand) {
-            (kiwi_records::expression_function::NEGATE, VariableValue::Float(number)) => {
+            (kiwi_records::ExpressionFunction::NEGATE, VariableValue::Float(number)) => {
                 Some(VariableValue::Float(-*number))
             }
-            (kiwi_records::expression_function::NOT, VariableValue::Boolean(flag)) => {
+            (kiwi_records::ExpressionFunction::NOT, VariableValue::Boolean(flag)) => {
                 Some(VariableValue::Boolean(!*flag))
             }
-            (kiwi_records::expression_function::STRINGIFY, _operand) => {
+            (kiwi_records::ExpressionFunction::STRINGIFY, _operand) => {
                 text(operand).map(|text| VariableValue::String(text))
             }
-            (kiwi_records::expression_function::IS_TRUTHY, _operand) => {
+            (kiwi_records::ExpressionFunction::IS_TRUTHY, _operand) => {
                 truthy(operand).map(|truthy| VariableValue::Boolean(truthy))
             }
             _ => None,
@@ -47392,66 +48016,66 @@ pub mod graph {
     ) -> Option<VariableValue> {
         match (operator, left, right) {
             (
-                kiwi_records::expression_function::ADDITION,
+                kiwi_records::ExpressionFunction::ADDITION,
                 VariableValue::Float(a),
                 VariableValue::Float(b),
             ) => Some(VariableValue::Float(a + b)),
-            (kiwi_records::expression_function::ADDITION, _left, _right) => {
+            (kiwi_records::ExpressionFunction::ADDITION, _left, _right) => {
                 concatenated(left, right)
             }
             (
-                kiwi_records::expression_function::SUBTRACTION,
+                kiwi_records::ExpressionFunction::SUBTRACTION,
                 VariableValue::Float(a),
                 VariableValue::Float(b),
             ) => Some(VariableValue::Float(a - b)),
             (
-                kiwi_records::expression_function::MULTIPLY,
+                kiwi_records::ExpressionFunction::MULTIPLY,
                 VariableValue::Float(a),
                 VariableValue::Float(b),
             ) => Some(VariableValue::Float(a * b)),
             (
-                kiwi_records::expression_function::DIVIDE,
+                kiwi_records::ExpressionFunction::DIVIDE,
                 VariableValue::Float(_a),
                 VariableValue::Float(b),
             ) if *b == 0.0 => None,
             (
-                kiwi_records::expression_function::DIVIDE,
+                kiwi_records::ExpressionFunction::DIVIDE,
                 VariableValue::Float(a),
                 VariableValue::Float(b),
             ) => Some(VariableValue::Float(a / b)),
-            (kiwi_records::expression_function::EQUALS, _left, _right) => {
+            (kiwi_records::ExpressionFunction::EQUALS, _left, _right) => {
                 equal(left, right).map(|same| VariableValue::Boolean(same))
             }
-            (kiwi_records::expression_function::NOT_EQUAL, _left, _right) => {
+            (kiwi_records::ExpressionFunction::NOT_EQUAL, _left, _right) => {
                 equal(left, right).map(|same| VariableValue::Boolean(!same))
             }
             (
-                kiwi_records::expression_function::LESS_THAN,
+                kiwi_records::ExpressionFunction::LESS_THAN,
                 VariableValue::Float(a),
                 VariableValue::Float(b),
             ) => Some(VariableValue::Boolean(a < b)),
             (
-                kiwi_records::expression_function::LESS_THAN_OR_EQUAL,
+                kiwi_records::ExpressionFunction::LESS_THAN_OR_EQUAL,
                 VariableValue::Float(a),
                 VariableValue::Float(b),
             ) => Some(VariableValue::Boolean(a <= b)),
             (
-                kiwi_records::expression_function::GREATER_THAN,
+                kiwi_records::ExpressionFunction::GREATER_THAN,
                 VariableValue::Float(a),
                 VariableValue::Float(b),
             ) => Some(VariableValue::Boolean(a > b)),
             (
-                kiwi_records::expression_function::GREATER_THAN_OR_EQUAL,
+                kiwi_records::ExpressionFunction::GREATER_THAN_OR_EQUAL,
                 VariableValue::Float(a),
                 VariableValue::Float(b),
             ) => Some(VariableValue::Boolean(a >= b)),
             (
-                kiwi_records::expression_function::AND,
+                kiwi_records::ExpressionFunction::AND,
                 VariableValue::Boolean(a),
                 VariableValue::Boolean(b),
             ) => Some(VariableValue::Boolean(*a && *b)),
             (
-                kiwi_records::expression_function::OR,
+                kiwi_records::ExpressionFunction::OR,
                 VariableValue::Boolean(a),
                 VariableValue::Boolean(b),
             ) => Some(VariableValue::Boolean(*a || *b)),
@@ -47466,7 +48090,7 @@ pub mod graph {
     ) -> Option<VariableValue> {
         match (operator, condition) {
             (
-                kiwi_records::expression_function::TERNARY,
+                kiwi_records::ExpressionFunction::TERNARY,
                 VariableValue::Boolean(chosen),
             ) if value_type(then) == value_type(otherwise) => {
                 if *chosen { Some(then.clone()) } else { Some(otherwise.clone()) }
@@ -47589,15 +48213,15 @@ pub mod graph {
         pub multiplier: f64,
     }
     fn bindable(field: u32) -> bool {
-        field == kiwi_records::variable_field::VISIBLE
-            || field == kiwi_records::variable_field::TEXT_DATA
+        field == kiwi_records::VariableField::VISIBLE
+            || field == kiwi_records::VariableField::TEXT_DATA
             || numeric_target(field).is_some()
     }
     fn field_target(field: u32) -> BoundTarget {
         BoundTarget::Field(field)
     }
     fn paint_target(field: u32, index: usize) -> BoundTarget {
-        if field == kiwi_records::node_change::FILL_PAINTS {
+        if field == kiwi_records::NodeChange::FILL_PAINTS {
             BoundTarget::FillPaint(index)
         } else {
             BoundTarget::StrokePaint(index)
@@ -47605,8 +48229,8 @@ pub mod graph {
     }
     fn argument_alias(argument: &KiwiRecord) -> Option<Linear> {
         argument
-            .record(kiwi_records::variable_data::VALUE)
-            .and_then(|value| value.record(kiwi_records::variable_any_value::ALIAS))
+            .record(kiwi_records::VariableData::VALUE)
+            .and_then(|value| value.record(kiwi_records::VariableAnyValue::ALIAS))
             .map(|reference| Linear {
                 multiplier: 1.0,
                 reference: Some(reference.clone()),
@@ -47617,11 +48241,11 @@ pub mod graph {
         for entry in consumption_entries(record) {
             bind_entry(&mut bindings, &entry, vars);
         }
-        bind_paints(&mut bindings, record, kiwi_records::node_change::FILL_PAINTS, vars);
+        bind_paints(&mut bindings, record, kiwi_records::NodeChange::FILL_PAINTS, vars);
         bind_paints(
             &mut bindings,
             record,
-            kiwi_records::node_change::STROKE_PAINTS,
+            kiwi_records::NodeChange::STROKE_PAINTS,
             vars,
         );
         bindings
@@ -47631,10 +48255,10 @@ pub mod graph {
         entry: &KiwiRecord,
         vars: &Variables,
     ) {
-        match entry.enum_value(kiwi_records::variable_data_map_entry::VARIABLE_FIELD) {
+        match entry.enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD) {
             Some(field) if bindable(field) => {
                 let data = entry
-                    .record(kiwi_records::variable_data_map_entry::VARIABLE_DATA);
+                    .record(kiwi_records::VariableDataMapEntry::VARIABLE_DATA);
                 match data.and_then(|data| linear(data, 0)) {
                     Some(Linear { multiplier, reference: Some(variable) }) => {
                         put_binding(
@@ -47647,11 +48271,11 @@ pub mod graph {
                     _ => {
                         let data_type = data
                             .and_then(|data| {
-                                data.enum_value(kiwi_records::variable_data::DATA_TYPE)
+                                data.enum_value(kiwi_records::VariableData::DATA_TYPE)
                             });
-                        if data_type != Some(kiwi_records::variable_data_type::ALIAS)
+                        if data_type != Some(kiwi_records::VariableDataType::ALIAS)
                             && data_type
-                                != Some(kiwi_records::variable_data_type::EXPRESSION)
+                                != Some(kiwi_records::VariableDataType::EXPRESSION)
                         {
                             bindings
                                 .retain(|binding| binding.target != field_target(field));
@@ -47683,12 +48307,12 @@ pub mod graph {
         };
     }
     fn linear(data: &KiwiRecord, depth: u32) -> Option<Linear> {
-        match data.record(kiwi_records::variable_data::VALUE) {
+        match data.record(kiwi_records::VariableData::VALUE) {
             Some(value) if depth <= 64 => {
                 match (
-                    value.record(kiwi_records::variable_any_value::ALIAS),
-                    value.float(kiwi_records::variable_any_value::FLOAT_VALUE),
-                    value.record(kiwi_records::variable_any_value::EXPRESSION_VALUE),
+                    value.record(kiwi_records::VariableAnyValue::ALIAS),
+                    value.float(kiwi_records::VariableAnyValue::FLOAT_VALUE),
+                    value.record(kiwi_records::VariableAnyValue::EXPRESSION_VALUE),
                 ) {
                     (Some(reference), _number, _expression) => {
                         Some(Linear {
@@ -47713,18 +48337,18 @@ pub mod graph {
     }
     fn linear_expression(expression: &KiwiRecord, depth: u32) -> Option<Linear> {
         let arguments = expression
-            .records(kiwi_records::expression::EXPRESSION_ARGUMENTS);
+            .records(kiwi_records::Expression::EXPRESSION_ARGUMENTS);
         match (
-            expression.enum_value(kiwi_records::expression::EXPRESSION_FUNCTION),
+            expression.enum_value(kiwi_records::Expression::EXPRESSION_FUNCTION),
             arguments.as_slice(),
         ) {
-            (Some(kiwi_records::expression_function::STRINGIFY), [argument]) => {
+            (Some(kiwi_records::ExpressionFunction::STRINGIFY), [argument]) => {
                 argument_alias(argument)
             }
-            (Some(kiwi_records::expression_function::IS_TRUTHY), [argument]) => {
+            (Some(kiwi_records::ExpressionFunction::IS_TRUTHY), [argument]) => {
                 argument_alias(argument)
             }
-            (Some(kiwi_records::expression_function::MULTIPLY), [_first, _rest @ ..]) => {
+            (Some(kiwi_records::ExpressionFunction::MULTIPLY), [_first, _rest @ ..]) => {
                 linear_product(arguments.as_slice(), depth)
             }
             _ => None,
@@ -47763,11 +48387,11 @@ pub mod graph {
         field: u32,
         vars: &Variables,
     ) {
-        for (index, paint) in record.records(field).iter().enumerate() {
+        for (index, paint) in record.records(field).into_iter().enumerate() {
             let reference = paint
-                .record(kiwi_records::paint::COLOR_VAR)
-                .and_then(|color| color.record(kiwi_records::variable_data::VALUE))
-                .and_then(|value| value.record(kiwi_records::variable_any_value::ALIAS))
+                .record(kiwi_records::Paint::COLOR_VAR)
+                .and_then(|color| color.record(kiwi_records::VariableData::VALUE))
+                .and_then(|value| value.record(kiwi_records::VariableAnyValue::ALIAS))
                 .and_then(|variable| reference(vars, variable));
             if let Some(id) = reference {
                 put_binding(bindings, paint_target(field, index), Some(id), 1.0);
@@ -47801,38 +48425,33 @@ pub mod graph {
     ) -> KiwiRecord {
         match (&binding.target, value) {
             (BoundTarget::FillPaint(index), VariableValue::Color(color)) => {
-                apply_paint(
-                    record,
-                    kiwi_records::node_change::FILL_PAINTS,
-                    *index,
-                    color,
-                )
+                apply_paint(record, kiwi_records::NodeChange::FILL_PAINTS, *index, color)
             }
             (BoundTarget::StrokePaint(index), VariableValue::Color(color)) => {
                 apply_paint(
                     record,
-                    kiwi_records::node_change::STROKE_PAINTS,
+                    kiwi_records::NodeChange::STROKE_PAINTS,
                     *index,
                     color,
                 )
             }
-            (BoundTarget::Field(kiwi_records::variable_field::TEXT_DATA), _value) => {
+            (BoundTarget::Field(kiwi_records::VariableField::TEXT_DATA), _value) => {
                 match text(value) {
                     Some(
                         text,
-                    ) if record.enum_value(kiwi_records::node_change::TYPE)
-                        == Some(kiwi_records::node_type::TEXT) => put_text(record, &text),
+                    ) if record.enum_value(kiwi_records::NodeChange::TYPE)
+                        == Some(kiwi_records::NodeType::TEXT) => put_text(record, &text),
                     _ => record,
                 }
             }
-            (BoundTarget::Field(kiwi_records::variable_field::VISIBLE), _value) => {
+            (BoundTarget::Field(kiwi_records::VariableField::VISIBLE), _value) => {
                 match truthy(value) {
                     Some(
                         visible,
                     ) if !occurrence
                         .overridden
-                        .contains(&kiwi_records::node_change::VISIBLE) => {
-                        record.put_bool(kiwi_records::node_change::VISIBLE, visible)
+                        .contains(&kiwi_records::NodeChange::VISIBLE) => {
+                        record.put_bool(kiwi_records::NodeChange::VISIBLE, visible)
                     }
                     _ => record,
                 }
@@ -47856,8 +48475,8 @@ pub mod graph {
             .collect::<Vec<KiwiRecord>>();
         if index < paints.len() {
             let paint = paints[index]
-                .put_record(kiwi_records::paint::COLOR, color_record(color))
-                .put_float(kiwi_records::paint::OPACITY, color.a as f32);
+                .put_record(kiwi_records::Paint::COLOR, color_record(color))
+                .put_float(kiwi_records::Paint::OPACITY, color.a as f32);
             paints[index] = paint;
             record.put_records(field, paints)
         } else {
@@ -47873,38 +48492,38 @@ pub mod graph {
     ) -> KiwiRecord {
         let placed = value * multiplier * occurrence.layout_scale;
         match (field, numeric_target(field)) {
-            (kiwi_records::variable_field::OPACITY, _target) => {
+            (kiwi_records::VariableField::OPACITY, _target) => {
                 record
                     .put_float(
-                        kiwi_records::node_change::OPACITY,
+                        kiwi_records::NodeChange::OPACITY,
                         (value * 0.01).clamp(0.0, 1.0) as f32,
                     )
             }
-            (kiwi_records::variable_field::WIDTH, _target) => {
-                put_length(record, kiwi_records::vector::X, placed, occurrence)
+            (kiwi_records::VariableField::WIDTH, _target) => {
+                put_length(record, kiwi_records::Vector::X, placed, occurrence)
             }
-            (kiwi_records::variable_field::HEIGHT, _target) => {
-                put_length(record, kiwi_records::vector::Y, placed, occurrence)
+            (kiwi_records::VariableField::HEIGHT, _target) => {
+                put_length(record, kiwi_records::Vector::Y, placed, occurrence)
             }
-            (kiwi_records::variable_field::X_POSITION, _target) => {
-                put_position(record, kiwi_records::matrix::M02, placed)
+            (kiwi_records::VariableField::X_POSITION, _target) => {
+                put_position(record, kiwi_records::Matrix::M02, placed)
             }
-            (kiwi_records::variable_field::Y_POSITION, _target) => {
-                put_position(record, kiwi_records::matrix::M12, placed)
+            (kiwi_records::VariableField::Y_POSITION, _target) => {
+                put_position(record, kiwi_records::Matrix::M12, placed)
             }
             (
                 _field,
                 Some(target),
-            ) if target == kiwi_records::node_change::LETTER_SPACING
-                || target == kiwi_records::node_change::LINE_HEIGHT => {
+            ) if target == kiwi_records::NodeChange::LETTER_SPACING
+                || target == kiwi_records::NodeChange::LINE_HEIGHT => {
                 record
                     .put_record(
                         target,
                         KiwiRecord::new(kiwi_record_definitions::NUMBER)
-                            .put_float(kiwi_records::number::VALUE, placed as f32)
+                            .put_float(kiwi_records::Number::VALUE, placed as f32)
                             .put_enum(
-                                kiwi_records::number::UNITS,
-                                kiwi_records::number_units::PIXELS,
+                                kiwi_records::Number::UNITS,
+                                kiwi_records::NumberUnits::PIXELS,
                                 kiwi_record_definitions::NUMBER_UNITS,
                             ),
                     )
@@ -47914,19 +48533,19 @@ pub mod graph {
         }
     }
     fn put_text(record: KiwiRecord, text: &str) -> KiwiRecord {
-        let text_data = match record.record(kiwi_records::node_change::TEXT_DATA) {
+        let text_data = match record.record(kiwi_records::NodeChange::TEXT_DATA) {
             Some(text_data) => text_data.clone(),
             None => KiwiRecord::new(kiwi_record_definitions::TEXT_DATA),
         };
-        if text_data.str(kiwi_records::text_data::CHARACTERS) == Some(text) {
+        if text_data.str(kiwi_records::TextData::CHARACTERS) == Some(text) {
             record
         } else {
             record
                 .put_record(
-                    kiwi_records::node_change::TEXT_DATA,
-                    text_data.put_str(kiwi_records::text_data::CHARACTERS, text),
+                    kiwi_records::NodeChange::TEXT_DATA,
+                    text_data.put_str(kiwi_records::TextData::CHARACTERS, text),
                 )
-                .delete(kiwi_records::node_change::DERIVED_TEXT_DATA)
+                .delete(kiwi_records::NodeChange::DERIVED_TEXT_DATA)
         }
     }
     fn put_length(
@@ -47935,14 +48554,14 @@ pub mod graph {
         value: f64,
         occurrence: &Occurrence,
     ) -> KiwiRecord {
-        match record.record(kiwi_records::node_change::SIZE) {
+        match record.record(kiwi_records::NodeChange::SIZE) {
             Some(
                 size,
             ) if occurrence.derived_size.is_none()
-                && !occurrence.overridden.contains(&kiwi_records::node_change::SIZE) => {
+                && !occurrence.overridden.contains(&kiwi_records::NodeChange::SIZE) => {
                 record
                     .put_record(
-                        kiwi_records::node_change::SIZE,
+                        kiwi_records::NodeChange::SIZE,
                         size.put_float(axis, value as f32),
                     )
             }
@@ -47950,14 +48569,14 @@ pub mod graph {
         }
     }
     fn put_position(record: KiwiRecord, axis: u32, value: f64) -> KiwiRecord {
-        match record.record(kiwi_records::node_change::TRANSFORM) {
+        match record.record(kiwi_records::NodeChange::TRANSFORM) {
             Some(
                 transform,
-            ) if transform.float(kiwi_records::matrix::M01) == Some(0.0)
-                && transform.float(kiwi_records::matrix::M10) == Some(0.0) => {
+            ) if transform.float(kiwi_records::Matrix::M01) == Some(0.0)
+                && transform.float(kiwi_records::Matrix::M10) == Some(0.0) => {
                 record
                     .put_record(
-                        kiwi_records::node_change::TRANSFORM,
+                        kiwi_records::NodeChange::TRANSFORM,
                         transform.put_float(axis, value as f32),
                     )
             }
@@ -47966,83 +48585,83 @@ pub mod graph {
     }
     fn numeric_target(field: u32) -> Option<u32> {
         match field {
-            kiwi_records::variable_field::CORNER_RADIUS => {
-                Some(kiwi_records::node_change::CORNER_RADIUS)
+            kiwi_records::VariableField::CORNER_RADIUS => {
+                Some(kiwi_records::NodeChange::CORNER_RADIUS)
             }
-            kiwi_records::variable_field::RECTANGLE_TOP_LEFT_CORNER_RADIUS => {
-                Some(kiwi_records::node_change::RECTANGLE_TOP_LEFT_CORNER_RADIUS)
+            kiwi_records::VariableField::RECTANGLE_TOP_LEFT_CORNER_RADIUS => {
+                Some(kiwi_records::NodeChange::RECTANGLE_TOP_LEFT_CORNER_RADIUS)
             }
-            kiwi_records::variable_field::RECTANGLE_TOP_RIGHT_CORNER_RADIUS => {
-                Some(kiwi_records::node_change::RECTANGLE_TOP_RIGHT_CORNER_RADIUS)
+            kiwi_records::VariableField::RECTANGLE_TOP_RIGHT_CORNER_RADIUS => {
+                Some(kiwi_records::NodeChange::RECTANGLE_TOP_RIGHT_CORNER_RADIUS)
             }
-            kiwi_records::variable_field::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS => {
-                Some(kiwi_records::node_change::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS)
+            kiwi_records::VariableField::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS => {
+                Some(kiwi_records::NodeChange::RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS)
             }
-            kiwi_records::variable_field::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS => {
-                Some(kiwi_records::node_change::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS)
+            kiwi_records::VariableField::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS => {
+                Some(kiwi_records::NodeChange::RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS)
             }
-            kiwi_records::variable_field::STROKE_WEIGHT => {
-                Some(kiwi_records::node_change::STROKE_WEIGHT)
+            kiwi_records::VariableField::STROKE_WEIGHT => {
+                Some(kiwi_records::NodeChange::STROKE_WEIGHT)
             }
-            kiwi_records::variable_field::BORDER_TOP_WEIGHT => {
-                Some(kiwi_records::node_change::BORDER_TOP_WEIGHT)
+            kiwi_records::VariableField::BORDER_TOP_WEIGHT => {
+                Some(kiwi_records::NodeChange::BORDER_TOP_WEIGHT)
             }
-            kiwi_records::variable_field::BORDER_BOTTOM_WEIGHT => {
-                Some(kiwi_records::node_change::BORDER_BOTTOM_WEIGHT)
+            kiwi_records::VariableField::BORDER_BOTTOM_WEIGHT => {
+                Some(kiwi_records::NodeChange::BORDER_BOTTOM_WEIGHT)
             }
-            kiwi_records::variable_field::BORDER_LEFT_WEIGHT => {
-                Some(kiwi_records::node_change::BORDER_LEFT_WEIGHT)
+            kiwi_records::VariableField::BORDER_LEFT_WEIGHT => {
+                Some(kiwi_records::NodeChange::BORDER_LEFT_WEIGHT)
             }
-            kiwi_records::variable_field::BORDER_RIGHT_WEIGHT => {
-                Some(kiwi_records::node_change::BORDER_RIGHT_WEIGHT)
+            kiwi_records::VariableField::BORDER_RIGHT_WEIGHT => {
+                Some(kiwi_records::NodeChange::BORDER_RIGHT_WEIGHT)
             }
-            kiwi_records::variable_field::STACK_SPACING => {
-                Some(kiwi_records::node_change::STACK_SPACING)
+            kiwi_records::VariableField::STACK_SPACING => {
+                Some(kiwi_records::NodeChange::STACK_SPACING)
             }
-            kiwi_records::variable_field::STACK_PADDING_LEFT => {
-                Some(kiwi_records::node_change::STACK_HORIZONTAL_PADDING)
+            kiwi_records::VariableField::STACK_PADDING_LEFT => {
+                Some(kiwi_records::NodeChange::STACK_HORIZONTAL_PADDING)
             }
-            kiwi_records::variable_field::STACK_PADDING_TOP => {
-                Some(kiwi_records::node_change::STACK_VERTICAL_PADDING)
+            kiwi_records::VariableField::STACK_PADDING_TOP => {
+                Some(kiwi_records::NodeChange::STACK_VERTICAL_PADDING)
             }
-            kiwi_records::variable_field::STACK_PADDING_RIGHT => {
-                Some(kiwi_records::node_change::STACK_PADDING_RIGHT)
+            kiwi_records::VariableField::STACK_PADDING_RIGHT => {
+                Some(kiwi_records::NodeChange::STACK_PADDING_RIGHT)
             }
-            kiwi_records::variable_field::STACK_PADDING_BOTTOM => {
-                Some(kiwi_records::node_change::STACK_PADDING_BOTTOM)
+            kiwi_records::VariableField::STACK_PADDING_BOTTOM => {
+                Some(kiwi_records::NodeChange::STACK_PADDING_BOTTOM)
             }
-            kiwi_records::variable_field::STACK_COUNTER_SPACING => {
-                Some(kiwi_records::node_change::STACK_COUNTER_SPACING)
+            kiwi_records::VariableField::STACK_COUNTER_SPACING => {
+                Some(kiwi_records::NodeChange::STACK_COUNTER_SPACING)
             }
-            kiwi_records::variable_field::FONT_SIZE => {
-                Some(kiwi_records::node_change::FONT_SIZE)
+            kiwi_records::VariableField::FONT_SIZE => {
+                Some(kiwi_records::NodeChange::FONT_SIZE)
             }
-            kiwi_records::variable_field::OPACITY => {
-                Some(kiwi_records::node_change::OPACITY)
+            kiwi_records::VariableField::OPACITY => {
+                Some(kiwi_records::NodeChange::OPACITY)
             }
-            kiwi_records::variable_field::WIDTH => Some(kiwi_records::node_change::SIZE),
-            kiwi_records::variable_field::HEIGHT => Some(kiwi_records::node_change::SIZE),
-            kiwi_records::variable_field::X_POSITION => {
-                Some(kiwi_records::node_change::TRANSFORM)
+            kiwi_records::VariableField::WIDTH => Some(kiwi_records::NodeChange::SIZE),
+            kiwi_records::VariableField::HEIGHT => Some(kiwi_records::NodeChange::SIZE),
+            kiwi_records::VariableField::X_POSITION => {
+                Some(kiwi_records::NodeChange::TRANSFORM)
             }
-            kiwi_records::variable_field::Y_POSITION => {
-                Some(kiwi_records::node_change::TRANSFORM)
+            kiwi_records::VariableField::Y_POSITION => {
+                Some(kiwi_records::NodeChange::TRANSFORM)
             }
-            kiwi_records::variable_field::LETTER_SPACING => {
-                Some(kiwi_records::node_change::LETTER_SPACING)
+            kiwi_records::VariableField::LETTER_SPACING => {
+                Some(kiwi_records::NodeChange::LETTER_SPACING)
             }
-            kiwi_records::variable_field::LINE_HEIGHT => {
-                Some(kiwi_records::node_change::LINE_HEIGHT)
+            kiwi_records::VariableField::LINE_HEIGHT => {
+                Some(kiwi_records::NodeChange::LINE_HEIGHT)
             }
             _ => None,
         }
     }
     fn color_record(color: &Color) -> KiwiRecord {
         KiwiRecord::new(kiwi_record_definitions::COLOR)
-            .put_float(kiwi_records::color::R, color.r as f32)
-            .put_float(kiwi_records::color::G, color.g as f32)
-            .put_float(kiwi_records::color::B, color.b as f32)
-            .put_float(kiwi_records::color::A, 1.0)
+            .put_float(kiwi_records::Color::R, color.r as f32)
+            .put_float(kiwi_records::Color::G, color.g as f32)
+            .put_float(kiwi_records::Color::B, color.b as f32)
+            .put_float(kiwi_records::Color::A, 1.0)
     }
     #[derive(Clone, Debug, PartialEq, Eq, Hash)]
     pub struct CloneGuid {
@@ -48139,8 +48758,8 @@ pub mod graph {
         match source(index, id) {
             Some(
                 record,
-            ) if record.enum_value(kiwi_records::node_change::TYPE)
-                == Some(kiwi_records::node_type::DOCUMENT) => {
+            ) if record.enum_value(kiwi_records::NodeChange::TYPE)
+                == Some(kiwi_records::NodeType::DOCUMENT) => {
                 let position = put_node(
                     graph,
                     GraphGuid::Source(id),
@@ -48225,19 +48844,16 @@ pub mod graph {
         let mut modes: Modes = HashMap::new();
         if let (Some(vars), Some(set_map)) = (
             vars,
-            record.record(kiwi_records::node_change::VARIABLE_MODE_BY_SET_MAP),
+            record.record(kiwi_records::NodeChange::VARIABLE_MODE_BY_SET_MAP),
         ) {
-            for entry in set_map.records(kiwi_records::variable_mode_by_set_map::ENTRIES)
-            {
+            for entry in set_map.records(kiwi_records::VariableModeBySetMap::ENTRIES) {
                 let collection = entry
-                    .record(
-                        kiwi_records::variable_mode_by_set_map_entry::VARIABLE_SET_ID,
-                    )
+                    .record(kiwi_records::VariableModeBySetMapEntry::VARIABLE_SET_ID)
                     .and_then(|set| reference(vars, set));
                 let mode = guid_key(
                     entry
                         .record(
-                            kiwi_records::variable_mode_by_set_map_entry::VARIABLE_MODE_ID,
+                            kiwi_records::VariableModeBySetMapEntry::VARIABLE_MODE_ID,
                         ),
                 );
                 if let (Some(collection), Some(mode)) = (collection, mode) {
@@ -48561,11 +49177,11 @@ pub mod graph {
         let mut by_name: HashMap<String, Vec<usize>> = HashMap::new();
         for (position, node) in graph.nodes.iter().enumerate() {
             if let Some(node_type) = enum_name(
-                node.record.get(kiwi_records::node_change::TYPE),
+                node.record.get(kiwi_records::NodeChange::TYPE),
             ) {
                 by_type.entry(node_type).or_default().push(position);
             }
-            if let Some(name) = node.record.str(kiwi_records::node_change::NAME) {
+            if let Some(name) = node.record.str(kiwi_records::NodeChange::NAME) {
                 by_name.entry(name.to_string()).or_default().push(position);
             }
         }
@@ -48957,11 +49573,11 @@ pub mod graph {
         guid: Term<'a>,
         parent: Option<Term<'a>>,
     ) -> NifResult<Term<'a>> {
-        use kiwi_records::node_change as field;
+        use kiwi_records::NodeChange as field;
         let nil = atom(env, "nil");
         let text = record
             .record(field::TEXT_DATA)
-            .and_then(|text| text.str(kiwi_records::text_data::CHARACTERS));
+            .and_then(|text| text.str(kiwi_records::TextData::CHARACTERS));
         let font = record.record(field::FONT_NAME);
         let font_field = |name: u32| {
             font.and_then(|font| font.str(name)).map_or(nil, |value| value.encode(env))
@@ -48978,7 +49594,7 @@ pub mod graph {
         let style = |name: u32| {
             record
                 .record(name)
-                .and_then(|style| guid_key(style.record(kiwi_records::style_id::GUID)))
+                .and_then(|style| guid_key(style.record(kiwi_records::StyleId::GUID)))
                 .map_or(nil, |(session, local)| format!("{session}:{local}").encode(env))
         };
         let size = record
@@ -48990,11 +49606,11 @@ pub mod graph {
                         &[
                             (
                                 "x",
-                                kiwi_encode_float(env, size.float(kiwi_records::vector::X)?),
+                                kiwi_encode_float(env, size.float(kiwi_records::Vector::X)?),
                             ),
                             (
                                 "y",
-                                kiwi_encode_float(env, size.float(kiwi_records::vector::Y)?),
+                                kiwi_encode_float(env, size.float(kiwi_records::Vector::Y)?),
                             ),
                         ],
                     ),
@@ -49003,7 +49619,7 @@ pub mod graph {
         let transform = record
             .record(field::TRANSFORM)
             .and_then(|matrix| {
-                use kiwi_records::matrix as m;
+                use kiwi_records::Matrix as m;
                 let entry = |name: &'static str, id: u32| Some((
                     name,
                     kiwi_encode_float(env, matrix.float(id)?),
@@ -49024,7 +49640,7 @@ pub mod graph {
             });
         let position = record
             .record(field::PARENT_INDEX)
-            .and_then(|parent| parent.str(kiwi_records::parent_index::POSITION))
+            .and_then(|parent| parent.str(kiwi_records::ParentIndex::POSITION))
             .map_or(nil, |value| value.encode(env));
         let parent = parent.unwrap_or(nil);
         let node_type = enum_name(record.get(field::TYPE))
@@ -49045,9 +49661,9 @@ pub mod graph {
                     ("locked", flag(field::LOCKED)),
                     ("opacity", float(field::OPACITY)),
                     ("text", text.map_or(nil, |text| text.encode(env))),
-                    ("font_family", font_field(kiwi_records::font_name::FAMILY)),
-                    ("font_style", font_field(kiwi_records::font_name::STYLE)),
-                    ("font_postscript", font_field(kiwi_records::font_name::POSTSCRIPT)),
+                    ("font_family", font_field(kiwi_records::FontName::FAMILY)),
+                    ("font_style", font_field(kiwi_records::FontName::STYLE)),
+                    ("font_postscript", font_field(kiwi_records::FontName::POSTSCRIPT)),
                     ("font_size", float(field::FONT_SIZE)),
                     ("text_style_guid", style(field::STYLE_ID_FOR_TEXT)),
                     ("component_key", string(field::COMPONENT_KEY)),
@@ -49162,7 +49778,7 @@ pub mod graph {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use kiwi_records::expression_function as function;
+        use kiwi_records::ExpressionFunction as function;
         fn float(value: f64) -> VariableValue {
             VariableValue::Float(value)
         }
@@ -49304,7 +49920,7 @@ pub fn graph_new_impl<'a>(
             }
         }
         KiwiRecord::new(kiwi_record_definitions::MESSAGE)
-            .put_records(kiwi_records::message::NODE_CHANGES, records)
+            .put_records(kiwi_records::Message::NODE_CHANGES, records)
     };
     let decoded = started.elapsed().as_micros() as u64;
     let (graph, indexed, interpreted) = graph::build_graph_resource(
