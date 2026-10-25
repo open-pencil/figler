@@ -335,9 +335,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrust parent_definition(ancestors, parent_id) do
     found =
       ancestors
-      |> iter()
-      |> map(fn ancestor -> definitions_named(ancestor, parent_id) end)
-      |> find(fn definitions -> not definitions.is_empty() end)
+      |> Enum.map(fn ancestor -> definitions_named(ancestor, parent_id) end)
+      |> Enum.find(fn definitions -> not definitions.is_empty() end)
 
     case found do
       :none ->
