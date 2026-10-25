@@ -194,7 +194,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   defrust dedupe_by_field(entries) do
     last = HashMap.new()
 
-    for {index, entry} <- entries.iter().enumerate() do
+    for {entry, index} <- Enum.with_index(entries) do
       case entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD) do
         {:some, field} -> last.insert(field, index)
         :none -> nil

@@ -144,7 +144,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
     binding =
       struct_literal(VariableBinding, target: target, variable: variable, multiplier: multiplier)
 
-    case bindings.iter().position(fn existing -> existing.target == binding.target end) do
+    case Enum.find_index(bindings, fn existing -> existing.target == binding.target end) do
       {:some, index} -> assign!(bindings[index], binding)
       :none -> bindings.push(binding)
     end
@@ -243,7 +243,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
         ) ::
           R.unit()
   defrust bind_paints(bindings, record, field, vars) do
-    for {index, paint} <- record.records(field).iter().enumerate() do
+    for {paint, index} <- Enum.with_index(record.records(field)) do
       reference =
         paint.record(Kiwi.Paint.COLOR_VAR)
         |> and_then(fn color -> color.record(Kiwi.VariableData.VALUE) end)

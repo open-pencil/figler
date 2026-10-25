@@ -114,8 +114,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   # Each parent and child, in the children's saved order.
   @spec child_pairs(R.slice(Kiwi.kiwi_record())) :: R.vec({GuidKey.t(), GuidKey.t()})
   defrust child_pairs(records) do
-    ordered = record_refs(records)
-    ordered.sort_by_key(fn record -> position(record) end)
+    ordered = Enum.sort_by(record_refs(records), &position/1)
 
     for record <- ordered,
         {:some, id} <- [record_id(record)],

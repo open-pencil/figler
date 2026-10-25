@@ -99,7 +99,7 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
   defrust find_segment(root, guid) do
     found = Vec.new()
 
-    for {index, child} <- root.children.iter().enumerate() do
+    for {child, index} <- Enum.with_index(root.children) do
       find_within(child, [index], guid, mut_ref(found))
     end
 
@@ -118,7 +118,7 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
         found.push(path)
 
       not instance?(node) ->
-        for {index, child} <- node.children.iter().enumerate() do
+        for {child, index} <- Enum.with_index(node.children) do
           child_path = path.clone()
           child_path.push(index)
           find_within(child, child_path, guid, found)
@@ -188,7 +188,7 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
   defrust segment_lookup(root) do
     table = HashMap.new()
 
-    for {index, child} <- root.children.iter().enumerate() do
+    for {child, index} <- Enum.with_index(root.children) do
       collect_segments(child, [index], ref(HashSet.new()), mut_ref(table))
     end
 
@@ -212,7 +212,7 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
       matched = matched.clone()
       matched.extend(new_keys)
 
-      for {index, child} <- node.children.iter().enumerate() do
+      for {child, index} <- Enum.with_index(node.children) do
         child_path = path.clone()
         child_path.push(index)
         collect_segments(child, child_path, ref(matched), table)

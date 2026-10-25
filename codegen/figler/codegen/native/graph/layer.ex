@@ -144,6 +144,6 @@ defmodule Figler.Codegen.Native.Graph.Layer do
   # The layer one level further down its path.
   @spec descend(R.ref(layer())) :: layer()
   defrust descend(layer) do
-    %{layer.clone() | path: layer.path.iter().skip(1).copied().collect()}
+    %{layer.clone() | path: Enum.drop(layer.path, 1)}
   end
 end

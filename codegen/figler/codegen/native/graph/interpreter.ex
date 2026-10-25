@@ -208,7 +208,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     owner = struct_literal(LayerOwner, id: id, rank: rank)
     {structural, own_claims} = own(ref(record.source), owner.clone())
     structural.extend(layers)
-    structural.sort_by(fn left, right -> right.owner.rank.cmp(ref(left.owner.rank)) end)
+    structural = Enum.sort_by(structural, fn layer -> layer.owner.rank end, :desc)
     root = resolve_root(index, raw, ref(record), structural, rank)
 
     {subtree, children} =
@@ -1034,7 +1034,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   defrust removed_from?(index, current, path, position) do
     case path.get(position) do
       {:some, segment} ->
-        rest = path.iter().skip(position).copied().collect()
+        rest = Enum.drop(path, position)
 
         cond do
           current.replaced_components
