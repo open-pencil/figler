@@ -218,11 +218,9 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   @spec collection(R.ref(Kiwi.kiwi_record())) :: R.option(collection())
   defrust collection(record) do
     modes =
-      record
-      |> records(Kiwi.NodeChange.VARIABLE_SET_MODES)
-      |> iter()
-      |> filter_map(fn mode -> guid_key(mode.record(Kiwi.VariableSetMode.ID)) end)
-      |> collect()
+      for mode <- record.records(Kiwi.NodeChange.VARIABLE_SET_MODES),
+          {:some, id} <- [guid_key(mode.record(Kiwi.VariableSetMode.ID))],
+          do: id
 
     case modes.first() do
       {:some, default} ->

@@ -86,7 +86,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
 
   @spec record_ids(R.slice(R.ref(Kiwi.kiwi_record()))) :: R.vec(GuidKey.t())
   defrust record_ids(records) do
-    records |> iter() |> filter_map(fn record -> record_id(record) end) |> collect()
+    for record <- records, {:some, id} <- [record_id(record)], do: id
   end
 
   @spec id_set(R.slice(GuidKey.t())) :: HashSet.t(GuidKey.t())
@@ -94,10 +94,10 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
 
   @spec sources(R.slice(Kiwi.kiwi_record())) :: sources()
   defrust sources(records) do
-    records
-    |> iter()
-    |> filter_map(fn record -> record_id(record).map(fn id -> {id, record.clone()} end) end)
-    |> collect()
+    for record <- records,
+        {:some, id} <- [record_id(record)],
+        into: HashMap.new(),
+        do: {id, record.clone()}
   end
 
   @spec children(R.slice(Kiwi.kiwi_record())) :: children()
@@ -117,17 +117,10 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
     ordered = record_refs(records)
     ordered.sort_by_key(fn record -> position(record) end)
 
-    ordered
-    |> iter()
-    |> filter_map(fn record ->
-      with {:some, id} <- record_id(record),
-           {:some, parent} <- parent_id(record) do
-        some({parent, id})
-      else
-        _ -> nil
-      end
-    end)
-    |> collect()
+    for record <- ordered,
+        {:some, id} <- [record_id(record)],
+        {:some, parent} <- [parent_id(record)],
+        do: {parent, id}
   end
 
   @spec record_refs(R.slice(Kiwi.kiwi_record())) :: R.vec(R.ref(Kiwi.kiwi_record()))

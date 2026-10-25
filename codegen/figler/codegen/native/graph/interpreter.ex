@@ -379,7 +379,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   defrust assigned_visibility(claims) do
     overridden = HashSet.new()
 
-    if claims.iter().any(fn claim -> assigned_visible?(claim) end),
+    if Enum.any?(claims, &assigned_visible?/1),
       do: overridden.insert(Kiwi.NodeChange.VISIBLE)
 
     overridden
@@ -519,9 +519,9 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # assignment groups replace in order.
   @spec scoped_bindings(R.ref(Kiwi.kiwi_record()), R.slice(group())) :: R.vec(Bindings.binding())
   defrust scoped_bindings(source, groups) do
-    groups
-    |> iter()
-    |> fold(component(source.records(Kiwi.NodeChange.COMPONENT_PROP_DEFS)), fn bindings, group ->
+    defaults = component(source.records(Kiwi.NodeChange.COMPONENT_PROP_DEFS))
+
+    Enum.reduce(groups, defaults, fn group, bindings ->
       assign(bindings, group.assignments.iter().collect(), some(group.rank))
     end)
   end

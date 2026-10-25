@@ -72,25 +72,17 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   # The defaults a component definition binds for its own expansion.
   @spec component(R.slice(R.ref(Kiwi.kiwi_record()))) :: R.vec(binding())
   defrust component(definitions) do
-    definitions
-    |> iter()
-    |> filter_map(fn definition ->
-      with {:some, id} <- guid_key(definition.record(Kiwi.ComponentPropDef.ID)),
-           {:some, value} <- definition.record(Kiwi.ComponentPropDef.INITIAL_VALUE) do
-        some(
-          struct_literal(Binding,
-            id: id,
-            value: prop_value(value),
-            origin: :default,
-            rank: nil,
-            superseded: Vec.new()
-          )
-        )
-      else
-        _ -> nil
-      end
-    end)
-    |> collect()
+    for definition <- definitions,
+        {:some, id} <- [guid_key(definition.record(Kiwi.ComponentPropDef.ID))],
+        {:some, value} <- [definition.record(Kiwi.ComponentPropDef.INITIAL_VALUE)] do
+      struct_literal(Binding,
+        id: id,
+        value: prop_value(value),
+        origin: :default,
+        rank: nil,
+        superseded: Vec.new()
+      )
+    end
   end
 
   # The parts of a property value or a variable value that binding reads.

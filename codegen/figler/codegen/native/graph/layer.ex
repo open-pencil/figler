@@ -59,10 +59,9 @@ defmodule Figler.Codegen.Native.Graph.Layer do
       end
 
     layers =
-      overrides
-      |> iter()
-      |> filter_map(fn override -> structural_layer(override, ref(owner)) end)
-      |> collect()
+      for override <- overrides.iter(),
+          {:some, layer} <- [structural_layer(override, owner)],
+          do: layer
 
     claims = mode_claims(source)
 
@@ -106,10 +105,9 @@ defmodule Figler.Codegen.Native.Graph.Layer do
   defrust override_path(override) do
     case override.record(Kiwi.NodeChange.GUID_PATH) do
       {:some, path} ->
-        path.records(Kiwi.GuidPath.GUIDS)
-        |> into_iter()
-        |> filter_map(fn guid -> guid_key(some(guid)) end)
-        |> collect()
+        for guid <- path.records(Kiwi.GuidPath.GUIDS),
+            {:some, key} <- [guid_key(some(guid))],
+            do: key
 
       :none ->
         Vec.new()

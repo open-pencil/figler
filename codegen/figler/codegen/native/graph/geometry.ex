@@ -251,9 +251,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
 
   @spec scale_numbers(R.ref(Kiwi.kiwi_record()), R.slice(R.u32()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_numbers(record, fields, factor) do
-    fields
-    |> iter()
-    |> fold(record.clone(), fn scaled, field ->
+    Enum.reduce(fields, record.clone(), fn field, scaled ->
       case scaled.float(deref(field)) do
         {:some, value} ->
           scaled.put_float(deref(field), cast(cast(value, R.f64()) * factor, R.f32()))
@@ -273,10 +271,9 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   defrust scale_floats(record, field, factor) do
     if record.has(field) do
       values =
-        record.floats(field)
-        |> into_iter()
-        |> map(fn value -> cast(cast(value, R.f64()) * factor, R.f32()) end)
-        |> collect()
+        Enum.map(record.floats(field), fn value ->
+          cast(cast(value, R.f64()) * factor, R.f32())
+        end)
 
       record.put_floats(field, values)
     else

@@ -130,9 +130,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
 
   @spec changed_shaping?(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record())) :: R.bool()
   defrust changed_shaping?(properties, patch) do
-    text_shaping()
-    |> iter()
-    |> any(fn field ->
+    Enum.any?(text_shaping(), fn field ->
       patch.has(deref(field)) and properties.get(deref(field)) != patch.get(deref(field))
     end)
   end

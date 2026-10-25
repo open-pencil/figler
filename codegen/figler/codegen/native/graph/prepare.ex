@@ -61,7 +61,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
 
   @spec prepare(R.vec(Kiwi.kiwi_record()), R.bool()) :: R.nif_result(R.vec(Kiwi.kiwi_record()))
   defrust prepare(records, styles) do
-    normalized = records |> iter() |> map(fn record -> normalize(record) end) |> collect()
+    normalized = Enum.map(records, fn record -> normalize(record) end)
     inherited = inherit_property_definitions(normalized)
     if styles, do: ok(apply_styles(inherited)), else: ok(inherited)
   end
@@ -232,10 +232,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
 
   @spec linked_definitions(R.ref(Kiwi.kiwi_record())) :: R.bool()
   defrust linked_definitions(record) do
-    record
-    |> records(Kiwi.NodeChange.COMPONENT_PROP_DEFS)
-    |> iter()
-    |> any(fn definition -> definition.has(Kiwi.ComponentPropDef.PARENT_PROP_DEF_ID) end)
+    record.records(Kiwi.NodeChange.COMPONENT_PROP_DEFS)
+    |> Enum.any?(fn definition -> definition.has(Kiwi.ComponentPropDef.PARENT_PROP_DEF_ID) end)
   end
 
   @spec resolve(
@@ -313,11 +311,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   @spec inherit_definitions(R.ref(Kiwi.kiwi_record()), R.slice(Kiwi.kiwi_record())) ::
           R.nif_result(R.vec(Kiwi.kiwi_record()))
   defrust inherit_definitions(record, ancestors) do
-    record
-    |> records(Kiwi.NodeChange.COMPONENT_PROP_DEFS)
-    |> into_iter()
-    |> map(fn definition -> inherit_definition(definition, ancestors) end)
-    |> collect()
+    record.records(Kiwi.NodeChange.COMPONENT_PROP_DEFS)
+    |> Enum.map(fn definition -> inherit_definition(definition, ancestors) end)
   end
 
   # A definition whose parent is not among its ancestors, as in a partial set of records,
@@ -356,13 +351,10 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   @spec definitions_named(R.ref(Kiwi.kiwi_record()), GuidKey.t()) ::
           R.vec(R.ref(Kiwi.kiwi_record()))
   defrust definitions_named(ancestor, id) do
-    ancestor
-    |> records(Kiwi.NodeChange.COMPONENT_PROP_DEFS)
-    |> into_iter()
-    |> filter(fn definition ->
+    ancestor.records(Kiwi.NodeChange.COMPONENT_PROP_DEFS)
+    |> Enum.filter(fn definition ->
       guid_key(definition.record(Kiwi.ComponentPropDef.ID)) == some(id)
     end)
-    |> collect()
   end
 
   @spec apply_styles(R.vec(Kiwi.kiwi_record())) :: R.vec(Kiwi.kiwi_record())
@@ -374,26 +366,23 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     else
       keys = style_keys(ref(records))
 
-      records
-      |> iter()
-      |> map(fn record -> apply_style_refs(record, ref(styles), ref(keys)) end)
-      |> collect()
+      Enum.map(records, fn record -> apply_style_refs(record, styles, keys) end)
     end
   end
 
   @spec style_records(R.slice(Kiwi.kiwi_record())) :: styles()
   defrust style_records(records) do
-    records
-    |> iter()
-    |> filter(fn record -> record.has(Kiwi.NodeChange.STYLE_TYPE) end)
-    |> filter_map(fn record -> record_id(record).map(fn id -> {id, record.clone()} end) end)
-    |> collect()
+    for record <- records,
+        record.has(Kiwi.NodeChange.STYLE_TYPE),
+        {:some, id} <- [record_id(record)],
+        into: HashMap.new(),
+        do: {id, record.clone()}
   end
 
   # Library styles are named by key, and by key and version.
   @spec style_keys(R.slice(Kiwi.kiwi_record())) :: style_keys()
   defrust style_keys(records) do
-    records |> iter() |> flat_map(fn record -> style_names(record) end) |> collect()
+    Enum.flat_map(records, &style_names/1)
   end
 
   @spec style_names(R.ref(Kiwi.kiwi_record())) :: R.vec({String.t(), GuidKey.t()})
