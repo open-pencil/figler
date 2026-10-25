@@ -10,15 +10,13 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [
       Figler.Codegen.Native.Graph.Records,
       Figler.Codegen.Native.Graph.SourceIndex
     ]
 
   alias Figler.Codegen.Native.Graph.SourceIndex
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
@@ -201,7 +199,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   # The resource a `VariableID` or `VariableSetID` names: by GUID, or by asset key. An
   # unversioned reference to a key with several versions names nothing.
-  @spec reference(R.ref(variables()), R.ref(KiwiRecord.t())) :: R.option(GuidKey.t())
+  @spec reference(R.ref(variables()), R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
   defrust reference(vars, reference) do
     case guid_key(reference.record(VariableId.GUID)) do
       {:some, id} ->
@@ -213,7 +211,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec asset_reference(R.ref(variables()), R.ref(KiwiRecord.t())) :: R.option(GuidKey.t())
+  @spec asset_reference(R.ref(variables()), R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
   defrust asset_reference(vars, asset) do
     with {:some, key} <- asset.str(AssetRef.KEY),
          {:some, versions} <- vars.keys.get(key) do
@@ -233,7 +231,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec collection(R.ref(KiwiRecord.t())) :: R.option(collection())
+  @spec collection(R.ref(Kiwi.kiwi_record())) :: R.option(collection())
   defrust collection(record) do
     modes =
       record
@@ -251,7 +249,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec variable_type(R.ref(KiwiRecord.t())) :: R.option(variable_type())
+  @spec variable_type(R.ref(Kiwi.kiwi_record())) :: R.option(variable_type())
   defrust variable_type(record) do
     case record.enum_value(NodeChange.VARIABLE_RESOLVED_TYPE) do
       {:some, VariableResolvedDataType.FLOAT} -> some(:float)
@@ -262,7 +260,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec put_variable(R.mut_ref(variables()), R.ref(KiwiRecord.t())) :: R.unit()
+  @spec put_variable(R.mut_ref(variables()), R.ref(Kiwi.kiwi_record())) :: R.unit()
   defrust put_variable(vars, record) do
     collection =
       record.record(NodeChange.VARIABLE_SET_ID)
@@ -289,7 +287,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   @spec mode_values(
           R.mut_ref(variables()),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
           GuidKey.t(),
           R.slice(GuidKey.t())
         ) ::
@@ -329,7 +327,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   end
 
   # A stored value: a literal, an alias, a formula, a composed color, or unsupported.
-  @spec stored_value(R.ref(variables()), R.option(R.ref(KiwiRecord.t())), R.u32()) :: stored()
+  @spec stored_value(R.ref(variables()), R.option(R.ref(Kiwi.kiwi_record())), R.u32()) :: stored()
   defrust stored_value(vars, data, depth) do
     case data do
       {:some, data} when depth <= 64 ->
@@ -361,7 +359,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec literal(R.u32(), R.ref(KiwiRecord.t())) :: R.option(variable_value())
+  @spec literal(R.u32(), R.ref(Kiwi.kiwi_record())) :: R.option(variable_value())
   defrust literal(data_type, value) do
     case {data_type, value.record(VariableAnyValue.COLOR_VALUE),
           value.bool(VariableAnyValue.BOOL_VALUE), value.str(VariableAnyValue.TEXT_VALUE),
@@ -383,7 +381,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec literal_color(R.ref(KiwiRecord.t())) :: color()
+  @spec literal_color(R.ref(Kiwi.kiwi_record())) :: color()
   defrust literal_color(color) do
     struct_literal(Color,
       r: cast(color.float(ColorField.R).unwrap_or(0.0), R.f64()),
@@ -393,7 +391,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     )
   end
 
-  @spec alias_value(R.ref(variables()), R.ref(KiwiRecord.t())) :: stored()
+  @spec alias_value(R.ref(variables()), R.ref(Kiwi.kiwi_record())) :: stored()
   defrust alias_value(vars, value) do
     case value.record(VariableAnyValue.ALIAS).and_then(fn variable ->
            reference(vars, variable)
@@ -403,7 +401,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec expression(R.ref(variables()), R.ref(KiwiRecord.t()), R.u32()) :: stored()
+  @spec expression(R.ref(variables()), R.ref(Kiwi.kiwi_record()), R.u32()) :: stored()
   defrust expression(vars, data, depth) do
     case data.record(VariableData.VALUE).and_then(fn value ->
            value.record(VariableAnyValue.EXPRESSION_VALUE)
@@ -422,7 +420,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec compose_color(R.ref(variables()), R.slice(R.ref(KiwiRecord.t())), R.u32()) :: stored()
+  @spec compose_color(R.ref(variables()), R.slice(R.ref(Kiwi.kiwi_record())), R.u32()) :: stored()
   defrust compose_color(vars, arguments, depth) do
     case arguments do
       [color, opacity] ->
@@ -452,7 +450,8 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec formula(R.ref(variables()), R.u32(), R.slice(R.ref(KiwiRecord.t())), R.u32()) :: stored()
+  @spec formula(R.ref(variables()), R.u32(), R.slice(R.ref(Kiwi.kiwi_record())), R.u32()) ::
+          stored()
   defrust formula(vars, function, arguments, depth) do
     supported =
       ref([
@@ -489,7 +488,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   end
 
   # Every argument as a formula operand, or nothing when one cannot be.
-  @spec formula_operands(R.ref(variables()), R.slice(R.ref(KiwiRecord.t())), R.u32()) ::
+  @spec formula_operands(R.ref(variables()), R.slice(R.ref(Kiwi.kiwi_record())), R.u32()) ::
           R.option(R.vec(formula()))
   defrust formula_operands(vars, arguments, depth) do
     arguments

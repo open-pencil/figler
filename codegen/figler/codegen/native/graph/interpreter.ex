@@ -14,9 +14,6 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [
       Figler.Codegen.Native.Graph.Records,
       Figler.Codegen.Native.Graph.SourceIndex,
@@ -31,6 +28,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   alias Figler.Codegen.Native.Graph.Layer
   alias Figler.Codegen.Native.Graph.Occurrence
   alias Figler.Codegen.Native.Graph.SourceIndex
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
@@ -69,14 +67,17 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   # A record bound from its enclosing component scope.
   @typep bound_record :: %{
-           required(:source) => KiwiRecord.t(),
+           required(:source) => Kiwi.kiwi_record(),
            required(:claims) => R.vec(Occurrence.binding_claim()),
            required(:bound) => HashMap.t(R.u32(), R.u32()),
            required(:superseded) => R.vec(GuidKey.t()),
            required(:slot_content) => R.option(GuidKey.t())
          }
 
-  @typep group :: %{required(:assignments) => R.vec(KiwiRecord.t()), required(:rank) => R.u32()}
+  @typep group :: %{
+           required(:assignments) => R.vec(Kiwi.kiwi_record()),
+           required(:rank) => R.u32()
+         }
 
   # The component an occurrence expands and the layers left for its descendants.
   @typep root :: %{
@@ -202,7 +203,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec expand_source(
           R.ref(SourceIndex.source_index()),
           GuidKey.t(),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
           R.slice(Bindings.binding()),
           R.vec(Layer.layer()),
           R.u32(),
@@ -295,7 +296,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # Binds the record's fields from the enclosing component scope.
   @spec bind_record(
           R.ref(SourceIndex.source_index()),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
           R.slice(Bindings.binding()),
           R.mut_ref(state())
         ) :: bound_record()
@@ -417,7 +418,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # so later entries win. Everything else addresses a descendant.
   @spec resolve_root(
           R.ref(SourceIndex.source_index()),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
           R.ref(bound_record()),
           R.vec(Layer.layer()),
           R.u32()
@@ -524,7 +525,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   # A component definition starts a binding scope from its defaults, which the instance's
   # assignment groups replace in order.
-  @spec scoped_bindings(R.ref(KiwiRecord.t()), R.slice(group())) :: R.vec(Bindings.binding())
+  @spec scoped_bindings(R.ref(Kiwi.kiwi_record()), R.slice(group())) :: R.vec(Bindings.binding())
   defrust scoped_bindings(source, groups) do
     groups
     |> iter()
@@ -704,8 +705,8 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec create_occurrence(
           R.ref(SourceIndex.source_index()),
           GuidKey.t(),
-          R.ref(KiwiRecord.t()),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
+          R.ref(Kiwi.kiwi_record()),
           R.ref(root()),
           R.option(R.ref(Occurrence.occurrence())),
           R.vec(Occurrence.occurrence())
@@ -745,7 +746,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     %{occurrence | default_instance_name: name}
   end
 
-  @spec new_occurrence(GuidKey.t(), KiwiRecord.t(), R.vec(Occurrence.occurrence())) ::
+  @spec new_occurrence(GuidKey.t(), Kiwi.kiwi_record(), R.vec(Occurrence.occurrence())) ::
           Occurrence.occurrence()
   defrust new_occurrence(id, properties, children) do
     struct_literal(Occurrence,
@@ -774,11 +775,11 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # replacement's paint, so the old paint's style link goes with it.
   @spec effective_properties(
           R.ref(SourceIndex.source_index()),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
           R.option(R.ref(Occurrence.occurrence())),
           R.option(GuidKey.t()),
           R.ref(root())
-        ) :: KiwiRecord.t()
+        ) :: Kiwi.kiwi_record()
   defrust effective_properties(index, source, base, original, root) do
     placed =
       if base.is_some() and original != root.effective and
@@ -810,8 +811,8 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     put_assignments(index, properties, source, ref(root.groups))
   end
 
-  @spec put_effective_symbol(KiwiRecord.t(), R.option(GuidKey.t()), R.ref(KiwiRecord.t())) ::
-          KiwiRecord.t()
+  @spec put_effective_symbol(Kiwi.kiwi_record(), R.option(GuidKey.t()), R.ref(Kiwi.kiwi_record())) ::
+          Kiwi.kiwi_record()
   defrust put_effective_symbol(properties, effective, source) do
     case {effective, source.record(NodeChange.SYMBOL_DATA)} do
       {{:some, effective}, {:some, symbol_data}} ->
@@ -825,7 +826,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     end
   end
 
-  @spec guid_record(GuidKey.t()) :: KiwiRecord.t()
+  @spec guid_record(GuidKey.t()) :: Kiwi.kiwi_record()
   defrust guid_record(guid) do
     {session_id, local_id} = guid
 
@@ -837,10 +838,10 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # A slot whose content frame is gone falls back to its component's content.
   @spec put_assignments(
           R.ref(SourceIndex.source_index()),
-          KiwiRecord.t(),
-          R.ref(KiwiRecord.t()),
+          Kiwi.kiwi_record(),
+          R.ref(Kiwi.kiwi_record()),
           R.slice(group())
-        ) :: KiwiRecord.t()
+        ) :: Kiwi.kiwi_record()
   defrust put_assignments(index, properties, source, groups) do
     if source.enum_value(NodeChange.TYPE) == some(NodeType.INSTANCE) do
       assignments =
@@ -855,7 +856,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     end
   end
 
-  @spec missing_slot_content?(R.ref(SourceIndex.source_index()), R.ref(KiwiRecord.t())) ::
+  @spec missing_slot_content?(R.ref(SourceIndex.source_index()), R.ref(Kiwi.kiwi_record())) ::
           R.bool()
   defrust missing_slot_content?(index, assignment) do
     assignment.record(ComponentPropAssignment.VAR_VALUE)
@@ -916,7 +917,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           R.ref(SourceIndex.source_index()),
           Occurrence.occurrence(),
           R.ref(subtree()),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
           R.vec(Layer.claim()),
           R.u32(),
           R.mut_ref(state())
@@ -946,7 +947,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   end
 
   # The size the file keeps for an instance is its own content laid out.
-  @spec put_instance_size(Occurrence.occurrence(), R.ref(KiwiRecord.t())) ::
+  @spec put_instance_size(Occurrence.occurrence(), R.ref(Kiwi.kiwi_record())) ::
           Occurrence.occurrence()
   defrust put_instance_size(occurrence, source) do
     case source.record(NodeChange.SIZE) do
@@ -1071,7 +1072,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec apply_derived_bounds(
           R.ref(SourceIndex.source_index()),
           Occurrence.occurrence(),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
           R.mut_ref(state())
         ) :: Occurrence.occurrence()
   defrust apply_derived_bounds(index, owner, source, state) do

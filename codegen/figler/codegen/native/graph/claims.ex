@@ -6,12 +6,10 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [Figler.Codegen.Native.Graph.Occurrence]
 
   alias Figler.Codegen.Native.Graph.Occurrence
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
@@ -74,7 +72,8 @@ defmodule Figler.Codegen.Native.Graph.Claims do
 
   # The fields of a claim its owner keeps on `target`: an outer owner's assignment, recorded
   # with a strictly smaller rank, supersedes the claim.
-  @spec retained(R.ref(KiwiRecord.t()), R.ref(Occurrence.occurrence()), R.u32()) :: KiwiRecord.t()
+  @spec retained(R.ref(Kiwi.kiwi_record()), R.ref(Occurrence.occurrence()), R.u32()) ::
+          Kiwi.kiwi_record()
   defrust retained(props, target, owner_rank) do
     kept =
       for field <- props.field_ids(),
@@ -87,7 +86,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   end
 
   # Merges claimed fields into an occurrence's effective record.
-  @spec apply_claim(R.mut_ref(Occurrence.occurrence()), R.ref(KiwiRecord.t())) :: R.unit()
+  @spec apply_claim(R.mut_ref(Occurrence.occurrence()), R.ref(Kiwi.kiwi_record())) :: R.unit()
   defrust apply_claim(target, props) do
     merged = invalidate_inherited_text(ref(target.properties), props).merge(props)
 
@@ -106,7 +105,8 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   end
 
   # Drops saved glyphs when a claim changes text or shaping and supplies none.
-  @spec invalidate_inherited_text(R.ref(KiwiRecord.t()), R.ref(KiwiRecord.t())) :: KiwiRecord.t()
+  @spec invalidate_inherited_text(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record())) ::
+          Kiwi.kiwi_record()
   defrust invalidate_inherited_text(properties, patch) do
     if not patch.has(NodeChange.DERIVED_TEXT_DATA) and
          (changed_text?(properties, patch) or changed_shaping?(properties, patch)) do
@@ -116,7 +116,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
     end
   end
 
-  @spec changed_text?(R.ref(KiwiRecord.t()), R.ref(KiwiRecord.t())) :: R.bool()
+  @spec changed_text?(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record())) :: R.bool()
   defrust changed_text?(properties, patch) do
     case patch.record(NodeChange.TEXT_DATA) do
       {:some, text} ->
@@ -133,7 +133,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
     end
   end
 
-  @spec changed_shaping?(R.ref(KiwiRecord.t()), R.ref(KiwiRecord.t())) :: R.bool()
+  @spec changed_shaping?(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record())) :: R.bool()
   defrust changed_shaping?(properties, patch) do
     text_shaping()
     |> iter()
@@ -145,8 +145,8 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   # Merges variable consumption entries, later entries replacing earlier ones for the same
   # field. The result is written as the parameter map, which readers consult after the legacy
   # map.
-  @spec merge_variable_consumption(R.ref(KiwiRecord.t()), R.ref(KiwiRecord.t())) ::
-          R.option(KiwiRecord.t())
+  @spec merge_variable_consumption(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record())) ::
+          R.option(Kiwi.kiwi_record())
   defrust merge_variable_consumption(base, patch) do
     incoming = consumption_entries(patch)
 
@@ -166,7 +166,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   # A record's variable consumption entries. Legacy entries precede parameter entries, which
   # may replace them per field; unkeyed entries come first, then one entry per field in
   # first-seen order.
-  @spec consumption_entries(R.ref(KiwiRecord.t())) :: R.vec(KiwiRecord.t())
+  @spec consumption_entries(R.ref(Kiwi.kiwi_record())) :: R.vec(Kiwi.kiwi_record())
   defrust consumption_entries(record) do
     entries = map_entries(record, NodeChange.VARIABLE_CONSUMPTION_MAP)
     entries.extend(map_entries(record, NodeChange.PARAMETER_CONSUMPTION_MAP))
@@ -185,7 +185,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
     unkeyed
   end
 
-  @spec map_entries(R.ref(KiwiRecord.t()), R.u32()) :: R.vec(KiwiRecord.t())
+  @spec map_entries(R.ref(Kiwi.kiwi_record()), R.u32()) :: R.vec(Kiwi.kiwi_record())
   defrust map_entries(record, field) do
     case record.record(field) do
       {:some, map} -> map.records(VariableDataMap.ENTRIES) |> into_iter() |> cloned() |> collect()
@@ -194,7 +194,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   end
 
   # Entries keep the position of a field's first entry and the value of its last.
-  @spec dedupe_by_field(R.slice(KiwiRecord.t())) :: R.vec(KiwiRecord.t())
+  @spec dedupe_by_field(R.slice(Kiwi.kiwi_record())) :: R.vec(Kiwi.kiwi_record())
   defrust dedupe_by_field(entries) do
     last = HashMap.new()
 

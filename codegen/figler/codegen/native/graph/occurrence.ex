@@ -8,14 +8,12 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [
       Figler.Codegen.Native.Graph.Records,
       Figler.Codegen.Native.Graph.SourceIndex
     ]
 
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   @typep occurrence :: %{
@@ -25,10 +23,10 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
            required(:main_component_override_key) => R.option(GuidKey.t()),
            required(:source_component_id) => R.option(GuidKey.t()),
            required(:source_component_override_key) => R.option(GuidKey.t()),
-           required(:derived_size) => R.option(KiwiRecord.t()),
+           required(:derived_size) => R.option(Kiwi.kiwi_record()),
            required(:slot_content_id) => R.option(GuidKey.t()),
            required(:default_instance_name) => R.option(String.t()),
-           required(:properties) => KiwiRecord.t(),
+           required(:properties) => Kiwi.kiwi_record(),
            required(:children) => R.vec(occurrence()),
            required(:property_claims) => R.vec(property_claim()),
            required(:binding_claims) => R.vec(binding_claim()),
@@ -43,7 +41,7 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
   @typep property_claim :: %{
            required(:declared_by) => GuidKey.t(),
            required(:path) => R.vec(GuidKey.t()),
-           required(:properties) => KiwiRecord.t()
+           required(:properties) => Kiwi.kiwi_record()
          }
 
   # A field a component property bound on a record.

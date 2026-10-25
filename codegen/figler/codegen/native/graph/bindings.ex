@@ -11,15 +11,13 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [
       Figler.Codegen.Native.Graph.Records,
       Figler.Codegen.Native.Graph.Occurrence
     ]
 
   alias Figler.Codegen.Native.Graph.Occurrence
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
@@ -39,7 +37,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   @typep prop_value :: %{
            required(:bool) => R.option(R.bool()),
            required(:text) => R.option(String.t()),
-           required(:guid) => R.option(KiwiRecord.t()),
+           required(:guid) => R.option(Kiwi.kiwi_record()),
            required(:has_slot_content) => R.bool(),
            required(:slot_content) => R.option(GuidKey.t())
          }
@@ -86,7 +84,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   end
 
   # The defaults a component definition binds for its own expansion.
-  @spec component(R.slice(R.ref(KiwiRecord.t()))) :: R.vec(binding())
+  @spec component(R.slice(R.ref(Kiwi.kiwi_record()))) :: R.vec(binding())
   defrust component(definitions) do
     definitions
     |> iter()
@@ -110,7 +108,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   end
 
   # The parts of a property value or a variable value that binding reads.
-  @spec prop_value(R.ref(KiwiRecord.t())) :: prop_value()
+  @spec prop_value(R.ref(Kiwi.kiwi_record())) :: prop_value()
   defrust prop_value(value) do
     if value.definition() == Definitions.COMPONENT_PROP_VALUE do
       %{
@@ -136,7 +134,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
     end
   end
 
-  @spec text_characters(R.option(R.ref(KiwiRecord.t()))) :: R.option(String.t())
+  @spec text_characters(R.option(R.ref(Kiwi.kiwi_record()))) :: R.option(String.t())
   defrust text_characters(text) do
     text
     |> and_then(fn text -> text.str(TextData.CHARACTERS) end)
@@ -144,7 +142,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   end
 
   # The content frame a slot value names, unless it names the component's own content.
-  @spec slot_content(R.ref(KiwiRecord.t())) :: R.option(GuidKey.t())
+  @spec slot_content(R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
   defrust slot_content(value) do
     value.record(VariableAnyValue.SLOT_CONTENT_ID_VALUE)
     |> and_then(fn slot -> guid_key(slot.record(SlotContentId.GUID)) end)
@@ -153,7 +151,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
 
   # Applies an owner's assignments over `bindings`; later entries win. A replacement keeps its
   # position and remembers the values it replaced, innermost first.
-  @spec assign(R.vec(binding()), R.slice(R.ref(KiwiRecord.t())), R.option(R.u32())) ::
+  @spec assign(R.vec(binding()), R.slice(R.ref(Kiwi.kiwi_record())), R.option(R.u32())) ::
           R.vec(binding())
   defrust assign(bindings, assignments, rank) do
     for assignment <- assignments do
@@ -178,7 +176,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
     bindings
   end
 
-  @spec assignment_binding(R.ref(KiwiRecord.t()), R.option(R.u32())) :: R.option(binding())
+  @spec assignment_binding(R.ref(Kiwi.kiwi_record()), R.option(R.u32())) :: R.option(binding())
   defrust assignment_binding(assignment, rank) do
     with {:some, id} <- guid_key(assignment.record(ComponentPropAssignment.DEF_ID)),
          {:some, value} <- assignment_value(assignment) do
@@ -198,7 +196,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
 
   # An assignment's own value, else the component its variable value names, else the first
   # value its variable holds.
-  @spec assignment_value(R.ref(KiwiRecord.t())) :: R.option(prop_value())
+  @spec assignment_value(R.ref(Kiwi.kiwi_record())) :: R.option(prop_value())
   defrust assignment_value(assignment) do
     value = assignment.record(ComponentPropAssignment.VALUE)
 
@@ -228,7 +226,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
     end
   end
 
-  @spec variable_value(R.ref(KiwiRecord.t())) :: R.option(prop_value())
+  @spec variable_value(R.ref(Kiwi.kiwi_record())) :: R.option(prop_value())
   defrust variable_value(variable) do
     value = prop_value(variable)
 
@@ -249,8 +247,8 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
 
   # Binds a record's fields from the enclosing scope, with each field a binding set and the
   # binding that set it.
-  @spec bind(R.ref(KiwiRecord.t()), R.slice(binding())) ::
-          {KiwiRecord.t(), R.vec({Occurrence.binding_claim(), binding()})}
+  @spec bind(R.ref(Kiwi.kiwi_record()), R.slice(binding())) ::
+          {Kiwi.kiwi_record(), R.vec({Occurrence.binding_claim(), binding()})}
   defrust bind(record, bindings) do
     bound = record.clone()
     claims = Vec.new()
@@ -269,8 +267,8 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
     {bound, claims}
   end
 
-  @spec bind_ref(R.ref(KiwiRecord.t()), R.ref(KiwiRecord.t()), R.slice(binding())) ::
-          R.option({KiwiRecord.t(), Occurrence.binding_claim(), binding()})
+  @spec bind_ref(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record()), R.slice(binding())) ::
+          R.option({Kiwi.kiwi_record(), Occurrence.binding_claim(), binding()})
   defrust bind_ref(record, reference, bindings) do
     with false <- reference.bool(ComponentPropRef.IS_DELETED).unwrap_or(false),
          {:some, id} <- guid_key(reference.record(ComponentPropRef.DEF_ID)),
@@ -285,8 +283,8 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
     end
   end
 
-  @spec bind_field(R.ref(KiwiRecord.t()), R.ref(KiwiRecord.t()), R.ref(prop_value())) ::
-          R.option({KiwiRecord.t(), Occurrence.bound_field()})
+  @spec bind_field(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record()), R.ref(prop_value())) ::
+          R.option({Kiwi.kiwi_record(), Occurrence.bound_field()})
   defrust bind_field(record, reference, value) do
     case {reference.enum_value(ComponentPropRef.COMPONENT_PROP_NODE_FIELD), ref(value.bool),
           ref(value.text), ref(value.guid)} do
@@ -309,7 +307,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
     end
   end
 
-  @spec bind_symbol(R.ref(KiwiRecord.t()), R.ref(KiwiRecord.t())) :: KiwiRecord.t()
+  @spec bind_symbol(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record())) :: Kiwi.kiwi_record()
   defrust bind_symbol(record, guid) do
     symbol_data =
       case record.record(NodeChange.SYMBOL_DATA) do
@@ -324,7 +322,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   end
 
   # New characters drop the glyphs saved for the old ones.
-  @spec bind_text(R.ref(KiwiRecord.t()), R.str()) :: KiwiRecord.t()
+  @spec bind_text(R.ref(Kiwi.kiwi_record()), R.str()) :: Kiwi.kiwi_record()
   defrust bind_text(record, text) do
     text_data =
       case record.record(NodeChange.TEXT_DATA) do

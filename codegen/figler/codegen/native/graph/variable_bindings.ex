@@ -10,9 +10,6 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [
       Figler.Codegen.Native.Graph.Occurrence,
       Figler.Codegen.Native.Graph.Claims,
@@ -21,6 +18,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   alias Figler.Codegen.Native.Graph.Occurrence
   alias Figler.Codegen.Native.Graph.Variables
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
@@ -56,7 +54,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   # A binding's exact form: a constant multiplier and the variable it names, if any.
   @typep linear :: %{
            required(:multiplier) => R.f64(),
-           required(:reference) => R.option(KiwiRecord.t())
+           required(:reference) => R.option(Kiwi.kiwi_record())
          }
 
   @doc false
@@ -102,7 +100,8 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   end
 
   # The fields a record binds, each to the variable it names and a multiplier.
-  @spec bound(R.ref(KiwiRecord.t()), R.ref(Variables.variables())) :: R.vec(variable_binding())
+  @spec bound(R.ref(Kiwi.kiwi_record()), R.ref(Variables.variables())) ::
+          R.vec(variable_binding())
   defrust bound(record, vars) do
     bindings = Vec.new()
 
@@ -117,7 +116,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   @spec bind_entry(
           R.mut_ref(R.vec(variable_binding())),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
           R.ref(Variables.variables())
         ) ::
           R.unit()
@@ -169,7 +168,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   # Only exact forms: an alias, a constant, a product of constants and one alias, or an alias
   # Figma converts to text or tests for visibility.
-  @spec linear(R.ref(KiwiRecord.t()), R.u32()) :: R.option(linear())
+  @spec linear(R.ref(Kiwi.kiwi_record()), R.u32()) :: R.option(linear())
   defrust linear(data, depth) do
     case data.record(VariableData.VALUE) do
       {:some, value} when depth <= 64 ->
@@ -193,7 +192,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
     end
   end
 
-  @spec linear_expression(R.ref(KiwiRecord.t()), R.u32()) :: R.option(linear())
+  @spec linear_expression(R.ref(Kiwi.kiwi_record()), R.u32()) :: R.option(linear())
   defrust linear_expression(expression, depth) do
     arguments = expression.records(Expression.EXPRESSION_ARGUMENTS)
 
@@ -212,7 +211,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
     end
   end
 
-  @spec argument_alias(R.ref(KiwiRecord.t())) :: R.option(linear())
+  @spec argument_alias(R.ref(Kiwi.kiwi_record())) :: R.option(linear())
   defrust argument_alias(argument) do
     argument.record(VariableData.VALUE)
     |> and_then(fn value -> value.record(VariableAnyValue.ALIAS) end)
@@ -222,7 +221,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   end
 
   # A product of constants and at most one variable.
-  @spec linear_product(R.slice(R.ref(KiwiRecord.t())), R.u32()) :: R.option(linear())
+  @spec linear_product(R.slice(R.ref(Kiwi.kiwi_record())), R.u32()) :: R.option(linear())
   defrust linear_product(factors, depth) do
     factors
     |> iter()
@@ -253,7 +252,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   @spec bind_paints(
           R.mut_ref(R.vec(variable_binding())),
-          R.ref(KiwiRecord.t()),
+          R.ref(Kiwi.kiwi_record()),
           R.u32(),
           R.ref(Variables.variables())
         ) ::
@@ -278,11 +277,11 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   # Writes the values a record's bindings resolve to in `modes` into the record.
   @spec apply_bindings(
-          KiwiRecord.t(),
+          Kiwi.kiwi_record(),
           R.ref(Occurrence.occurrence()),
           R.ref(Variables.modes()),
           R.ref(Variables.variables())
-        ) :: KiwiRecord.t()
+        ) :: Kiwi.kiwi_record()
   defrust apply_bindings(record, occurrence, modes, vars) do
     bound(ref(record), vars)
     |> iter()
@@ -295,11 +294,11 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   end
 
   @spec apply_binding(
-          KiwiRecord.t(),
+          Kiwi.kiwi_record(),
           R.ref(variable_binding()),
           R.ref(Variables.variable_value()),
           R.ref(Occurrence.occurrence())
-        ) :: KiwiRecord.t()
+        ) :: Kiwi.kiwi_record()
   defrust apply_binding(record, binding, value, occurrence) do
     case {ref(binding.target), value} do
       {{:fill_paint, index}, {:color, color}} ->
@@ -336,8 +335,8 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   # A bound paint takes its whole color from the variable: RGB at full alpha, and the
   # variable's alpha as the paint's opacity.
-  @spec apply_paint(KiwiRecord.t(), R.u32(), R.usize(), R.ref(Variables.color())) ::
-          KiwiRecord.t()
+  @spec apply_paint(Kiwi.kiwi_record(), R.u32(), R.usize(), R.ref(Variables.color())) ::
+          Kiwi.kiwi_record()
   defrust apply_paint(record, field, index, color) do
     paints = record.records(field) |> into_iter() |> cloned() |> collect()
 
@@ -354,7 +353,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
     end
   end
 
-  @spec color_record(R.ref(Variables.color())) :: KiwiRecord.t()
+  @spec color_record(R.ref(Variables.color())) :: Kiwi.kiwi_record()
   defrust color_record(color) do
     KiwiRecord.new(Definitions.COLOR)
     |> put_float(ColorField.R, cast(color.r, R.f32()))
@@ -364,8 +363,14 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   end
 
   # Numbers apply in placed units, scaled with the instance; opacity is a percentage.
-  @spec apply_number(KiwiRecord.t(), R.u32(), R.f64(), R.f64(), R.ref(Occurrence.occurrence())) ::
-          KiwiRecord.t()
+  @spec apply_number(
+          Kiwi.kiwi_record(),
+          R.u32(),
+          R.f64(),
+          R.f64(),
+          R.ref(Occurrence.occurrence())
+        ) ::
+          Kiwi.kiwi_record()
   defrust apply_number(record, field, value, multiplier, occurrence) do
     placed = value * multiplier * occurrence.layout_scale
 
@@ -402,7 +407,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
     end
   end
 
-  @spec put_text(KiwiRecord.t(), R.str()) :: KiwiRecord.t()
+  @spec put_text(Kiwi.kiwi_record(), R.str()) :: Kiwi.kiwi_record()
   defrust put_text(record, text) do
     text_data =
       case record.record(NodeChange.TEXT_DATA) do
@@ -421,8 +426,8 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   # A width or height the file saved for an instance layer, or that an override sets, is
   # kept.
-  @spec put_length(KiwiRecord.t(), R.u32(), R.f64(), R.ref(Occurrence.occurrence())) ::
-          KiwiRecord.t()
+  @spec put_length(Kiwi.kiwi_record(), R.u32(), R.f64(), R.ref(Occurrence.occurrence())) ::
+          Kiwi.kiwi_record()
   defrust put_length(record, axis, value, occurrence) do
     case record.record(NodeChange.SIZE) do
       {:some, size}
@@ -436,7 +441,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   end
 
   # Positions apply to unrotated layers, whose position is the matrix translation.
-  @spec put_position(KiwiRecord.t(), R.u32(), R.f64()) :: KiwiRecord.t()
+  @spec put_position(Kiwi.kiwi_record(), R.u32(), R.f64()) :: Kiwi.kiwi_record()
   defrust put_position(record, axis, value) do
     case record.record(NodeChange.TRANSFORM) do
       {:some, transform}

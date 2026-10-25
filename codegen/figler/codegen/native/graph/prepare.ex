@@ -11,11 +11,9 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [Figler.Codegen.Native.Graph.Records]
 
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
@@ -40,8 +38,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrustmod NodeType, as: [:kiwi_records, :node_type]
   defrustmod Definitions, as: [:kiwi_record_definitions]
 
-  @typep resolved :: HashMap.t(GuidKey.t(), KiwiRecord.t())
-  @typep styles :: HashMap.t(GuidKey.t(), KiwiRecord.t())
+  @typep resolved :: HashMap.t(GuidKey.t(), Kiwi.kiwi_record())
+  @typep styles :: HashMap.t(GuidKey.t(), Kiwi.kiwi_record())
   @typep style_keys :: HashMap.t(String.t(), GuidKey.t())
 
   @doc false
@@ -83,7 +81,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
       ])
   end
 
-  @spec prepare(R.vec(KiwiRecord.t()), R.bool()) :: R.nif_result(R.vec(KiwiRecord.t()))
+  @spec prepare(R.vec(Kiwi.kiwi_record()), R.bool()) :: R.nif_result(R.vec(Kiwi.kiwi_record()))
   defrust prepare(records, styles) do
     normalized = records |> iter() |> map(fn record -> normalize(record) end) |> collect()
     inherited = inherit_property_definitions(normalized)
@@ -91,7 +89,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   end
 
   # Applies to a record, its override and derived records, and its text ranges.
-  @spec normalize(R.ref(KiwiRecord.t())) :: KiwiRecord.t()
+  @spec normalize(R.ref(Kiwi.kiwi_record())) :: Kiwi.kiwi_record()
   defrust normalize(record) do
     record.map_records(NodeChange.COMPONENT_PROP_DEFS, fn definition ->
       normalize_default(definition)
@@ -108,7 +106,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
 
   # Current files keep a property's default in `varValue`; an instance-swap default names
   # its component by GUID.
-  @spec normalize_default(R.ref(KiwiRecord.t())) :: KiwiRecord.t()
+  @spec normalize_default(R.ref(Kiwi.kiwi_record())) :: Kiwi.kiwi_record()
   defrust normalize_default(definition) do
     if definition.has(ComponentPropDef.INITIAL_VALUE) do
       definition.clone()
@@ -120,7 +118,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec default_value(R.ref(KiwiRecord.t())) :: R.option(KiwiRecord.t())
+  @spec default_value(R.ref(Kiwi.kiwi_record())) :: R.option(Kiwi.kiwi_record())
   defrust default_value(definition) do
     with {:some, variable} <- definition.record(ComponentPropDef.VAR_VALUE),
          {:some, value} <- variable.record(VariableData.VALUE) do
@@ -143,7 +141,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
 
   # A PROP_REF entry replaces the saved ref for the same field, keeping its position; new
   # fields follow the saved refs.
-  @spec put_prop_refs(KiwiRecord.t()) :: KiwiRecord.t()
+  @spec put_prop_refs(Kiwi.kiwi_record()) :: Kiwi.kiwi_record()
   defrust put_prop_refs(record) do
     entries =
       case record.record(NodeChange.PARAMETER_CONSUMPTION_MAP) do
@@ -162,7 +160,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     if refs.is_empty(), do: record, else: record.put_records(NodeChange.COMPONENT_PROP_REFS, refs)
   end
 
-  @spec prop_ref(R.ref(R.ref(KiwiRecord.t()))) :: R.option(KiwiRecord.t())
+  @spec prop_ref(R.ref(R.ref(Kiwi.kiwi_record()))) :: R.option(Kiwi.kiwi_record())
   defrust prop_ref(entry) do
     with {:some, variable_field} <- entry.enum_value(VariableDataMapEntry.VARIABLE_FIELD),
          {:some, field} <- node_field(variable_field),
@@ -198,7 +196,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   end
 
   # Replaces the last saved ref for the same field, or adds the ref after the others.
-  @spec upsert_ref(R.vec(KiwiRecord.t()), KiwiRecord.t()) :: R.vec(KiwiRecord.t())
+  @spec upsert_ref(R.vec(Kiwi.kiwi_record()), Kiwi.kiwi_record()) :: R.vec(Kiwi.kiwi_record())
   defrust upsert_ref(refs, prop_ref) do
     field = prop_ref.enum_value(ComponentPropRef.COMPONENT_PROP_NODE_FIELD)
 
@@ -219,7 +217,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   end
 
   # Completes definitions that name a parent from the nearest ancestor holding it.
-  @spec inherit_property_definitions(R.vec(KiwiRecord.t())) :: R.nif_result(R.vec(KiwiRecord.t()))
+  @spec inherit_property_definitions(R.vec(Kiwi.kiwi_record())) ::
+          R.nif_result(R.vec(Kiwi.kiwi_record()))
   defrust inherit_property_definitions(records) do
     if records.iter().any(fn record -> linked_definitions(record) end) do
       by_id = records_by_id(ref(records))
@@ -234,7 +233,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec records_by_id(R.slice(KiwiRecord.t())) :: HashMap.t(GuidKey.t(), R.ref(KiwiRecord.t()))
+  @spec records_by_id(R.slice(Kiwi.kiwi_record())) ::
+          HashMap.t(GuidKey.t(), R.ref(Kiwi.kiwi_record()))
   defrust records_by_id(records) do
     records
     |> iter()
@@ -242,7 +242,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     |> collect()
   end
 
-  @spec linked_definitions(R.ref(KiwiRecord.t())) :: R.bool()
+  @spec linked_definitions(R.ref(Kiwi.kiwi_record())) :: R.bool()
   defrust linked_definitions(record) do
     record
     |> records(NodeChange.COMPONENT_PROP_DEFS)
@@ -251,11 +251,11 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   end
 
   @spec resolve(
-          R.ref(KiwiRecord.t()),
-          R.ref(HashMap.t(GuidKey.t(), R.ref(KiwiRecord.t()))),
+          R.ref(Kiwi.kiwi_record()),
+          R.ref(HashMap.t(GuidKey.t(), R.ref(Kiwi.kiwi_record()))),
           R.mut_ref(resolved()),
           R.ref(HashSet.t(GuidKey.t()))
-        ) :: R.nif_result(KiwiRecord.t())
+        ) :: R.nif_result(Kiwi.kiwi_record())
   defrust resolve(record, by_id, resolved, visiting) do
     case record_id(record) do
       :none ->
@@ -285,7 +285,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec cached(R.ref(resolved()), GuidKey.t()) :: R.nif_result(KiwiRecord.t())
+  @spec cached(R.ref(resolved()), GuidKey.t()) :: R.nif_result(Kiwi.kiwi_record())
   defrust cached(resolved, id) do
     case resolved.get(ref(id)) do
       {:some, record} -> ok(record.clone())
@@ -294,11 +294,11 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   end
 
   @spec resolved_ancestors(
-          R.ref(KiwiRecord.t()),
-          R.ref(HashMap.t(GuidKey.t(), R.ref(KiwiRecord.t()))),
+          R.ref(Kiwi.kiwi_record()),
+          R.ref(HashMap.t(GuidKey.t(), R.ref(Kiwi.kiwi_record()))),
           R.mut_ref(resolved()),
           R.ref(HashSet.t(GuidKey.t()))
-        ) :: R.nif_result(R.vec(KiwiRecord.t()))
+        ) :: R.nif_result(R.vec(Kiwi.kiwi_record()))
   defrust resolved_ancestors(record, by_id, resolved, visiting) do
     case parent_id(record).and_then(fn id -> by_id.get(ref(id)) end) do
       :none ->
@@ -312,8 +312,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec inherit_from(R.ref(KiwiRecord.t()), R.slice(KiwiRecord.t())) ::
-          R.nif_result(KiwiRecord.t())
+  @spec inherit_from(R.ref(Kiwi.kiwi_record()), R.slice(Kiwi.kiwi_record())) ::
+          R.nif_result(Kiwi.kiwi_record())
   defrust inherit_from(record, ancestors) do
     definitions = inherit_definitions(record, ancestors)
 
@@ -322,8 +322,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
       else: ok(record.clone())
   end
 
-  @spec inherit_definitions(R.ref(KiwiRecord.t()), R.slice(KiwiRecord.t())) ::
-          R.nif_result(R.vec(KiwiRecord.t()))
+  @spec inherit_definitions(R.ref(Kiwi.kiwi_record()), R.slice(Kiwi.kiwi_record())) ::
+          R.nif_result(R.vec(Kiwi.kiwi_record()))
   defrust inherit_definitions(record, ancestors) do
     record
     |> records(NodeChange.COMPONENT_PROP_DEFS)
@@ -334,8 +334,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
 
   # A definition whose parent is not among its ancestors, as in a partial set of records,
   # keeps its own fields.
-  @spec inherit_definition(R.ref(KiwiRecord.t()), R.slice(KiwiRecord.t())) ::
-          R.nif_result(KiwiRecord.t())
+  @spec inherit_definition(R.ref(Kiwi.kiwi_record()), R.slice(Kiwi.kiwi_record())) ::
+          R.nif_result(Kiwi.kiwi_record())
   defrust inherit_definition(definition, ancestors) do
     case guid_key(definition.record(ComponentPropDef.PARENT_PROP_DEF_ID)) do
       :none ->
@@ -347,7 +347,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec parent_definition(R.slice(KiwiRecord.t()), GuidKey.t()) :: R.nif_result(KiwiRecord.t())
+  @spec parent_definition(R.slice(Kiwi.kiwi_record()), GuidKey.t()) ::
+          R.nif_result(Kiwi.kiwi_record())
   defrust parent_definition(ancestors, parent_id) do
     found =
       ancestors
@@ -364,7 +365,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec definitions_named(R.ref(KiwiRecord.t()), GuidKey.t()) :: R.vec(R.ref(KiwiRecord.t()))
+  @spec definitions_named(R.ref(Kiwi.kiwi_record()), GuidKey.t()) ::
+          R.vec(R.ref(Kiwi.kiwi_record()))
   defrust definitions_named(ancestor, id) do
     ancestor
     |> records(NodeChange.COMPONENT_PROP_DEFS)
@@ -373,7 +375,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     |> collect()
   end
 
-  @spec apply_styles(R.vec(KiwiRecord.t())) :: R.vec(KiwiRecord.t())
+  @spec apply_styles(R.vec(Kiwi.kiwi_record())) :: R.vec(Kiwi.kiwi_record())
   defrust apply_styles(records) do
     styles = style_records(ref(records))
 
@@ -389,7 +391,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec style_records(R.slice(KiwiRecord.t())) :: styles()
+  @spec style_records(R.slice(Kiwi.kiwi_record())) :: styles()
   defrust style_records(records) do
     records
     |> iter()
@@ -399,12 +401,12 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   end
 
   # Library styles are named by key, and by key and version.
-  @spec style_keys(R.slice(KiwiRecord.t())) :: style_keys()
+  @spec style_keys(R.slice(Kiwi.kiwi_record())) :: style_keys()
   defrust style_keys(records) do
     records |> iter() |> flat_map(fn record -> style_names(record) end) |> collect()
   end
 
-  @spec style_names(R.ref(KiwiRecord.t())) :: R.vec({String.t(), GuidKey.t()})
+  @spec style_names(R.ref(Kiwi.kiwi_record())) :: R.vec({String.t(), GuidKey.t()})
   defrust style_names(record) do
     with {:some, key} <- record.str(NodeChange.KEY),
          {:some, id} <- record_id(record) do
@@ -417,8 +419,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec apply_style_refs(R.ref(KiwiRecord.t()), R.ref(styles()), R.ref(style_keys())) ::
-          KiwiRecord.t()
+  @spec apply_style_refs(R.ref(Kiwi.kiwi_record()), R.ref(styles()), R.ref(style_keys())) ::
+          Kiwi.kiwi_record()
   defrust apply_style_refs(record, styles, keys) do
     fill =
       style_field(
@@ -473,14 +475,14 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
 
   # A style of `style_type` that sets `source` gives the record its `target`.
   @spec style_field(
-          KiwiRecord.t(),
+          Kiwi.kiwi_record(),
           R.u32(),
           R.u32(),
           R.u32(),
           R.u32(),
           R.ref(styles()),
           R.ref(style_keys())
-        ) :: KiwiRecord.t()
+        ) :: Kiwi.kiwi_record()
   defrust style_field(record, field, style_type, source, target, styles, keys) do
     with {:some, style} <- referenced_style(ref(record), field, styles, keys),
          {:some, value} <- style.get(source) do
@@ -493,7 +495,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   end
 
   # A text style sets the fields it defines, and its decoration even when unset.
-  @spec text_style(KiwiRecord.t(), R.ref(styles()), R.ref(style_keys())) :: KiwiRecord.t()
+  @spec text_style(Kiwi.kiwi_record(), R.ref(styles()), R.ref(style_keys())) :: Kiwi.kiwi_record()
   defrust text_style(record, styles, keys) do
     case referenced_style(ref(record), NodeChange.STYLE_ID_FOR_TEXT, styles, keys) do
       {:some, style} ->
@@ -509,7 +511,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec with_text_style(KiwiRecord.t(), R.ref(KiwiRecord.t())) :: KiwiRecord.t()
+  @spec with_text_style(Kiwi.kiwi_record(), R.ref(Kiwi.kiwi_record())) :: Kiwi.kiwi_record()
   defrust with_text_style(record, style) do
     text =
       style.take(
@@ -530,8 +532,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec referenced_style(R.ref(KiwiRecord.t()), R.u32(), R.ref(styles()), R.ref(style_keys())) ::
-          R.option(KiwiRecord.t())
+  @spec referenced_style(R.ref(Kiwi.kiwi_record()), R.u32(), R.ref(styles()), R.ref(style_keys())) ::
+          R.option(Kiwi.kiwi_record())
   defrust referenced_style(record, field, styles, keys) do
     case record.record(field) do
       :none ->
@@ -551,8 +553,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec asset_style(R.ref(KiwiRecord.t()), R.ref(styles()), R.ref(style_keys())) ::
-          R.option(KiwiRecord.t())
+  @spec asset_style(R.ref(Kiwi.kiwi_record()), R.ref(styles()), R.ref(style_keys())) ::
+          R.option(Kiwi.kiwi_record())
   defrust asset_style(asset, styles, keys) do
     case asset.str(AssetRef.KEY) do
       :none ->
@@ -573,7 +575,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   end
 
   @spec unversioned_style(R.ref(styles()), R.ref(style_keys()), R.str()) ::
-          R.option(KiwiRecord.t())
+          R.option(Kiwi.kiwi_record())
   defrust unversioned_style(styles, keys, key) do
     case keys.get(key) do
       {:some, id} -> style_by_id(styles, deref(id))
@@ -581,7 +583,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec style_by_id(R.ref(styles()), GuidKey.t()) :: R.option(KiwiRecord.t())
+  @spec style_by_id(R.ref(styles()), GuidKey.t()) :: R.option(Kiwi.kiwi_record())
   defrust style_by_id(styles, id) do
     case styles.get(ref(id)) do
       {:some, style} -> some(style.clone())

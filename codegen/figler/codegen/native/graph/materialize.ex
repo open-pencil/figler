@@ -9,9 +9,6 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [
       Figler.Codegen.Native.Graph.Records,
       Figler.Codegen.Native.Graph.SourceIndex,
@@ -25,6 +22,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   alias Figler.Codegen.Native.Graph.Occurrence
   alias Figler.Codegen.Native.Graph.SourceIndex
   alias Figler.Codegen.Native.Graph.Variables
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
@@ -51,7 +49,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   @typep graph_node :: %{
            required(:guid) => graph_guid(),
            required(:parent) => R.option(graph_guid()),
-           required(:record) => KiwiRecord.t(),
+           required(:record) => Kiwi.kiwi_record(),
            required(:provenance) => R.option(provenance()),
            required(:children) => R.vec(R.usize())
          }
@@ -220,7 +218,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   end
 
   # The modes a layer sets explicitly, by collection.
-  @spec explicit_modes(R.ref(KiwiRecord.t()), R.option(R.ref(Variables.variables()))) ::
+  @spec explicit_modes(R.ref(Kiwi.kiwi_record()), R.option(R.ref(Variables.variables()))) ::
           Variables.modes()
   defrust explicit_modes(record, vars) do
     modes = HashMap.new()
@@ -268,7 +266,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
           R.mut_ref(graph()),
           graph_guid(),
           R.option(R.usize()),
-          KiwiRecord.t(),
+          Kiwi.kiwi_record(),
           R.option(provenance())
         ) :: R.usize()
   defrust put_node(graph, guid, parent, record, provenance) do

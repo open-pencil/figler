@@ -7,12 +7,10 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [Figler.Codegen.Native.Graph.Occurrence]
 
   alias Figler.Codegen.Native.Graph.Occurrence
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
@@ -135,7 +133,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     ])
   end
 
-  @spec uniform_scale(R.ref(KiwiRecord.t())) :: R.f64()
+  @spec uniform_scale(R.ref(Kiwi.kiwi_record())) :: R.f64()
   defrust uniform_scale(record) do
     case record.record(NodeChange.SYMBOL_DATA).and_then(fn data ->
            data.float(SymbolData.UNIFORM_SCALE_FACTOR)
@@ -147,7 +145,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
 
   # Scales an expansion from component space into the instance's placed space, then restores
   # the distances the instance record itself declares.
-  @spec apply_layout_scale(Occurrence.occurrence(), R.ref(KiwiRecord.t())) ::
+  @spec apply_layout_scale(Occurrence.occurrence(), R.ref(Kiwi.kiwi_record())) ::
           R.nif_result(Occurrence.occurrence())
   defrust apply_layout_scale(root, source) do
     factor = uniform_scale(source)
@@ -187,7 +185,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     }
   end
 
-  @spec scale_properties(R.ref(KiwiRecord.t()), R.f64()) :: KiwiRecord.t()
+  @spec scale_properties(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_properties(properties, factor) do
     scale_text_layout(properties, factor)
     |> scale_numbers(visual_lengths(), factor)
@@ -200,7 +198,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     end)
   end
 
-  @spec scale_effect(R.ref(KiwiRecord.t()), R.f64()) :: KiwiRecord.t()
+  @spec scale_effect(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_effect(effect, factor) do
     effect
     |> map_record(Effect.OFFSET, fn offset -> scale_vector(offset, factor) end)
@@ -208,7 +206,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   end
 
   # Scales positional text data, not font identity or normalized glyph outlines.
-  @spec scale_text_layout(R.ref(KiwiRecord.t()), R.f64()) :: KiwiRecord.t()
+  @spec scale_text_layout(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_text_layout(properties, factor) do
     properties
     |> scale_numbers(ref([NodeChange.FONT_SIZE]), factor)
@@ -224,7 +222,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     end)
   end
 
-  @spec scale_derived_text(R.ref(KiwiRecord.t()), R.f64()) :: KiwiRecord.t()
+  @spec scale_derived_text(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_derived_text(derived, factor) do
     derived
     |> map_record(DerivedTextData.LAYOUT_SIZE, fn size -> scale_vector(size, factor) end)
@@ -233,14 +231,14 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     |> map_records(DerivedTextData.BASELINES, fn baseline -> scale_baseline(baseline, factor) end)
   end
 
-  @spec scale_glyph(R.ref(KiwiRecord.t()), R.f64()) :: KiwiRecord.t()
+  @spec scale_glyph(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_glyph(glyph, factor) do
     glyph
     |> map_record(Glyph.POSITION, fn position -> scale_vector(position, factor) end)
     |> scale_numbers(ref([Glyph.FONT_SIZE]), factor)
   end
 
-  @spec scale_baseline(R.ref(KiwiRecord.t()), R.f64()) :: KiwiRecord.t()
+  @spec scale_baseline(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_baseline(baseline, factor) do
     baseline
     |> map_record(Baseline.POSITION, fn position -> scale_vector(position, factor) end)
@@ -251,7 +249,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   end
 
   # A metric given in pixels scales; one given in percent or raw units does not.
-  @spec scale_pixel_value(KiwiRecord.t(), R.u32(), R.f64()) :: KiwiRecord.t()
+  @spec scale_pixel_value(Kiwi.kiwi_record(), R.u32(), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_pixel_value(properties, field, factor) do
     properties.map_record(field, fn metric ->
       if metric.enum_value(NumberValue.UNITS) == some(NumberUnits.PIXELS),
@@ -260,7 +258,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     end)
   end
 
-  @spec scale_numbers(R.ref(KiwiRecord.t()), R.slice(R.u32()), R.f64()) :: KiwiRecord.t()
+  @spec scale_numbers(R.ref(Kiwi.kiwi_record()), R.slice(R.u32()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_numbers(record, fields, factor) do
     fields
     |> iter()
@@ -275,12 +273,12 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     end)
   end
 
-  @spec scale_vector(R.ref(KiwiRecord.t()), R.f64()) :: KiwiRecord.t()
+  @spec scale_vector(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust(scale_vector(vector, factor),
     do: scale_numbers(vector, ref([Vector.X, Vector.Y]), factor)
   )
 
-  @spec scale_floats(KiwiRecord.t(), R.u32(), R.f64()) :: KiwiRecord.t()
+  @spec scale_floats(Kiwi.kiwi_record(), R.u32(), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_floats(record, field, factor) do
     if record.has(field) do
       values =
@@ -295,7 +293,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     end
   end
 
-  @spec vector_size(R.ref(KiwiRecord.t())) :: {R.f64(), R.f64()}
+  @spec vector_size(R.ref(Kiwi.kiwi_record())) :: {R.f64(), R.f64()}
   defrust vector_size(vector) do
     {cast(vector.float(Vector.X).unwrap_or(0.0), R.f64()),
      cast(vector.float(Vector.Y).unwrap_or(0.0), R.f64())}
@@ -305,7 +303,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   @spec apply_placed_constraints(
           Occurrence.occurrence(),
           R.option(R.ref(Occurrence.occurrence())),
-          R.ref(KiwiRecord.t())
+          R.ref(Kiwi.kiwi_record())
         ) :: Occurrence.occurrence()
   defrust apply_placed_constraints(root, base, source) do
     with {:some, base} <- base,
@@ -434,7 +432,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     end
   end
 
-  @spec identity_matrix() :: KiwiRecord.t()
+  @spec identity_matrix() :: Kiwi.kiwi_record()
   defrust identity_matrix() do
     KiwiRecord.new(Definitions.MATRIX)
     |> put_float(Matrix.M00, 1.0)
@@ -446,7 +444,8 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   end
 
   # Copies one saved derived entry onto its target; a cache, not a claim.
-  @spec apply_derived_entry(R.mut_ref(Occurrence.occurrence()), R.ref(KiwiRecord.t())) :: R.unit()
+  @spec apply_derived_entry(R.mut_ref(Occurrence.occurrence()), R.ref(Kiwi.kiwi_record())) ::
+          R.unit()
   defrust apply_derived_entry(target, entry) do
     derived = entry.take(derived_fields())
 

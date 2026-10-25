@@ -7,11 +7,9 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   """
 
   use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ],
     callable_modules: [Figler.Codegen.Native.Graph.Records, Figler.Codegen.Native.Graph.Prepare]
 
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod Message, as: [:kiwi_records, :message]
@@ -19,7 +17,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   defrustmod NodePhase, as: [:kiwi_records, :node_phase]
   defrustmod SymbolData, as: [:kiwi_records, :symbol_data]
 
-  @typep sources :: HashMap.t(GuidKey.t(), KiwiRecord.t())
+  @typep sources :: HashMap.t(GuidKey.t(), Kiwi.kiwi_record())
   @typep children :: HashMap.t(GuidKey.t(), R.vec(GuidKey.t()))
   @typep source_index :: %{required(:sources) => sources(), required(:children) => children()}
 
@@ -58,7 +56,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
       ])
   end
 
-  @spec source_index(R.ref(KiwiRecord.t()), R.bool()) :: R.nif_result(source_index())
+  @spec source_index(R.ref(Kiwi.kiwi_record()), R.bool()) :: R.nif_result(source_index())
   defrust source_index(message, styles) do
     live = live_records(message)
 
@@ -76,21 +74,21 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
     end
   end
 
-  @spec live?(R.ref(KiwiRecord.t())) :: R.bool()
+  @spec live?(R.ref(Kiwi.kiwi_record())) :: R.bool()
   defrust live?(record), do: record.enum_value(NodeChange.PHASE) != some(NodePhase.REMOVED)
 
-  @spec live_records(R.ref(KiwiRecord.t())) :: R.vec(R.ref(KiwiRecord.t()))
+  @spec live_records(R.ref(Kiwi.kiwi_record())) :: R.vec(R.ref(Kiwi.kiwi_record()))
   defrust live_records(message) do
     for record <- message.records(Message.NODE_CHANGES), live?(record), do: record
   end
 
-  @spec duplicate_ids?(R.slice(R.ref(KiwiRecord.t()))) :: R.bool()
+  @spec duplicate_ids?(R.slice(R.ref(Kiwi.kiwi_record()))) :: R.bool()
   defrust duplicate_ids?(records) do
     ids = record_ids(records)
     ids.len() != id_set(ref(ids)).len()
   end
 
-  @spec record_ids(R.slice(R.ref(KiwiRecord.t()))) :: R.vec(GuidKey.t())
+  @spec record_ids(R.slice(R.ref(Kiwi.kiwi_record()))) :: R.vec(GuidKey.t())
   defrust record_ids(records) do
     records |> iter() |> filter_map(fn record -> record_id(record) end) |> collect()
   end
@@ -98,7 +96,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   @spec id_set(R.slice(GuidKey.t())) :: HashSet.t(GuidKey.t())
   defrust id_set(ids), do: ids |> iter() |> copied() |> collect()
 
-  @spec sources(R.slice(KiwiRecord.t())) :: sources()
+  @spec sources(R.slice(Kiwi.kiwi_record())) :: sources()
   defrust sources(records) do
     records
     |> iter()
@@ -106,7 +104,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
     |> collect()
   end
 
-  @spec children(R.slice(KiwiRecord.t())) :: children()
+  @spec children(R.slice(Kiwi.kiwi_record())) :: children()
   defrust children(records) do
     children = HashMap.new()
 
@@ -118,7 +116,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   end
 
   # Each parent and child, in the children's saved order.
-  @spec child_pairs(R.slice(KiwiRecord.t())) :: R.vec({GuidKey.t(), GuidKey.t()})
+  @spec child_pairs(R.slice(Kiwi.kiwi_record())) :: R.vec({GuidKey.t(), GuidKey.t()})
   defrust child_pairs(records) do
     ordered = record_refs(records)
     ordered.sort_by_key(fn record -> position(record) end)
@@ -136,10 +134,10 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
     |> collect()
   end
 
-  @spec record_refs(R.slice(KiwiRecord.t())) :: R.vec(R.ref(KiwiRecord.t()))
+  @spec record_refs(R.slice(Kiwi.kiwi_record())) :: R.vec(R.ref(Kiwi.kiwi_record()))
   defrust record_refs(records), do: records |> iter() |> collect()
 
-  @spec source(R.ref(source_index()), GuidKey.t()) :: R.option(R.ref(KiwiRecord.t()))
+  @spec source(R.ref(source_index()), GuidKey.t()) :: R.option(R.ref(Kiwi.kiwi_record()))
   defrust(source(index, id), do: index.sources.get(ref(id)))
 
   @spec children_of(R.ref(source_index()), GuidKey.t()) :: R.slice(GuidKey.t())
@@ -151,7 +149,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   end
 
   # The component an instance record names.
-  @spec symbol_id(R.ref(KiwiRecord.t())) :: R.option(GuidKey.t())
+  @spec symbol_id(R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
   defrust symbol_id(record) do
     record.record(NodeChange.SYMBOL_DATA).and_then(fn data ->
       guid_key(data.record(SymbolData.SYMBOL_ID))
@@ -159,14 +157,14 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   end
 
   # A stable override key, unless it is the unset GUID layers without one share.
-  @spec override_key(R.ref(KiwiRecord.t())) :: R.option(GuidKey.t())
+  @spec override_key(R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
   defrust override_key(record) do
     guid_key(record.record(NodeChange.OVERRIDE_KEY))
     |> filter(fn key -> deref(key) != {0xFFFFFFFF, 0xFFFFFFFF} end)
   end
 
   # A path segment addresses a record by GUID or by its stable override key.
-  @spec matches?(R.ref(KiwiRecord.t()), GuidKey.t()) :: R.bool()
+  @spec matches?(R.ref(Kiwi.kiwi_record()), GuidKey.t()) :: R.bool()
   defrust matches?(record, guid) do
     record_id(record) == some(guid) or override_key(record) == some(guid)
   end

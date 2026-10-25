@@ -3,11 +3,9 @@ defmodule Figler.Codegen.Native.Graph.Records do
   Reading GUIDs and tree placement from native Kiwi records, for the native interpreter.
   """
 
-  use RustQ.Meta,
-    rust_sources: [
-      "deps/kiwi_codec/codegen/kiwi_codec/rustler_generator/templates/records_runtime.rs"
-    ]
+  use RustQ.Meta
 
+  alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   defrustmod NodeChange, as: [:kiwi_records, :node_change]
@@ -23,7 +21,7 @@ defmodule Figler.Codegen.Native.Graph.Records do
       RustQ.Meta.AST.functions!(__MODULE__, [:guid_key, :record_id, :parent_id, :position])
   end
 
-  @spec guid_key(R.option(R.ref(KiwiRecord.t()))) :: R.option(guid_key())
+  @spec guid_key(R.option(R.ref(Kiwi.kiwi_record()))) :: R.option(guid_key())
   defrust guid_key(guid) do
     with {:some, guid} <- guid,
          {:some, session} <- guid.uint(Guid.SESSION_ID),
@@ -34,10 +32,10 @@ defmodule Figler.Codegen.Native.Graph.Records do
     end
   end
 
-  @spec record_id(R.ref(KiwiRecord.t())) :: R.option(guid_key())
+  @spec record_id(R.ref(Kiwi.kiwi_record())) :: R.option(guid_key())
   defrust record_id(record), do: guid_key(record.record(NodeChange.GUID))
 
-  @spec parent_id(R.ref(KiwiRecord.t())) :: R.option(guid_key())
+  @spec parent_id(R.ref(Kiwi.kiwi_record())) :: R.option(guid_key())
   defrust parent_id(record) do
     case record.record(NodeChange.PARENT_INDEX) do
       {:some, parent} -> guid_key(parent.record(ParentIndex.GUID))
@@ -46,7 +44,7 @@ defmodule Figler.Codegen.Native.Graph.Records do
   end
 
   # Saved sibling order: the fractional position string, compared as text.
-  @spec position(R.ref(KiwiRecord.t())) :: R.str()
+  @spec position(R.ref(Kiwi.kiwi_record())) :: R.str()
   defrust position(record) do
     case record.record(NodeChange.PARENT_INDEX) do
       {:some, parent} -> parent.str(ParentIndex.POSITION).unwrap_or("")
