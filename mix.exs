@@ -184,14 +184,14 @@ defmodule Figler.MixProject do
   # KIWI_CODEC_PATH and RUSTQ_PATH point at local checkouts, to try changes to them here.
   defp kiwi_codec_dep do
     case System.get_env("KIWI_CODEC_PATH") do
-      nil -> {:kiwi_codec, "~> 0.5.0"}
+      nil -> {:kiwi_codec, "~> 0.5.1"}
       path -> {:kiwi_codec, path: path, override: true}
     end
   end
 
   defp rustq_dep do
     case System.get_env("RUSTQ_PATH") do
-      nil -> {:rustq, "~> 1.0.0-rc.15", only: [:dev, :test], runtime: false}
+      nil -> {:rustq, "~> 1.0.0-rc.16", only: [:dev, :test], runtime: false}
       path -> {:rustq, path: path, only: [:dev, :test], runtime: false, override: true}
     end
   end
