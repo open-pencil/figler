@@ -13,22 +13,6 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  defrustmod NodeChange, as: [:kiwi_records, :node_change]
-  defrustmod SymbolData, as: [:kiwi_records, :symbol_data]
-  defrustmod TextData, as: [:kiwi_records, :text_data]
-  defrustmod DerivedTextData, as: [:kiwi_records, :derived_text_data]
-  defrustmod Glyph, as: [:kiwi_records, :glyph]
-  defrustmod Baseline, as: [:kiwi_records, :baseline]
-  defrustmod Effect, as: [:kiwi_records, :effect]
-  defrustmod Vector, as: [:kiwi_records, :vector]
-  defrustmod Matrix, as: [:kiwi_records, :matrix]
-  defrustmod NumberValue, as: [:kiwi_records, :number]
-  defrustmod NumberUnits, as: [:kiwi_records, :number_units]
-  defrustmod ConstraintType, as: [:kiwi_records, :constraint_type]
-  defrustmod StackMode, as: [:kiwi_records, :stack_mode]
-  defrustmod StackPositioning, as: [:kiwi_records, :stack_positioning]
-  defrustmod Definitions, as: [:kiwi_record_definitions]
-
   @doc false
   @spec items() :: [term()]
   def items do
@@ -64,12 +48,12 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   @spec visual_lengths() :: R.slice(R.u32(), R.lifetime(:static))
   defrust visual_lengths() do
     ref([
-      NodeChange.STROKE_WEIGHT,
-      NodeChange.CORNER_RADIUS,
-      NodeChange.RECTANGLE_TOP_LEFT_CORNER_RADIUS,
-      NodeChange.RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
-      NodeChange.RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
-      NodeChange.RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS
+      Kiwi.NodeChange.STROKE_WEIGHT,
+      Kiwi.NodeChange.CORNER_RADIUS,
+      Kiwi.NodeChange.RECTANGLE_TOP_LEFT_CORNER_RADIUS,
+      Kiwi.NodeChange.RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
+      Kiwi.NodeChange.RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
+      Kiwi.NodeChange.RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS
     ])
   end
 
@@ -77,13 +61,13 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   @spec layout_distances() :: R.slice(R.u32(), R.lifetime(:static))
   defrust layout_distances() do
     ref([
-      NodeChange.STACK_PADDING,
-      NodeChange.STACK_SPACING,
-      NodeChange.STACK_COUNTER_SPACING,
-      NodeChange.STACK_HORIZONTAL_PADDING,
-      NodeChange.STACK_VERTICAL_PADDING,
-      NodeChange.STACK_PADDING_RIGHT,
-      NodeChange.STACK_PADDING_BOTTOM
+      Kiwi.NodeChange.STACK_PADDING,
+      Kiwi.NodeChange.STACK_SPACING,
+      Kiwi.NodeChange.STACK_COUNTER_SPACING,
+      Kiwi.NodeChange.STACK_HORIZONTAL_PADDING,
+      Kiwi.NodeChange.STACK_VERTICAL_PADDING,
+      Kiwi.NodeChange.STACK_PADDING_RIGHT,
+      Kiwi.NodeChange.STACK_PADDING_BOTTOM
     ])
   end
 
@@ -92,28 +76,28 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   @spec scaled_fields() :: R.slice(R.u32(), R.lifetime(:static))
   defrust scaled_fields() do
     ref([
-      NodeChange.STACK_PADDING,
-      NodeChange.STACK_SPACING,
-      NodeChange.STACK_COUNTER_SPACING,
-      NodeChange.STACK_HORIZONTAL_PADDING,
-      NodeChange.STACK_VERTICAL_PADDING,
-      NodeChange.STACK_PADDING_RIGHT,
-      NodeChange.STACK_PADDING_BOTTOM,
-      NodeChange.STROKE_WEIGHT,
-      NodeChange.CORNER_RADIUS,
-      NodeChange.RECTANGLE_TOP_LEFT_CORNER_RADIUS,
-      NodeChange.RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
-      NodeChange.RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
-      NodeChange.RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS,
-      NodeChange.FONT_SIZE,
-      NodeChange.LINE_HEIGHT,
-      NodeChange.LETTER_SPACING,
-      NodeChange.TEXT_DATA,
-      NodeChange.DERIVED_TEXT_DATA,
-      NodeChange.DASH_PATTERN,
-      NodeChange.EFFECTS,
-      NodeChange.SIZE,
-      NodeChange.TRANSFORM
+      Kiwi.NodeChange.STACK_PADDING,
+      Kiwi.NodeChange.STACK_SPACING,
+      Kiwi.NodeChange.STACK_COUNTER_SPACING,
+      Kiwi.NodeChange.STACK_HORIZONTAL_PADDING,
+      Kiwi.NodeChange.STACK_VERTICAL_PADDING,
+      Kiwi.NodeChange.STACK_PADDING_RIGHT,
+      Kiwi.NodeChange.STACK_PADDING_BOTTOM,
+      Kiwi.NodeChange.STROKE_WEIGHT,
+      Kiwi.NodeChange.CORNER_RADIUS,
+      Kiwi.NodeChange.RECTANGLE_TOP_LEFT_CORNER_RADIUS,
+      Kiwi.NodeChange.RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
+      Kiwi.NodeChange.RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
+      Kiwi.NodeChange.RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS,
+      Kiwi.NodeChange.FONT_SIZE,
+      Kiwi.NodeChange.LINE_HEIGHT,
+      Kiwi.NodeChange.LETTER_SPACING,
+      Kiwi.NodeChange.TEXT_DATA,
+      Kiwi.NodeChange.DERIVED_TEXT_DATA,
+      Kiwi.NodeChange.DASH_PATTERN,
+      Kiwi.NodeChange.EFFECTS,
+      Kiwi.NodeChange.SIZE,
+      Kiwi.NodeChange.TRANSFORM
     ])
   end
 
@@ -121,22 +105,22 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   @spec derived_fields() :: R.slice(R.u32(), R.lifetime(:static))
   defrust derived_fields() do
     ref([
-      NodeChange.DERIVED_TEXT_DATA,
-      NodeChange.FONT_SIZE,
-      NodeChange.LINE_HEIGHT,
-      NodeChange.LETTER_SPACING,
-      NodeChange.SIZE,
-      NodeChange.TRANSFORM,
-      NodeChange.FILL_GEOMETRY,
-      NodeChange.STROKE_GEOMETRY,
-      NodeChange.VECTOR_DATA
+      Kiwi.NodeChange.DERIVED_TEXT_DATA,
+      Kiwi.NodeChange.FONT_SIZE,
+      Kiwi.NodeChange.LINE_HEIGHT,
+      Kiwi.NodeChange.LETTER_SPACING,
+      Kiwi.NodeChange.SIZE,
+      Kiwi.NodeChange.TRANSFORM,
+      Kiwi.NodeChange.FILL_GEOMETRY,
+      Kiwi.NodeChange.STROKE_GEOMETRY,
+      Kiwi.NodeChange.VECTOR_DATA
     ])
   end
 
   @spec uniform_scale(R.ref(Kiwi.kiwi_record())) :: R.f64()
   defrust uniform_scale(record) do
-    case record.record(NodeChange.SYMBOL_DATA).and_then(fn data ->
-           data.float(SymbolData.UNIFORM_SCALE_FACTOR)
+    case record.record(Kiwi.NodeChange.SYMBOL_DATA).and_then(fn data ->
+           data.float(Kiwi.SymbolData.UNIFORM_SCALE_FACTOR)
          end) do
       {:some, factor} -> cast(factor, R.f64())
       :none -> 1.0
@@ -190,34 +174,34 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     scale_text_layout(properties, factor)
     |> scale_numbers(visual_lengths(), factor)
     |> scale_numbers(layout_distances(), factor)
-    |> scale_floats(NodeChange.DASH_PATTERN, factor)
-    |> map_records(NodeChange.EFFECTS, fn effect -> scale_effect(effect, factor) end)
-    |> map_record(NodeChange.SIZE, fn size -> scale_vector(size, factor) end)
-    |> map_record(NodeChange.TRANSFORM, fn transform ->
-      scale_numbers(transform, ref([Matrix.M02, Matrix.M12]), factor)
+    |> scale_floats(Kiwi.NodeChange.DASH_PATTERN, factor)
+    |> map_records(Kiwi.NodeChange.EFFECTS, fn effect -> scale_effect(effect, factor) end)
+    |> map_record(Kiwi.NodeChange.SIZE, fn size -> scale_vector(size, factor) end)
+    |> map_record(Kiwi.NodeChange.TRANSFORM, fn transform ->
+      scale_numbers(transform, ref([Kiwi.Matrix.M02, Kiwi.Matrix.M12]), factor)
     end)
   end
 
   @spec scale_effect(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_effect(effect, factor) do
     effect
-    |> map_record(Effect.OFFSET, fn offset -> scale_vector(offset, factor) end)
-    |> scale_numbers(ref([Effect.RADIUS, Effect.SPREAD]), factor)
+    |> map_record(Kiwi.Effect.OFFSET, fn offset -> scale_vector(offset, factor) end)
+    |> scale_numbers(ref([Kiwi.Effect.RADIUS, Kiwi.Effect.SPREAD]), factor)
   end
 
   # Scales positional text data, not font identity or normalized glyph outlines.
   @spec scale_text_layout(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_text_layout(properties, factor) do
     properties
-    |> scale_numbers(ref([NodeChange.FONT_SIZE]), factor)
-    |> scale_pixel_value(NodeChange.LINE_HEIGHT, factor)
-    |> scale_pixel_value(NodeChange.LETTER_SPACING, factor)
-    |> map_record(NodeChange.TEXT_DATA, fn text ->
-      text.map_records(TextData.STYLE_OVERRIDE_TABLE, fn style ->
+    |> scale_numbers(ref([Kiwi.NodeChange.FONT_SIZE]), factor)
+    |> scale_pixel_value(Kiwi.NodeChange.LINE_HEIGHT, factor)
+    |> scale_pixel_value(Kiwi.NodeChange.LETTER_SPACING, factor)
+    |> map_record(Kiwi.NodeChange.TEXT_DATA, fn text ->
+      text.map_records(Kiwi.TextData.STYLE_OVERRIDE_TABLE, fn style ->
         scale_text_layout(style, factor)
       end)
     end)
-    |> map_record(NodeChange.DERIVED_TEXT_DATA, fn derived ->
+    |> map_record(Kiwi.NodeChange.DERIVED_TEXT_DATA, fn derived ->
       scale_derived_text(derived, factor)
     end)
   end
@@ -225,25 +209,32 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   @spec scale_derived_text(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_derived_text(derived, factor) do
     derived
-    |> map_record(DerivedTextData.LAYOUT_SIZE, fn size -> scale_vector(size, factor) end)
-    |> scale_numbers(ref([DerivedTextData.TRUNCATED_HEIGHT]), factor)
-    |> map_records(DerivedTextData.GLYPHS, fn glyph -> scale_glyph(glyph, factor) end)
-    |> map_records(DerivedTextData.BASELINES, fn baseline -> scale_baseline(baseline, factor) end)
+    |> map_record(Kiwi.DerivedTextData.LAYOUT_SIZE, fn size -> scale_vector(size, factor) end)
+    |> scale_numbers(ref([Kiwi.DerivedTextData.TRUNCATED_HEIGHT]), factor)
+    |> map_records(Kiwi.DerivedTextData.GLYPHS, fn glyph -> scale_glyph(glyph, factor) end)
+    |> map_records(Kiwi.DerivedTextData.BASELINES, fn baseline ->
+      scale_baseline(baseline, factor)
+    end)
   end
 
   @spec scale_glyph(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_glyph(glyph, factor) do
     glyph
-    |> map_record(Glyph.POSITION, fn position -> scale_vector(position, factor) end)
-    |> scale_numbers(ref([Glyph.FONT_SIZE]), factor)
+    |> map_record(Kiwi.Glyph.POSITION, fn position -> scale_vector(position, factor) end)
+    |> scale_numbers(ref([Kiwi.Glyph.FONT_SIZE]), factor)
   end
 
   @spec scale_baseline(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_baseline(baseline, factor) do
     baseline
-    |> map_record(Baseline.POSITION, fn position -> scale_vector(position, factor) end)
+    |> map_record(Kiwi.Baseline.POSITION, fn position -> scale_vector(position, factor) end)
     |> scale_numbers(
-      ref([Baseline.WIDTH, Baseline.LINE_HEIGHT, Baseline.LINE_ASCENT, Baseline.LINE_Y]),
+      ref([
+        Kiwi.Baseline.WIDTH,
+        Kiwi.Baseline.LINE_HEIGHT,
+        Kiwi.Baseline.LINE_ASCENT,
+        Kiwi.Baseline.LINE_Y
+      ]),
       factor
     )
   end
@@ -252,8 +243,8 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   @spec scale_pixel_value(Kiwi.kiwi_record(), R.u32(), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_pixel_value(properties, field, factor) do
     properties.map_record(field, fn metric ->
-      if metric.enum_value(NumberValue.UNITS) == some(NumberUnits.PIXELS),
-        do: scale_numbers(metric, ref([NumberValue.VALUE]), factor),
+      if metric.enum_value(Kiwi.Number.UNITS) == some(Kiwi.NumberUnits.PIXELS),
+        do: scale_numbers(metric, ref([Kiwi.Number.VALUE]), factor),
         else: metric.clone()
     end)
   end
@@ -275,7 +266,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
 
   @spec scale_vector(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust(scale_vector(vector, factor),
-    do: scale_numbers(vector, ref([Vector.X, Vector.Y]), factor)
+    do: scale_numbers(vector, ref([Kiwi.Vector.X, Kiwi.Vector.Y]), factor)
   )
 
   @spec scale_floats(Kiwi.kiwi_record(), R.u32(), R.f64()) :: Kiwi.kiwi_record()
@@ -295,8 +286,8 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
 
   @spec vector_size(R.ref(Kiwi.kiwi_record())) :: {R.f64(), R.f64()}
   defrust vector_size(vector) do
-    {cast(vector.float(Vector.X).unwrap_or(0.0), R.f64()),
-     cast(vector.float(Vector.Y).unwrap_or(0.0), R.f64())}
+    {cast(vector.float(Kiwi.Vector.X).unwrap_or(0.0), R.f64()),
+     cast(vector.float(Kiwi.Vector.Y).unwrap_or(0.0), R.f64())}
   end
 
   # Resizes an instance's freeform children from the component's scaled size to its own.
@@ -307,8 +298,8 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
         ) :: Occurrence.occurrence()
   defrust apply_placed_constraints(root, base, source) do
     with {:some, base} <- base,
-         {:some, base_size} <- base.properties.record(NodeChange.SIZE),
-         {:some, size} <- source.record(NodeChange.SIZE) do
+         {:some, base_size} <- base.properties.record(Kiwi.NodeChange.SIZE),
+         {:some, size} <- source.record(Kiwi.NodeChange.SIZE) do
       {width, height} = vector_size(base_size)
       factor = uniform_scale(source)
       resize(root, {width * factor, height * factor}, vector_size(size))
@@ -324,8 +315,8 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
       root
     else
       auto_layout =
-        case root.properties.enum_value(NodeChange.STACK_MODE) do
-          {:some, StackMode.NONE} -> false
+        case root.properties.enum_value(Kiwi.NodeChange.STACK_MODE) do
+          {:some, Kiwi.StackMode.NONE} -> false
           {:some, _mode} -> true
           :none -> false
         end
@@ -344,10 +335,10 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
           Occurrence.occurrence()
   defrust resize_child(child, before_size, after_size, auto_layout) do
     absolute =
-      child.properties.enum_value(NodeChange.STACK_POSITIONING) ==
-        some(StackPositioning.ABSOLUTE)
+      child.properties.enum_value(Kiwi.NodeChange.STACK_POSITIONING) ==
+        some(Kiwi.StackPositioning.ABSOLUTE)
 
-    if (auto_layout and not absolute) or not child.properties.has(NodeChange.SIZE),
+    if (auto_layout and not absolute) or not child.properties.has(Kiwi.NodeChange.SIZE),
       do: child,
       else: resized_child(child, before_size, after_size)
   end
@@ -356,15 +347,15 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
           Occurrence.occurrence()
   defrust resized_child(child, before_size, after_size) do
     transform =
-      case child.properties.record(NodeChange.TRANSFORM) do
+      case child.properties.record(Kiwi.NodeChange.TRANSFORM) do
         {:some, transform} -> transform.clone()
         :none -> identity_matrix()
       end
 
     size =
-      case child.properties.record(NodeChange.SIZE) do
+      case child.properties.record(Kiwi.NodeChange.SIZE) do
         {:some, size} -> size.clone()
-        :none -> KiwiRecord.new(Definitions.VECTOR)
+        :none -> KiwiRecord.new(Kiwi.Definitions.VECTOR)
       end
 
     {width, height} = vector_size(ref(size))
@@ -373,38 +364,38 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
 
     {x, new_width} =
       constrained_axis(
-        cast(transform.float(Matrix.M02).unwrap_or(0.0), R.f64()),
+        cast(transform.float(Kiwi.Matrix.M02).unwrap_or(0.0), R.f64()),
         width,
         before_width,
         after_width,
-        child.properties.enum_value(NodeChange.HORIZONTAL_CONSTRAINT)
+        child.properties.enum_value(Kiwi.NodeChange.HORIZONTAL_CONSTRAINT)
       )
 
     {y, new_height} =
       constrained_axis(
-        cast(transform.float(Matrix.M12).unwrap_or(0.0), R.f64()),
+        cast(transform.float(Kiwi.Matrix.M12).unwrap_or(0.0), R.f64()),
         height,
         before_height,
         after_height,
-        child.properties.enum_value(NodeChange.VERTICAL_CONSTRAINT)
+        child.properties.enum_value(Kiwi.NodeChange.VERTICAL_CONSTRAINT)
       )
 
     child = resize(child, {width, height}, {new_width, new_height})
 
     new_size =
       size
-      |> put_float(Vector.X, cast(new_width, R.f32()))
-      |> put_float(Vector.Y, cast(new_height, R.f32()))
+      |> put_float(Kiwi.Vector.X, cast(new_width, R.f32()))
+      |> put_float(Kiwi.Vector.Y, cast(new_height, R.f32()))
 
     placed =
       transform
-      |> put_float(Matrix.M02, cast(x, R.f32()))
-      |> put_float(Matrix.M12, cast(y, R.f32()))
+      |> put_float(Kiwi.Matrix.M02, cast(x, R.f32()))
+      |> put_float(Kiwi.Matrix.M12, cast(y, R.f32()))
 
     properties =
       child.properties
-      |> put_record(NodeChange.SIZE, new_size)
-      |> put_record(NodeChange.TRANSFORM, placed)
+      |> put_record(Kiwi.NodeChange.SIZE, new_size)
+      |> put_record(Kiwi.NodeChange.TRANSFORM, placed)
 
     %{child | properties: properties}
   end
@@ -415,16 +406,16 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     delta = after_size - before_size
 
     case constraint do
-      {:some, ConstraintType.SCALE} when before_size > 0.0 ->
+      {:some, Kiwi.ConstraintType.SCALE} when before_size > 0.0 ->
         {position * (after_size / before_size), size * (after_size / before_size)}
 
-      {:some, ConstraintType.MAX} ->
+      {:some, Kiwi.ConstraintType.MAX} ->
         {position + delta, size}
 
-      {:some, ConstraintType.CENTER} ->
+      {:some, Kiwi.ConstraintType.CENTER} ->
         {position + delta / 2.0, size}
 
-      {:some, ConstraintType.STRETCH} ->
+      {:some, Kiwi.ConstraintType.STRETCH} ->
         {position, (size + delta).max(0.0)}
 
       _ ->
@@ -434,13 +425,13 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
 
   @spec identity_matrix() :: Kiwi.kiwi_record()
   defrust identity_matrix() do
-    KiwiRecord.new(Definitions.MATRIX)
-    |> put_float(Matrix.M00, 1.0)
-    |> put_float(Matrix.M01, 0.0)
-    |> put_float(Matrix.M02, 0.0)
-    |> put_float(Matrix.M10, 0.0)
-    |> put_float(Matrix.M11, 1.0)
-    |> put_float(Matrix.M12, 0.0)
+    KiwiRecord.new(Kiwi.Definitions.MATRIX)
+    |> put_float(Kiwi.Matrix.M00, 1.0)
+    |> put_float(Kiwi.Matrix.M01, 0.0)
+    |> put_float(Kiwi.Matrix.M02, 0.0)
+    |> put_float(Kiwi.Matrix.M10, 0.0)
+    |> put_float(Kiwi.Matrix.M11, 1.0)
+    |> put_float(Kiwi.Matrix.M12, 0.0)
   end
 
   # Copies one saved derived entry onto its target; a cache, not a claim.
@@ -449,7 +440,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   defrust apply_derived_entry(target, entry) do
     derived = entry.take(derived_fields())
 
-    case derived.record(NodeChange.SIZE) do
+    case derived.record(Kiwi.NodeChange.SIZE) do
       {:some, size} -> assign!(target.derived_size, some(size.clone()))
       :none -> :ok
     end

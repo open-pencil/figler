@@ -21,24 +21,6 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  defrustmod NodeChange, as: [:kiwi_records, :node_change]
-  defrustmod NodeType, as: [:kiwi_records, :node_type]
-  defrustmod TextData, as: [:kiwi_records, :text_data]
-  defrustmod Paint, as: [:kiwi_records, :paint]
-  defrustmod ColorField, as: [:kiwi_records, :color]
-  defrustmod Matrix, as: [:kiwi_records, :matrix]
-  defrustmod Vector, as: [:kiwi_records, :vector]
-  defrustmod NumberValue, as: [:kiwi_records, :number]
-  defrustmod NumberUnits, as: [:kiwi_records, :number_units]
-  defrustmod VariableData, as: [:kiwi_records, :variable_data]
-  defrustmod VariableDataType, as: [:kiwi_records, :variable_data_type]
-  defrustmod VariableAnyValue, as: [:kiwi_records, :variable_any_value]
-  defrustmod VariableDataMapEntry, as: [:kiwi_records, :variable_data_map_entry]
-  defrustmod VariableField, as: [:kiwi_records, :variable_field]
-  defrustmod Expression, as: [:kiwi_records, :expression]
-  defrustmod ExpressionFunction, as: [:kiwi_records, :expression_function]
-  defrustmod Definitions, as: [:kiwi_record_definitions]
-
   # What a binding sets: a record field by its Kiwi variable field, or a paint's color.
   @typep bound_target ::
            R.hashable(
@@ -87,7 +69,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   @spec bindable?(R.u32()) :: R.bool()
   defrust bindable?(field) do
-    field == VariableField.VISIBLE or field == VariableField.TEXT_DATA or
+    field == Kiwi.VariableField.VISIBLE or field == Kiwi.VariableField.TEXT_DATA or
       numeric_target(field).is_some()
   end
 
@@ -96,7 +78,9 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   @spec paint_target(R.u32(), R.usize()) :: bound_target()
   defrust paint_target(field, index) do
-    if field == NodeChange.FILL_PAINTS, do: {:fill_paint, index}, else: {:stroke_paint, index}
+    if field == Kiwi.NodeChange.FILL_PAINTS,
+      do: {:fill_paint, index},
+      else: {:stroke_paint, index}
   end
 
   # The fields a record binds, each to the variable it names and a multiplier.
@@ -109,8 +93,8 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
       bind_entry(mut_ref(bindings), ref(entry), vars)
     end
 
-    bind_paints(mut_ref(bindings), record, NodeChange.FILL_PAINTS, vars)
-    bind_paints(mut_ref(bindings), record, NodeChange.STROKE_PAINTS, vars)
+    bind_paints(mut_ref(bindings), record, Kiwi.NodeChange.FILL_PAINTS, vars)
+    bind_paints(mut_ref(bindings), record, Kiwi.NodeChange.STROKE_PAINTS, vars)
     bindings
   end
 
@@ -121,9 +105,9 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
         ) ::
           R.unit()
   defrust bind_entry(bindings, entry, vars) do
-    case entry.enum_value(VariableDataMapEntry.VARIABLE_FIELD) do
+    case entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD) do
       {:some, field} when bindable?(field) ->
-        data = entry.record(VariableDataMapEntry.VARIABLE_DATA)
+        data = entry.record(Kiwi.VariableDataMapEntry.VARIABLE_DATA)
 
         case data.and_then(fn data -> linear(data, 0) end) do
           {:some, %{multiplier: multiplier, reference: {:some, variable}}} ->
@@ -136,10 +120,10 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
             )
 
           _ ->
-            data_type = data.and_then(fn data -> data.enum_value(VariableData.DATA_TYPE) end)
+            data_type = data.and_then(fn data -> data.enum_value(Kiwi.VariableData.DATA_TYPE) end)
 
-            if data_type != some(VariableDataType.ALIAS) and
-                 data_type != some(VariableDataType.EXPRESSION) do
+            if data_type != some(Kiwi.VariableDataType.ALIAS) and
+                 data_type != some(Kiwi.VariableDataType.EXPRESSION) do
               bindings.retain(fn binding -> binding.target != field_target(field) end)
             end
         end
@@ -170,10 +154,11 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   # Figma converts to text or tests for visibility.
   @spec linear(R.ref(Kiwi.kiwi_record()), R.u32()) :: R.option(linear())
   defrust linear(data, depth) do
-    case data.record(VariableData.VALUE) do
+    case data.record(Kiwi.VariableData.VALUE) do
       {:some, value} when depth <= 64 ->
-        case {value.record(VariableAnyValue.ALIAS), value.float(VariableAnyValue.FLOAT_VALUE),
-              value.record(VariableAnyValue.EXPRESSION_VALUE)} do
+        case {value.record(Kiwi.VariableAnyValue.ALIAS),
+              value.float(Kiwi.VariableAnyValue.FLOAT_VALUE),
+              value.record(Kiwi.VariableAnyValue.EXPRESSION_VALUE)} do
           {{:some, reference}, _number, _expression} ->
             some(struct_literal(Linear, multiplier: 1.0, reference: some(reference.clone())))
 
@@ -194,16 +179,16 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   @spec linear_expression(R.ref(Kiwi.kiwi_record()), R.u32()) :: R.option(linear())
   defrust linear_expression(expression, depth) do
-    arguments = expression.records(Expression.EXPRESSION_ARGUMENTS)
+    arguments = expression.records(Kiwi.Expression.EXPRESSION_ARGUMENTS)
 
-    case {expression.enum_value(Expression.EXPRESSION_FUNCTION), arguments.as_slice()} do
-      {{:some, ExpressionFunction.STRINGIFY}, [argument]} ->
+    case {expression.enum_value(Kiwi.Expression.EXPRESSION_FUNCTION), arguments.as_slice()} do
+      {{:some, Kiwi.ExpressionFunction.STRINGIFY}, [argument]} ->
         argument_alias(argument)
 
-      {{:some, ExpressionFunction.IS_TRUTHY}, [argument]} ->
+      {{:some, Kiwi.ExpressionFunction.IS_TRUTHY}, [argument]} ->
         argument_alias(argument)
 
-      {{:some, ExpressionFunction.MULTIPLY}, [_first | _rest]} ->
+      {{:some, Kiwi.ExpressionFunction.MULTIPLY}, [_first | _rest]} ->
         linear_product(arguments.as_slice(), depth)
 
       _ ->
@@ -213,8 +198,8 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   @spec argument_alias(R.ref(Kiwi.kiwi_record())) :: R.option(linear())
   defrust argument_alias(argument) do
-    argument.record(VariableData.VALUE)
-    |> and_then(fn value -> value.record(VariableAnyValue.ALIAS) end)
+    argument.record(Kiwi.VariableData.VALUE)
+    |> and_then(fn value -> value.record(Kiwi.VariableAnyValue.ALIAS) end)
     |> map(fn reference ->
       struct_literal(Linear, multiplier: 1.0, reference: some(reference.clone()))
     end)
@@ -260,9 +245,9 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   defrust bind_paints(bindings, record, field, vars) do
     for {index, paint} <- record.records(field).iter().enumerate() do
       reference =
-        paint.record(Paint.COLOR_VAR)
-        |> and_then(fn color -> color.record(VariableData.VALUE) end)
-        |> and_then(fn value -> value.record(VariableAnyValue.ALIAS) end)
+        paint.record(Kiwi.Paint.COLOR_VAR)
+        |> and_then(fn color -> color.record(Kiwi.VariableData.VALUE) end)
+        |> and_then(fn value -> value.record(Kiwi.VariableAnyValue.ALIAS) end)
         |> and_then(fn variable -> reference(vars, variable) end)
 
       case reference do
@@ -302,24 +287,26 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   defrust apply_binding(record, binding, value, occurrence) do
     case {ref(binding.target), value} do
       {{:fill_paint, index}, {:color, color}} ->
-        apply_paint(record, NodeChange.FILL_PAINTS, index, color)
+        apply_paint(record, Kiwi.NodeChange.FILL_PAINTS, index, color)
 
       {{:stroke_paint, index}, {:color, color}} ->
-        apply_paint(record, NodeChange.STROKE_PAINTS, index, color)
+        apply_paint(record, Kiwi.NodeChange.STROKE_PAINTS, index, color)
 
-      {{:field, VariableField.TEXT_DATA}, _value} ->
+      {{:field, Kiwi.VariableField.TEXT_DATA}, _value} ->
         case text(value) do
-          {:some, text} when record.enum_value(NodeChange.TYPE) == some(NodeType.TEXT) ->
+          {:some, text}
+          when record.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.TEXT) ->
             put_text(record, ref(text))
 
           _ ->
             record
         end
 
-      {{:field, VariableField.VISIBLE}, _value} ->
+      {{:field, Kiwi.VariableField.VISIBLE}, _value} ->
         case truthy(value) do
-          {:some, visible} when not occurrence.overridden.contains(ref(NodeChange.VISIBLE)) ->
-            record.put_bool(NodeChange.VISIBLE, visible)
+          {:some, visible}
+          when not occurrence.overridden.contains(ref(Kiwi.NodeChange.VISIBLE)) ->
+            record.put_bool(Kiwi.NodeChange.VISIBLE, visible)
 
           _ ->
             record
@@ -343,8 +330,8 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
     if index < paints.len() do
       paint =
         paints[index]
-        |> put_record(Paint.COLOR, color_record(color))
-        |> put_float(Paint.OPACITY, cast(color.a, R.f32()))
+        |> put_record(Kiwi.Paint.COLOR, color_record(color))
+        |> put_float(Kiwi.Paint.OPACITY, cast(color.a, R.f32()))
 
       assign!(paints[index], paint)
       record.put_records(field, paints)
@@ -355,11 +342,11 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   @spec color_record(R.ref(Variables.color())) :: Kiwi.kiwi_record()
   defrust color_record(color) do
-    KiwiRecord.new(Definitions.COLOR)
-    |> put_float(ColorField.R, cast(color.r, R.f32()))
-    |> put_float(ColorField.G, cast(color.g, R.f32()))
-    |> put_float(ColorField.B, cast(color.b, R.f32()))
-    |> put_float(ColorField.A, 1.0)
+    KiwiRecord.new(Kiwi.Definitions.COLOR)
+    |> put_float(Kiwi.Color.R, cast(color.r, R.f32()))
+    |> put_float(Kiwi.Color.G, cast(color.g, R.f32()))
+    |> put_float(Kiwi.Color.B, cast(color.b, R.f32()))
+    |> put_float(Kiwi.Color.A, 1.0)
   end
 
   # Numbers apply in placed units, scaled with the instance; opacity is a percentage.
@@ -375,28 +362,28 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
     placed = value * multiplier * occurrence.layout_scale
 
     case {field, numeric_target(field)} do
-      {VariableField.OPACITY, _target} ->
-        record.put_float(NodeChange.OPACITY, cast((value * 0.01).clamp(0.0, 1.0), R.f32()))
+      {Kiwi.VariableField.OPACITY, _target} ->
+        record.put_float(Kiwi.NodeChange.OPACITY, cast((value * 0.01).clamp(0.0, 1.0), R.f32()))
 
-      {VariableField.WIDTH, _target} ->
-        put_length(record, Vector.X, placed, occurrence)
+      {Kiwi.VariableField.WIDTH, _target} ->
+        put_length(record, Kiwi.Vector.X, placed, occurrence)
 
-      {VariableField.HEIGHT, _target} ->
-        put_length(record, Vector.Y, placed, occurrence)
+      {Kiwi.VariableField.HEIGHT, _target} ->
+        put_length(record, Kiwi.Vector.Y, placed, occurrence)
 
-      {VariableField.X_POSITION, _target} ->
-        put_position(record, Matrix.M02, placed)
+      {Kiwi.VariableField.X_POSITION, _target} ->
+        put_position(record, Kiwi.Matrix.M02, placed)
 
-      {VariableField.Y_POSITION, _target} ->
-        put_position(record, Matrix.M12, placed)
+      {Kiwi.VariableField.Y_POSITION, _target} ->
+        put_position(record, Kiwi.Matrix.M12, placed)
 
       {_field, {:some, target}}
-      when target == NodeChange.LETTER_SPACING or target == NodeChange.LINE_HEIGHT ->
+      when target == Kiwi.NodeChange.LETTER_SPACING or target == Kiwi.NodeChange.LINE_HEIGHT ->
         record.put_record(
           target,
-          KiwiRecord.new(Definitions.NUMBER)
-          |> put_float(NumberValue.VALUE, cast(placed, R.f32()))
-          |> put_enum(NumberValue.UNITS, NumberUnits.PIXELS, Definitions.NUMBER_UNITS)
+          KiwiRecord.new(Kiwi.Definitions.NUMBER)
+          |> put_float(Kiwi.Number.VALUE, cast(placed, R.f32()))
+          |> put_enum(Kiwi.Number.UNITS, Kiwi.NumberUnits.PIXELS, Kiwi.Definitions.NUMBER_UNITS)
         )
 
       {_field, {:some, target}} ->
@@ -410,17 +397,17 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   @spec put_text(Kiwi.kiwi_record(), R.str()) :: Kiwi.kiwi_record()
   defrust put_text(record, text) do
     text_data =
-      case record.record(NodeChange.TEXT_DATA) do
+      case record.record(Kiwi.NodeChange.TEXT_DATA) do
         {:some, text_data} -> text_data.clone()
-        :none -> KiwiRecord.new(Definitions.TEXT_DATA)
+        :none -> KiwiRecord.new(Kiwi.Definitions.TEXT_DATA)
       end
 
-    if text_data.str(TextData.CHARACTERS) == some(text) do
+    if text_data.str(Kiwi.TextData.CHARACTERS) == some(text) do
       record
     else
       record
-      |> put_record(NodeChange.TEXT_DATA, text_data.put_str(TextData.CHARACTERS, text))
-      |> delete(NodeChange.DERIVED_TEXT_DATA)
+      |> put_record(Kiwi.NodeChange.TEXT_DATA, text_data.put_str(Kiwi.TextData.CHARACTERS, text))
+      |> delete(Kiwi.NodeChange.DERIVED_TEXT_DATA)
     end
   end
 
@@ -429,11 +416,11 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   @spec put_length(Kiwi.kiwi_record(), R.u32(), R.f64(), R.ref(Occurrence.occurrence())) ::
           Kiwi.kiwi_record()
   defrust put_length(record, axis, value, occurrence) do
-    case record.record(NodeChange.SIZE) do
+    case record.record(Kiwi.NodeChange.SIZE) do
       {:some, size}
       when occurrence.derived_size.is_none() and
-             not occurrence.overridden.contains(ref(NodeChange.SIZE)) ->
-        record.put_record(NodeChange.SIZE, size.put_float(axis, cast(value, R.f32())))
+             not occurrence.overridden.contains(ref(Kiwi.NodeChange.SIZE)) ->
+        record.put_record(Kiwi.NodeChange.SIZE, size.put_float(axis, cast(value, R.f32())))
 
       _ ->
         record
@@ -443,10 +430,14 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   # Positions apply to unrotated layers, whose position is the matrix translation.
   @spec put_position(Kiwi.kiwi_record(), R.u32(), R.f64()) :: Kiwi.kiwi_record()
   defrust put_position(record, axis, value) do
-    case record.record(NodeChange.TRANSFORM) do
+    case record.record(Kiwi.NodeChange.TRANSFORM) do
       {:some, transform}
-      when transform.float(Matrix.M01) == some(0.0) and transform.float(Matrix.M10) == some(0.0) ->
-        record.put_record(NodeChange.TRANSFORM, transform.put_float(axis, cast(value, R.f32())))
+      when transform.float(Kiwi.Matrix.M01) == some(0.0) and
+             transform.float(Kiwi.Matrix.M10) == some(0.0) ->
+        record.put_record(
+          Kiwi.NodeChange.TRANSFORM,
+          transform.put_float(axis, cast(value, R.f32()))
+        )
 
       _ ->
         record
@@ -457,77 +448,77 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   @spec numeric_target(R.u32()) :: R.option(R.u32())
   defrust numeric_target(field) do
     case field do
-      VariableField.CORNER_RADIUS ->
-        some(NodeChange.CORNER_RADIUS)
+      Kiwi.VariableField.CORNER_RADIUS ->
+        some(Kiwi.NodeChange.CORNER_RADIUS)
 
-      VariableField.RECTANGLE_TOP_LEFT_CORNER_RADIUS ->
-        some(NodeChange.RECTANGLE_TOP_LEFT_CORNER_RADIUS)
+      Kiwi.VariableField.RECTANGLE_TOP_LEFT_CORNER_RADIUS ->
+        some(Kiwi.NodeChange.RECTANGLE_TOP_LEFT_CORNER_RADIUS)
 
-      VariableField.RECTANGLE_TOP_RIGHT_CORNER_RADIUS ->
-        some(NodeChange.RECTANGLE_TOP_RIGHT_CORNER_RADIUS)
+      Kiwi.VariableField.RECTANGLE_TOP_RIGHT_CORNER_RADIUS ->
+        some(Kiwi.NodeChange.RECTANGLE_TOP_RIGHT_CORNER_RADIUS)
 
-      VariableField.RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS ->
-        some(NodeChange.RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS)
+      Kiwi.VariableField.RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS ->
+        some(Kiwi.NodeChange.RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS)
 
-      VariableField.RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS ->
-        some(NodeChange.RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS)
+      Kiwi.VariableField.RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS ->
+        some(Kiwi.NodeChange.RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS)
 
-      VariableField.STROKE_WEIGHT ->
-        some(NodeChange.STROKE_WEIGHT)
+      Kiwi.VariableField.STROKE_WEIGHT ->
+        some(Kiwi.NodeChange.STROKE_WEIGHT)
 
-      VariableField.BORDER_TOP_WEIGHT ->
-        some(NodeChange.BORDER_TOP_WEIGHT)
+      Kiwi.VariableField.BORDER_TOP_WEIGHT ->
+        some(Kiwi.NodeChange.BORDER_TOP_WEIGHT)
 
-      VariableField.BORDER_BOTTOM_WEIGHT ->
-        some(NodeChange.BORDER_BOTTOM_WEIGHT)
+      Kiwi.VariableField.BORDER_BOTTOM_WEIGHT ->
+        some(Kiwi.NodeChange.BORDER_BOTTOM_WEIGHT)
 
-      VariableField.BORDER_LEFT_WEIGHT ->
-        some(NodeChange.BORDER_LEFT_WEIGHT)
+      Kiwi.VariableField.BORDER_LEFT_WEIGHT ->
+        some(Kiwi.NodeChange.BORDER_LEFT_WEIGHT)
 
-      VariableField.BORDER_RIGHT_WEIGHT ->
-        some(NodeChange.BORDER_RIGHT_WEIGHT)
+      Kiwi.VariableField.BORDER_RIGHT_WEIGHT ->
+        some(Kiwi.NodeChange.BORDER_RIGHT_WEIGHT)
 
-      VariableField.STACK_SPACING ->
-        some(NodeChange.STACK_SPACING)
+      Kiwi.VariableField.STACK_SPACING ->
+        some(Kiwi.NodeChange.STACK_SPACING)
 
-      VariableField.STACK_PADDING_LEFT ->
-        some(NodeChange.STACK_HORIZONTAL_PADDING)
+      Kiwi.VariableField.STACK_PADDING_LEFT ->
+        some(Kiwi.NodeChange.STACK_HORIZONTAL_PADDING)
 
-      VariableField.STACK_PADDING_TOP ->
-        some(NodeChange.STACK_VERTICAL_PADDING)
+      Kiwi.VariableField.STACK_PADDING_TOP ->
+        some(Kiwi.NodeChange.STACK_VERTICAL_PADDING)
 
-      VariableField.STACK_PADDING_RIGHT ->
-        some(NodeChange.STACK_PADDING_RIGHT)
+      Kiwi.VariableField.STACK_PADDING_RIGHT ->
+        some(Kiwi.NodeChange.STACK_PADDING_RIGHT)
 
-      VariableField.STACK_PADDING_BOTTOM ->
-        some(NodeChange.STACK_PADDING_BOTTOM)
+      Kiwi.VariableField.STACK_PADDING_BOTTOM ->
+        some(Kiwi.NodeChange.STACK_PADDING_BOTTOM)
 
-      VariableField.STACK_COUNTER_SPACING ->
-        some(NodeChange.STACK_COUNTER_SPACING)
+      Kiwi.VariableField.STACK_COUNTER_SPACING ->
+        some(Kiwi.NodeChange.STACK_COUNTER_SPACING)
 
-      VariableField.FONT_SIZE ->
-        some(NodeChange.FONT_SIZE)
+      Kiwi.VariableField.FONT_SIZE ->
+        some(Kiwi.NodeChange.FONT_SIZE)
 
-      VariableField.OPACITY ->
-        some(NodeChange.OPACITY)
+      Kiwi.VariableField.OPACITY ->
+        some(Kiwi.NodeChange.OPACITY)
 
-      VariableField.WIDTH ->
-        some(NodeChange.SIZE)
+      Kiwi.VariableField.WIDTH ->
+        some(Kiwi.NodeChange.SIZE)
 
-      VariableField.HEIGHT ->
-        some(NodeChange.SIZE)
+      Kiwi.VariableField.HEIGHT ->
+        some(Kiwi.NodeChange.SIZE)
 
-      VariableField.X_POSITION ->
-        some(NodeChange.TRANSFORM)
+      Kiwi.VariableField.X_POSITION ->
+        some(Kiwi.NodeChange.TRANSFORM)
 
-      VariableField.Y_POSITION ->
-        some(NodeChange.TRANSFORM)
+      Kiwi.VariableField.Y_POSITION ->
+        some(Kiwi.NodeChange.TRANSFORM)
 
-      VariableField.LETTER_SPACING ->
-        some(NodeChange.LETTER_SPACING)
+      Kiwi.VariableField.LETTER_SPACING ->
+        some(Kiwi.NodeChange.LETTER_SPACING)
 
-      VariableField.LINE_HEIGHT ->
-        some(NodeChange.LINE_HEIGHT)
+      Kiwi.VariableField.LINE_HEIGHT ->
+        some(Kiwi.NodeChange.LINE_HEIGHT)
 
       _ ->
         nil

@@ -89,7 +89,7 @@ pub fn graph_new_impl<'a>(
             }
         }
         KiwiRecord::new(kiwi_record_definitions::MESSAGE)
-            .put_records(kiwi_records::message::NODE_CHANGES, records)
+            .put_records(kiwi_records::Message::NODE_CHANGES, records)
     };
     let decoded = started.elapsed().as_micros() as u64;
     let (graph, indexed, interpreted) = graph::build_graph_resource(&message, styles, variables)?;

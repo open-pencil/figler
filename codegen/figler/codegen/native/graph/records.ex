@@ -8,10 +8,6 @@ defmodule Figler.Codegen.Native.Graph.Records do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  defrustmod NodeChange, as: [:kiwi_records, :node_change]
-  defrustmod Guid, as: [:kiwi_records, :guid]
-  defrustmod ParentIndex, as: [:kiwi_records, :parent_index]
-
   @type guid_key :: {R.u32(), R.u32()}
 
   @doc false
@@ -24,8 +20,8 @@ defmodule Figler.Codegen.Native.Graph.Records do
   @spec guid_key(R.option(R.ref(Kiwi.kiwi_record()))) :: R.option(guid_key())
   defrust guid_key(guid) do
     with {:some, guid} <- guid,
-         {:some, session} <- guid.uint(Guid.SESSION_ID),
-         {:some, local} <- guid.uint(Guid.LOCAL_ID) do
+         {:some, session} <- guid.uint(Kiwi.Guid.SESSION_ID),
+         {:some, local} <- guid.uint(Kiwi.Guid.LOCAL_ID) do
       some({session, local})
     else
       _ -> nil
@@ -33,12 +29,12 @@ defmodule Figler.Codegen.Native.Graph.Records do
   end
 
   @spec record_id(R.ref(Kiwi.kiwi_record())) :: R.option(guid_key())
-  defrust record_id(record), do: guid_key(record.record(NodeChange.GUID))
+  defrust record_id(record), do: guid_key(record.record(Kiwi.NodeChange.GUID))
 
   @spec parent_id(R.ref(Kiwi.kiwi_record())) :: R.option(guid_key())
   defrust parent_id(record) do
-    case record.record(NodeChange.PARENT_INDEX) do
-      {:some, parent} -> guid_key(parent.record(ParentIndex.GUID))
+    case record.record(Kiwi.NodeChange.PARENT_INDEX) do
+      {:some, parent} -> guid_key(parent.record(Kiwi.ParentIndex.GUID))
       :none -> nil
     end
   end
@@ -46,8 +42,8 @@ defmodule Figler.Codegen.Native.Graph.Records do
   # Saved sibling order: the fractional position string, compared as text.
   @spec position(R.ref(Kiwi.kiwi_record())) :: R.str()
   defrust position(record) do
-    case record.record(NodeChange.PARENT_INDEX) do
-      {:some, parent} -> parent.str(ParentIndex.POSITION).unwrap_or("")
+    case record.record(Kiwi.NodeChange.PARENT_INDEX) do
+      {:some, parent} -> parent.str(Kiwi.ParentIndex.POSITION).unwrap_or("")
       :none -> ""
     end
   end

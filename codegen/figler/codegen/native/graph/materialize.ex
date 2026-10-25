@@ -25,11 +25,6 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  defrustmod NodeChange, as: [:kiwi_records, :node_change]
-  defrustmod NodeType, as: [:kiwi_records, :node_type]
-  defrustmod VariableModeBySetMap, as: [:kiwi_records, :variable_mode_by_set_map]
-  defrustmod VariableModeBySetMapEntry, as: [:kiwi_records, :variable_mode_by_set_map_entry]
-
   # A layer of an instance expansion: the outermost instance and the source GUIDs below it.
   @typep clone_guid ::
            R.hashable(%{required(:root) => GuidKey.t(), required(:path) => R.vec(GuidKey.t())})
@@ -144,7 +139,8 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
     graph.roots.push(id)
 
     case source(index, id) do
-      {:some, record} when record.enum_value(NodeChange.TYPE) == some(NodeType.DOCUMENT) ->
+      {:some, record}
+      when record.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.DOCUMENT) ->
         position = put_node(graph, {:source, id}, nil, record.clone(), nil)
         modes = explicit_modes(record, vars)
 
@@ -223,14 +219,14 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   defrust explicit_modes(record, vars) do
     modes = HashMap.new()
 
-    case {vars, record.record(NodeChange.VARIABLE_MODE_BY_SET_MAP)} do
+    case {vars, record.record(Kiwi.NodeChange.VARIABLE_MODE_BY_SET_MAP)} do
       {{:some, vars}, {:some, set_map}} ->
-        for entry <- set_map.records(VariableModeBySetMap.ENTRIES) do
+        for entry <- set_map.records(Kiwi.VariableModeBySetMap.ENTRIES) do
           collection =
-            entry.record(VariableModeBySetMapEntry.VARIABLE_SET_ID)
+            entry.record(Kiwi.VariableModeBySetMapEntry.VARIABLE_SET_ID)
             |> and_then(fn set -> reference(vars, set) end)
 
-          mode = guid_key(entry.record(VariableModeBySetMapEntry.VARIABLE_MODE_ID))
+          mode = guid_key(entry.record(Kiwi.VariableModeBySetMapEntry.VARIABLE_MODE_ID))
 
           case {collection, mode} do
             {{:some, collection}, {:some, mode}} -> modes.insert(collection, mode)

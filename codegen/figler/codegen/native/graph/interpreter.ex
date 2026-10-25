@@ -31,14 +31,6 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  defrustmod NodeChange, as: [:kiwi_records, :node_change]
-  defrustmod NodeType, as: [:kiwi_records, :node_type]
-  defrustmod SymbolData, as: [:kiwi_records, :symbol_data]
-  defrustmod ComponentPropAssignment, as: [:kiwi_records, :component_prop_assignment]
-  defrustmod VariableData, as: [:kiwi_records, :variable_data]
-  defrustmod Guid, as: [:kiwi_records, :guid]
-  defrustmod Definitions, as: [:kiwi_record_definitions]
-
   @typep diagnostic_kind ::
            :unresolved_property
            | :unresolved_assignment
@@ -168,10 +160,10 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec drop_slot_content(R.ref(SourceIndex.source_index()), Occurrence.occurrence()) ::
           Occurrence.occurrence()
   defrust drop_slot_content(index, occurrence) do
-    if node_type(index, occurrence.source_id) == some(NodeType.CANVAS) do
+    if node_type(index, occurrence.source_id) == some(Kiwi.NodeType.CANVAS) do
       children =
         for child <- occurrence.children,
-            not child.properties.bool(NodeChange.IS_SLOT_CONTENT).unwrap_or(false),
+            not child.properties.bool(Kiwi.NodeChange.IS_SLOT_CONTENT).unwrap_or(false),
             do: child
 
       %{occurrence | children: children}
@@ -273,7 +265,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           state
         )
 
-      record.source.enum_value(NodeChange.TYPE) == some(NodeType.SYMBOL) ->
+      record.source.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.SYMBOL) ->
         expand_children_of(
           index,
           owner.id,
@@ -375,9 +367,9 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec bound_node_field(Occurrence.bound_field()) :: R.option(R.u32())
   defrust bound_node_field(field) do
     case field do
-      :visible -> some(NodeChange.VISIBLE)
-      :text_data -> some(NodeChange.TEXT_DATA)
-      :symbol_data -> some(NodeChange.SYMBOL_DATA)
+      :visible -> some(Kiwi.NodeChange.VISIBLE)
+      :text_data -> some(Kiwi.NodeChange.TEXT_DATA)
+      :symbol_data -> some(Kiwi.NodeChange.SYMBOL_DATA)
       :slot_content -> nil
     end
   end
@@ -388,7 +380,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     overridden = HashSet.new()
 
     if claims.iter().any(fn claim -> assigned_visible?(claim) end),
-      do: overridden.insert(NodeChange.VISIBLE)
+      do: overridden.insert(Kiwi.NodeChange.VISIBLE)
 
     overridden
   end
@@ -430,7 +422,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     keys.extend(component_keys(index, effective))
 
     assignments =
-      record.source.records(NodeChange.COMPONENT_PROP_ASSIGNMENTS)
+      record.source.records(Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS)
       |> into_iter()
       |> cloned()
       |> collect()
@@ -529,7 +521,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   defrust scoped_bindings(source, groups) do
     groups
     |> iter()
-    |> fold(component(source.records(NodeChange.COMPONENT_PROP_DEFS)), fn bindings, group ->
+    |> fold(component(source.records(Kiwi.NodeChange.COMPONENT_PROP_DEFS)), fn bindings, group ->
       assign(bindings, group.assignments.iter().collect(), some(group.rank))
     end)
   end
@@ -733,7 +725,8 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
               main_component_override_key: base.main_component_override_key.or(base.override_key),
               property_claims: base.property_claims.clone(),
               has_own_name:
-                node_type(index, base.source_id) == some(NodeType.INSTANCE) and base.has_own_name
+                node_type(index, base.source_id) == some(Kiwi.NodeType.INSTANCE) and
+                  base.has_own_name
           }
 
           rename_swapped(inherited, base, ref(root.replaced))
@@ -783,8 +776,8 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   defrust effective_properties(index, source, base, original, root) do
     placed =
       if base.is_some() and original != root.effective and
-           source.enum_value(NodeChange.TYPE) == some(NodeType.INSTANCE) do
-        source.drop(ref([NodeChange.FILL_PAINTS, NodeChange.STYLE_ID_FOR_FILL]))
+           source.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.INSTANCE) do
+        source.drop(ref([Kiwi.NodeChange.FILL_PAINTS, Kiwi.NodeChange.STYLE_ID_FOR_FILL]))
       else
         source.clone()
       end
@@ -792,7 +785,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     base_properties =
       case base do
         {:some, base} -> base.properties.clone()
-        :none -> KiwiRecord.new(Definitions.NODE_CHANGE)
+        :none -> KiwiRecord.new(Kiwi.Definitions.NODE_CHANGE)
       end
 
     properties =
@@ -802,7 +795,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     properties =
       case merge_variable_consumption(ref(base_properties), source) do
         {:some, consumption} ->
-          properties.put_record(NodeChange.PARAMETER_CONSUMPTION_MAP, consumption)
+          properties.put_record(Kiwi.NodeChange.PARAMETER_CONSUMPTION_MAP, consumption)
 
         :none ->
           properties
@@ -814,11 +807,11 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec put_effective_symbol(Kiwi.kiwi_record(), R.option(GuidKey.t()), R.ref(Kiwi.kiwi_record())) ::
           Kiwi.kiwi_record()
   defrust put_effective_symbol(properties, effective, source) do
-    case {effective, source.record(NodeChange.SYMBOL_DATA)} do
+    case {effective, source.record(Kiwi.NodeChange.SYMBOL_DATA)} do
       {{:some, effective}, {:some, symbol_data}} ->
         properties.put_record(
-          NodeChange.SYMBOL_DATA,
-          symbol_data.put_record(SymbolData.SYMBOL_ID, guid_record(effective))
+          Kiwi.NodeChange.SYMBOL_DATA,
+          symbol_data.put_record(Kiwi.SymbolData.SYMBOL_ID, guid_record(effective))
         )
 
       _ ->
@@ -830,9 +823,9 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   defrust guid_record(guid) do
     {session_id, local_id} = guid
 
-    KiwiRecord.new(Definitions.GUID)
-    |> put_uint(Guid.SESSION_ID, session_id)
-    |> put_uint(Guid.LOCAL_ID, local_id)
+    KiwiRecord.new(Kiwi.Definitions.GUID)
+    |> put_uint(Kiwi.Guid.SESSION_ID, session_id)
+    |> put_uint(Kiwi.Guid.LOCAL_ID, local_id)
   end
 
   # A slot whose content frame is gone falls back to its component's content.
@@ -843,14 +836,14 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           R.slice(group())
         ) :: Kiwi.kiwi_record()
   defrust put_assignments(index, properties, source, groups) do
-    if source.enum_value(NodeChange.TYPE) == some(NodeType.INSTANCE) do
+    if source.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.INSTANCE) do
       assignments =
         for group <- groups,
             assignment <- group.assignments.iter(),
             not missing_slot_content?(index, assignment),
             do: assignment.clone()
 
-      properties.put_records(NodeChange.COMPONENT_PROP_ASSIGNMENTS, assignments)
+      properties.put_records(Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS, assignments)
     else
       properties
     end
@@ -859,8 +852,8 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec missing_slot_content?(R.ref(SourceIndex.source_index()), R.ref(Kiwi.kiwi_record())) ::
           R.bool()
   defrust missing_slot_content?(index, assignment) do
-    assignment.record(ComponentPropAssignment.VAR_VALUE)
-    |> and_then(fn variable -> variable.record(VariableData.VALUE) end)
+    assignment.record(Kiwi.ComponentPropAssignment.VAR_VALUE)
+    |> and_then(fn variable -> variable.record(Kiwi.VariableData.VALUE) end)
     |> and_then(fn value -> slot_content(value) end)
     |> is_some_and(fn content -> not index.sources.contains_key(ref(content)) end)
   end
@@ -879,13 +872,13 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
       name =
         case ref(base.default_instance_name) do
           {:some, name} -> some(name.clone())
-          :none -> base.properties.str(NodeChange.NAME).map(fn name -> name.to_string() end)
+          :none -> base.properties.str(Kiwi.NodeChange.NAME).map(fn name -> name.to_string() end)
         end
 
       properties =
         case name do
-          {:some, name} -> occurrence.properties.put_str(NodeChange.NAME, ref(name))
-          :none -> occurrence.properties.delete(NodeChange.NAME)
+          {:some, name} -> occurrence.properties.put_str(Kiwi.NodeChange.NAME, ref(name))
+          :none -> occurrence.properties.delete(Kiwi.NodeChange.NAME)
         end
 
       %{occurrence | properties: properties}
@@ -903,12 +896,12 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
     case parent do
       {:some, set}
-      when node_type(index, occurrence.source_id) != some(NodeType.INSTANCE) and
-             set.bool(NodeChange.IS_STATE_GROUP) == some(true) ->
-        set.str(NodeChange.NAME).map(fn name -> name.to_string() end)
+      when node_type(index, occurrence.source_id) != some(Kiwi.NodeType.INSTANCE) and
+             set.bool(Kiwi.NodeChange.IS_STATE_GROUP) == some(true) ->
+        set.str(Kiwi.NodeChange.NAME).map(fn name -> name.to_string() end)
 
       _ ->
-        occurrence.properties.str(NodeChange.NAME).map(fn name -> name.to_string() end)
+        occurrence.properties.str(Kiwi.NodeChange.NAME).map(fn name -> name.to_string() end)
     end
   end
 
@@ -950,11 +943,12 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec put_instance_size(Occurrence.occurrence(), R.ref(Kiwi.kiwi_record())) ::
           Occurrence.occurrence()
   defrust put_instance_size(occurrence, source) do
-    case source.record(NodeChange.SIZE) do
-      {:some, size} when source.enum_value(NodeChange.TYPE) == some(NodeType.INSTANCE) ->
+    case source.record(Kiwi.NodeChange.SIZE) do
+      {:some, size}
+      when source.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.INSTANCE) ->
         %{
           occurrence
-          | properties: occurrence.properties.put_record(NodeChange.SIZE, size.clone()),
+          | properties: occurrence.properties.put_record(Kiwi.NodeChange.SIZE, size.clone()),
             derived_size: some(size.clone())
         }
 
@@ -1079,7 +1073,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     # Derived entries change properties, never the subtree's shape.
     tables = HashMap.new()
 
-    for entry <- source.records(NodeChange.DERIVED_SYMBOL_DATA) do
+    for entry <- source.records(Kiwi.NodeChange.DERIVED_SYMBOL_DATA) do
       path = override_path(entry)
 
       if not path.is_empty() do
@@ -1103,6 +1097,6 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   @spec node_type(R.ref(SourceIndex.source_index()), GuidKey.t()) :: R.option(R.u32())
   defrust node_type(index, id) do
-    source(index, id).and_then(fn record -> record.enum_value(NodeChange.TYPE) end)
+    source(index, id).and_then(fn record -> record.enum_value(Kiwi.NodeChange.TYPE) end)
   end
 end

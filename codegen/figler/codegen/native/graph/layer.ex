@@ -15,11 +15,6 @@ defmodule Figler.Codegen.Native.Graph.Layer do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  defrustmod NodeChange, as: [:kiwi_records, :node_change]
-  defrustmod NodeType, as: [:kiwi_records, :node_type]
-  defrustmod SymbolData, as: [:kiwi_records, :symbol_data]
-  defrustmod GuidPath, as: [:kiwi_records, :guid_path]
-
   @typep layer_owner :: %{required(:id) => GuidKey.t(), required(:rank) => R.u32()}
 
   @typep boundary :: %{
@@ -58,8 +53,8 @@ defmodule Figler.Codegen.Native.Graph.Layer do
   @spec own(R.ref(Kiwi.kiwi_record()), layer_owner()) :: {R.vec(layer()), R.vec(claim())}
   defrust own(source, owner) do
     overrides =
-      case source.record(NodeChange.SYMBOL_DATA) do
-        {:some, data} -> data.records(SymbolData.SYMBOL_OVERRIDES)
+      case source.record(Kiwi.NodeChange.SYMBOL_DATA) do
+        {:some, data} -> data.records(Kiwi.SymbolData.SYMBOL_OVERRIDES)
         :none -> Vec.new()
       end
 
@@ -77,9 +72,9 @@ defmodule Figler.Codegen.Native.Graph.Layer do
       props =
         override.drop(
           ref([
-            NodeChange.GUID_PATH,
-            NodeChange.OVERRIDDEN_SYMBOL_ID,
-            NodeChange.COMPONENT_PROP_ASSIGNMENTS
+            Kiwi.NodeChange.GUID_PATH,
+            Kiwi.NodeChange.OVERRIDDEN_SYMBOL_ID,
+            Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS
           ])
         )
 
@@ -93,13 +88,13 @@ defmodule Figler.Codegen.Native.Graph.Layer do
 
   @spec mode_claims(R.ref(Kiwi.kiwi_record())) :: R.vec(claim())
   defrust mode_claims(source) do
-    with true <- source.enum_value(NodeChange.TYPE) == some(NodeType.INSTANCE),
-         true <- source.has(NodeChange.VARIABLE_MODE_BY_SET_MAP),
+    with true <- source.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.INSTANCE),
+         true <- source.has(Kiwi.NodeChange.VARIABLE_MODE_BY_SET_MAP),
          {:some, symbol_id} <- symbol_id(source) do
       [
         struct_literal(Claim,
           path: [symbol_id],
-          props: source.take(ref([NodeChange.VARIABLE_MODE_BY_SET_MAP]))
+          props: source.take(ref([Kiwi.NodeChange.VARIABLE_MODE_BY_SET_MAP]))
         )
       ]
     else
@@ -109,9 +104,9 @@ defmodule Figler.Codegen.Native.Graph.Layer do
 
   @spec override_path(R.ref(Kiwi.kiwi_record())) :: R.vec(GuidKey.t())
   defrust override_path(override) do
-    case override.record(NodeChange.GUID_PATH) do
+    case override.record(Kiwi.NodeChange.GUID_PATH) do
       {:some, path} ->
-        path.records(GuidPath.GUIDS)
+        path.records(Kiwi.GuidPath.GUIDS)
         |> into_iter()
         |> filter_map(fn guid -> guid_key(some(guid)) end)
         |> collect()
@@ -124,10 +119,10 @@ defmodule Figler.Codegen.Native.Graph.Layer do
   @spec structural_layer(R.ref(Kiwi.kiwi_record()), R.ref(layer_owner())) :: R.option(layer())
   defrust structural_layer(override, owner) do
     path = override_path(override)
-    swap = guid_key(override.record(NodeChange.OVERRIDDEN_SYMBOL_ID))
+    swap = guid_key(override.record(Kiwi.NodeChange.OVERRIDDEN_SYMBOL_ID))
 
     assignments =
-      override.records(NodeChange.COMPONENT_PROP_ASSIGNMENTS)
+      override.records(Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS)
       |> into_iter()
       |> cloned()
       |> collect()

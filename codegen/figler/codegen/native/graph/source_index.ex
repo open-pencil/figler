@@ -12,11 +12,6 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  defrustmod Message, as: [:kiwi_records, :message]
-  defrustmod NodeChange, as: [:kiwi_records, :node_change]
-  defrustmod NodePhase, as: [:kiwi_records, :node_phase]
-  defrustmod SymbolData, as: [:kiwi_records, :symbol_data]
-
   @typep sources :: HashMap.t(GuidKey.t(), Kiwi.kiwi_record())
   @typep children :: HashMap.t(GuidKey.t(), R.vec(GuidKey.t()))
   @typep source_index :: %{required(:sources) => sources(), required(:children) => children()}
@@ -75,11 +70,12 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   end
 
   @spec live?(R.ref(Kiwi.kiwi_record())) :: R.bool()
-  defrust live?(record), do: record.enum_value(NodeChange.PHASE) != some(NodePhase.REMOVED)
+  defrust live?(record),
+    do: record.enum_value(Kiwi.NodeChange.PHASE) != some(Kiwi.NodePhase.REMOVED)
 
   @spec live_records(R.ref(Kiwi.kiwi_record())) :: R.vec(R.ref(Kiwi.kiwi_record()))
   defrust live_records(message) do
-    for record <- message.records(Message.NODE_CHANGES), live?(record), do: record
+    for record <- message.records(Kiwi.Message.NODE_CHANGES), live?(record), do: record
   end
 
   @spec duplicate_ids?(R.slice(R.ref(Kiwi.kiwi_record()))) :: R.bool()
@@ -151,15 +147,15 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   # The component an instance record names.
   @spec symbol_id(R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
   defrust symbol_id(record) do
-    record.record(NodeChange.SYMBOL_DATA).and_then(fn data ->
-      guid_key(data.record(SymbolData.SYMBOL_ID))
+    record.record(Kiwi.NodeChange.SYMBOL_DATA).and_then(fn data ->
+      guid_key(data.record(Kiwi.SymbolData.SYMBOL_ID))
     end)
   end
 
   # A stable override key, unless it is the unset GUID layers without one share.
   @spec override_key(R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
   defrust override_key(record) do
-    guid_key(record.record(NodeChange.OVERRIDE_KEY))
+    guid_key(record.record(Kiwi.NodeChange.OVERRIDE_KEY))
     |> filter(fn key -> deref(key) != {0xFFFFFFFF, 0xFFFFFFFF} end)
   end
 

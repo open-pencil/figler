@@ -12,11 +12,6 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  defrustmod NodeChange, as: [:kiwi_records, :node_change]
-  defrustmod VariableDataMap, as: [:kiwi_records, :variable_data_map]
-  defrustmod VariableDataMapEntry, as: [:kiwi_records, :variable_data_map_entry]
-  defrustmod Definitions, as: [:kiwi_record_definitions]
-
   @doc false
   @spec items() :: [term()]
   def items do
@@ -39,15 +34,15 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   @spec component_identity() :: R.slice(R.u32(), R.lifetime(:static))
   defrust component_identity() do
     ref([
-      NodeChange.COMPONENT_KEY,
-      NodeChange.SOURCE_LIBRARY_KEY,
-      NodeChange.PUBLISH_ID,
-      NodeChange.PUBLISHED_VERSION,
-      NodeChange.SHARED_SYMBOL_VERSION,
-      NodeChange.IS_SYMBOL_PUBLISHABLE,
-      NodeChange.VARIANT_PROP_SPECS,
-      NodeChange.COMPONENT_PROP_DEFS,
-      NodeChange.OVERRIDE_KEY
+      Kiwi.NodeChange.COMPONENT_KEY,
+      Kiwi.NodeChange.SOURCE_LIBRARY_KEY,
+      Kiwi.NodeChange.PUBLISH_ID,
+      Kiwi.NodeChange.PUBLISHED_VERSION,
+      Kiwi.NodeChange.SHARED_SYMBOL_VERSION,
+      Kiwi.NodeChange.IS_SYMBOL_PUBLISHABLE,
+      Kiwi.NodeChange.VARIANT_PROP_SPECS,
+      Kiwi.NodeChange.COMPONENT_PROP_DEFS,
+      Kiwi.NodeChange.OVERRIDE_KEY
     ])
   end
 
@@ -55,18 +50,18 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   @spec text_shaping() :: R.slice(R.u32(), R.lifetime(:static))
   defrust text_shaping() do
     ref([
-      NodeChange.FONT_SIZE,
-      NodeChange.FONT_NAME,
-      NodeChange.FONT_VARIATIONS,
-      NodeChange.LETTER_SPACING,
-      NodeChange.LINE_HEIGHT,
-      NodeChange.TEXT_CASE,
-      NodeChange.TEXT_ALIGN_HORIZONTAL,
-      NodeChange.TEXT_ALIGN_VERTICAL,
-      NodeChange.TEXT_AUTO_RESIZE,
-      NodeChange.STYLE_ID_FOR_TEXT,
-      NodeChange.FONT_VARIANT_COMMON_LIGATURES,
-      NodeChange.FONT_VARIANT_CONTEXTUAL_LIGATURES
+      Kiwi.NodeChange.FONT_SIZE,
+      Kiwi.NodeChange.FONT_NAME,
+      Kiwi.NodeChange.FONT_VARIATIONS,
+      Kiwi.NodeChange.LETTER_SPACING,
+      Kiwi.NodeChange.LINE_HEIGHT,
+      Kiwi.NodeChange.TEXT_CASE,
+      Kiwi.NodeChange.TEXT_ALIGN_HORIZONTAL,
+      Kiwi.NodeChange.TEXT_ALIGN_VERTICAL,
+      Kiwi.NodeChange.TEXT_AUTO_RESIZE,
+      Kiwi.NodeChange.STYLE_ID_FOR_TEXT,
+      Kiwi.NodeChange.FONT_VARIANT_COMMON_LIGATURES,
+      Kiwi.NodeChange.FONT_VARIANT_CONTEXTUAL_LIGATURES
     ])
   end
 
@@ -93,14 +88,14 @@ defmodule Figler.Codegen.Native.Graph.Claims do
     properties =
       case merge_variable_consumption(ref(target.properties), props) do
         {:some, consumption} ->
-          merged.put_record(NodeChange.PARAMETER_CONSUMPTION_MAP, consumption)
+          merged.put_record(Kiwi.NodeChange.PARAMETER_CONSUMPTION_MAP, consumption)
 
         :none ->
           merged
       end
 
     assign!(target.properties, properties)
-    assign!(target.has_own_name, target.has_own_name or props.has(NodeChange.NAME))
+    assign!(target.has_own_name, target.has_own_name or props.has(Kiwi.NodeChange.NAME))
     target.overridden.extend(props.field_ids())
   end
 
@@ -108,9 +103,9 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   @spec invalidate_inherited_text(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record())) ::
           Kiwi.kiwi_record()
   defrust invalidate_inherited_text(properties, patch) do
-    if not patch.has(NodeChange.DERIVED_TEXT_DATA) and
+    if not patch.has(Kiwi.NodeChange.DERIVED_TEXT_DATA) and
          (changed_text?(properties, patch) or changed_shaping?(properties, patch)) do
-      properties.delete(NodeChange.DERIVED_TEXT_DATA)
+      properties.delete(Kiwi.NodeChange.DERIVED_TEXT_DATA)
     else
       properties.clone()
     end
@@ -118,9 +113,9 @@ defmodule Figler.Codegen.Native.Graph.Claims do
 
   @spec changed_text?(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record())) :: R.bool()
   defrust changed_text?(properties, patch) do
-    case patch.record(NodeChange.TEXT_DATA) do
+    case patch.record(Kiwi.NodeChange.TEXT_DATA) do
       {:some, text} ->
-        case properties.record(NodeChange.TEXT_DATA) do
+        case properties.record(Kiwi.NodeChange.TEXT_DATA) do
           {:some, source} ->
             text.fields().any(fn {field, value} -> source.get(field) != some(value) end)
 
@@ -157,8 +152,8 @@ defmodule Figler.Codegen.Native.Graph.Claims do
       entries.extend(incoming)
 
       some(
-        KiwiRecord.new(Definitions.VARIABLE_DATA_MAP)
-        |> put_records(VariableDataMap.ENTRIES, dedupe_by_field(entries))
+        KiwiRecord.new(Kiwi.Definitions.VARIABLE_DATA_MAP)
+        |> put_records(Kiwi.VariableDataMap.ENTRIES, dedupe_by_field(entries))
       )
     end
   end
@@ -168,17 +163,17 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   # first-seen order.
   @spec consumption_entries(R.ref(Kiwi.kiwi_record())) :: R.vec(Kiwi.kiwi_record())
   defrust consumption_entries(record) do
-    entries = map_entries(record, NodeChange.VARIABLE_CONSUMPTION_MAP)
-    entries.extend(map_entries(record, NodeChange.PARAMETER_CONSUMPTION_MAP))
+    entries = map_entries(record, Kiwi.NodeChange.VARIABLE_CONSUMPTION_MAP)
+    entries.extend(map_entries(record, Kiwi.NodeChange.PARAMETER_CONSUMPTION_MAP))
 
     unkeyed =
       for entry <- entries.iter(),
-          entry.enum_value(VariableDataMapEntry.VARIABLE_FIELD).is_none(),
+          entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD).is_none(),
           do: entry.clone()
 
     keyed =
       for entry <- entries.iter(),
-          entry.enum_value(VariableDataMapEntry.VARIABLE_FIELD).is_some(),
+          entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD).is_some(),
           do: entry.clone()
 
     unkeyed.extend(dedupe_by_field(keyed))
@@ -188,8 +183,11 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   @spec map_entries(R.ref(Kiwi.kiwi_record()), R.u32()) :: R.vec(Kiwi.kiwi_record())
   defrust map_entries(record, field) do
     case record.record(field) do
-      {:some, map} -> map.records(VariableDataMap.ENTRIES) |> into_iter() |> cloned() |> collect()
-      :none -> Vec.new()
+      {:some, map} ->
+        map.records(Kiwi.VariableDataMap.ENTRIES) |> into_iter() |> cloned() |> collect()
+
+      :none ->
+        Vec.new()
     end
   end
 
@@ -199,7 +197,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
     last = HashMap.new()
 
     for {index, entry} <- entries.iter().enumerate() do
-      case entry.enum_value(VariableDataMapEntry.VARIABLE_FIELD) do
+      case entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD) do
         {:some, field} -> last.insert(field, index)
         :none -> nil
       end
@@ -209,7 +207,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
     kept = Vec.new()
 
     for entry <- entries do
-      case entry.enum_value(VariableDataMapEntry.VARIABLE_FIELD) do
+      case entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD) do
         {:some, field} ->
           if seen.insert(field), do: kept.push(entries[last[ref(field)]].clone())
 

@@ -19,22 +19,6 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  defrustmod NodeChange, as: [:kiwi_records, :node_change]
-  defrustmod NodeType, as: [:kiwi_records, :node_type]
-  defrustmod VariableSetMode, as: [:kiwi_records, :variable_set_mode]
-  defrustmod VariableDataValues, as: [:kiwi_records, :variable_data_values]
-  defrustmod VariableDataValuesEntry, as: [:kiwi_records, :variable_data_values_entry]
-  defrustmod VariableData, as: [:kiwi_records, :variable_data]
-  defrustmod VariableDataType, as: [:kiwi_records, :variable_data_type]
-  defrustmod VariableResolvedDataType, as: [:kiwi_records, :variable_resolved_data_type]
-  defrustmod VariableAnyValue, as: [:kiwi_records, :variable_any_value]
-  defrustmod VariableId, as: [:kiwi_records, :variable_id]
-  defrustmod Expression, as: [:kiwi_records, :expression]
-  defrustmod ExpressionFunction, as: [:kiwi_records, :expression_function]
-  defrustmod ColorField, as: [:kiwi_records, :color]
-  defrustmod AssetRef, as: [:kiwi_records, :asset_ref]
-  defrustmod Definitions, as: [:kiwi_record_definitions]
-
   @typep variable_type :: :float | :boolean | :string | :color
 
   @typep color :: %{
@@ -148,7 +132,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
       records
       |> iter()
       |> filter(fn {_id, record} ->
-        record.enum_value(NodeChange.TYPE) == some(NodeType.VARIABLE_SET)
+        record.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.VARIABLE_SET)
       end)
       |> filter_map(fn {id, record} ->
         collection(record).map(fn collection -> {deref(id), collection} end)
@@ -165,7 +149,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
     ids =
       for {id, record} <- records.iter(),
-          record.enum_value(NodeChange.TYPE) == some(NodeType.VARIABLE),
+          record.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.VARIABLE),
           do: deref(id)
 
     ids.sort()
@@ -184,9 +168,9 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     keys = HashMap.new()
 
     for {id, record} <- records.iter() do
-      case record.str(NodeChange.KEY) do
+      case record.str(Kiwi.NodeChange.KEY) do
         {:some, key} ->
-          version = record.str(NodeChange.VERSION).unwrap_or("")
+          version = record.str(Kiwi.NodeChange.VERSION).unwrap_or("")
           keys.entry(key.to_string()).or_default().insert(version.to_string(), deref(id))
 
         :none ->
@@ -201,21 +185,21 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   # unversioned reference to a key with several versions names nothing.
   @spec reference(R.ref(variables()), R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
   defrust reference(vars, reference) do
-    case guid_key(reference.record(VariableId.GUID)) do
+    case guid_key(reference.record(Kiwi.VariableId.GUID)) do
       {:some, id} ->
         some(id)
 
       :none ->
-        reference.record(VariableId.ASSET_REF)
+        reference.record(Kiwi.VariableId.ASSET_REF)
         |> and_then(fn asset -> asset_reference(vars, asset) end)
     end
   end
 
   @spec asset_reference(R.ref(variables()), R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
   defrust asset_reference(vars, asset) do
-    with {:some, key} <- asset.str(AssetRef.KEY),
+    with {:some, key} <- asset.str(Kiwi.AssetRef.KEY),
          {:some, versions} <- vars.keys.get(key) do
-      case asset.str(AssetRef.VERSION) do
+      case asset.str(Kiwi.AssetRef.VERSION) do
         {:some, version} when not version.is_empty() ->
           versions.get(version).copied()
 
@@ -235,9 +219,9 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   defrust collection(record) do
     modes =
       record
-      |> records(NodeChange.VARIABLE_SET_MODES)
+      |> records(Kiwi.NodeChange.VARIABLE_SET_MODES)
       |> iter()
-      |> filter_map(fn mode -> guid_key(mode.record(VariableSetMode.ID)) end)
+      |> filter_map(fn mode -> guid_key(mode.record(Kiwi.VariableSetMode.ID)) end)
       |> collect()
 
     case modes.first() do
@@ -251,11 +235,11 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   @spec variable_type(R.ref(Kiwi.kiwi_record())) :: R.option(variable_type())
   defrust variable_type(record) do
-    case record.enum_value(NodeChange.VARIABLE_RESOLVED_TYPE) do
-      {:some, VariableResolvedDataType.FLOAT} -> some(:float)
-      {:some, VariableResolvedDataType.BOOLEAN} -> some(:boolean)
-      {:some, VariableResolvedDataType.STRING} -> some(:string)
-      {:some, VariableResolvedDataType.COLOR} -> some(:color)
+    case record.enum_value(Kiwi.NodeChange.VARIABLE_RESOLVED_TYPE) do
+      {:some, Kiwi.VariableResolvedDataType.FLOAT} -> some(:float)
+      {:some, Kiwi.VariableResolvedDataType.BOOLEAN} -> some(:boolean)
+      {:some, Kiwi.VariableResolvedDataType.STRING} -> some(:string)
+      {:some, Kiwi.VariableResolvedDataType.COLOR} -> some(:color)
       _ -> nil
     end
   end
@@ -263,7 +247,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   @spec put_variable(R.mut_ref(variables()), R.ref(Kiwi.kiwi_record())) :: R.unit()
   defrust put_variable(vars, record) do
     collection =
-      record.record(NodeChange.VARIABLE_SET_ID)
+      record.record(Kiwi.NodeChange.VARIABLE_SET_ID)
       |> and_then(fn set -> reference(vars, set) end)
       |> or_else(fn -> parent_id(record) end)
 
@@ -296,15 +280,15 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     values = BTreeMap.new()
 
     entries =
-      case record.record(NodeChange.VARIABLE_DATA_VALUES) do
-        {:some, data_values} -> data_values.records(VariableDataValues.ENTRIES)
+      case record.record(Kiwi.NodeChange.VARIABLE_DATA_VALUES) do
+        {:some, data_values} -> data_values.records(Kiwi.VariableDataValues.ENTRIES)
         :none -> Vec.new()
       end
 
     for entry <- entries do
-      case guid_key(entry.record(VariableDataValuesEntry.MODE_ID)) do
+      case guid_key(entry.record(Kiwi.VariableDataValuesEntry.MODE_ID)) do
         {:some, mode} when modes.contains(ref(mode)) ->
-          stored = stored_value(vars, entry.record(VariableDataValuesEntry.VARIABLE_DATA), 0)
+          stored = stored_value(vars, entry.record(Kiwi.VariableDataValuesEntry.VARIABLE_DATA), 0)
 
           case stored do
             :unsupported ->
@@ -331,17 +315,17 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   defrust stored_value(vars, data, depth) do
     case data do
       {:some, data} when depth <= 64 ->
-        value = data.record(VariableData.VALUE)
+        value = data.record(Kiwi.VariableData.VALUE)
 
         data_type =
-          data.enum_value(VariableData.DATA_TYPE)
-          |> or_else(fn -> data.enum_value(VariableData.RESOLVED_DATA_TYPE) end)
+          data.enum_value(Kiwi.VariableData.DATA_TYPE)
+          |> or_else(fn -> data.enum_value(Kiwi.VariableData.RESOLVED_DATA_TYPE) end)
 
         case {data_type, value} do
-          {{:some, VariableDataType.ALIAS}, {:some, value}} ->
+          {{:some, Kiwi.VariableDataType.ALIAS}, {:some, value}} ->
             alias_value(vars, value)
 
-          {{:some, VariableDataType.EXPRESSION}, _value} ->
+          {{:some, Kiwi.VariableDataType.EXPRESSION}, _value} ->
             expression(vars, data, depth)
 
           {{:some, data_type}, {:some, value}} ->
@@ -361,19 +345,20 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   @spec literal(R.u32(), R.ref(Kiwi.kiwi_record())) :: R.option(variable_value())
   defrust literal(data_type, value) do
-    case {data_type, value.record(VariableAnyValue.COLOR_VALUE),
-          value.bool(VariableAnyValue.BOOL_VALUE), value.str(VariableAnyValue.TEXT_VALUE),
-          value.float(VariableAnyValue.FLOAT_VALUE)} do
-      {VariableDataType.COLOR, {:some, color}, _flag, _text, _number} ->
+    case {data_type, value.record(Kiwi.VariableAnyValue.COLOR_VALUE),
+          value.bool(Kiwi.VariableAnyValue.BOOL_VALUE),
+          value.str(Kiwi.VariableAnyValue.TEXT_VALUE),
+          value.float(Kiwi.VariableAnyValue.FLOAT_VALUE)} do
+      {Kiwi.VariableDataType.COLOR, {:some, color}, _flag, _text, _number} ->
         some({:color, literal_color(color)})
 
-      {VariableDataType.BOOLEAN, _color, {:some, flag}, _text, _number} ->
+      {Kiwi.VariableDataType.BOOLEAN, _color, {:some, flag}, _text, _number} ->
         some({:boolean, flag})
 
-      {VariableDataType.STRING, _color, _flag, {:some, text}, _number} ->
+      {Kiwi.VariableDataType.STRING, _color, _flag, {:some, text}, _number} ->
         some({:string, text.to_string()})
 
-      {VariableDataType.FLOAT, _color, _flag, _text, {:some, number}} ->
+      {Kiwi.VariableDataType.FLOAT, _color, _flag, _text, {:some, number}} ->
         some({:float, cast(number, R.f64())})
 
       _ ->
@@ -384,16 +369,16 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   @spec literal_color(R.ref(Kiwi.kiwi_record())) :: color()
   defrust literal_color(color) do
     struct_literal(Color,
-      r: cast(color.float(ColorField.R).unwrap_or(0.0), R.f64()),
-      g: cast(color.float(ColorField.G).unwrap_or(0.0), R.f64()),
-      b: cast(color.float(ColorField.B).unwrap_or(0.0), R.f64()),
-      a: cast(color.float(ColorField.A).unwrap_or(1.0), R.f64())
+      r: cast(color.float(Kiwi.Color.R).unwrap_or(0.0), R.f64()),
+      g: cast(color.float(Kiwi.Color.G).unwrap_or(0.0), R.f64()),
+      b: cast(color.float(Kiwi.Color.B).unwrap_or(0.0), R.f64()),
+      a: cast(color.float(Kiwi.Color.A).unwrap_or(1.0), R.f64())
     )
   end
 
   @spec alias_value(R.ref(variables()), R.ref(Kiwi.kiwi_record())) :: stored()
   defrust alias_value(vars, value) do
-    case value.record(VariableAnyValue.ALIAS).and_then(fn variable ->
+    case value.record(Kiwi.VariableAnyValue.ALIAS).and_then(fn variable ->
            reference(vars, variable)
          end) do
       {:some, id} -> {:alias, id}
@@ -403,16 +388,21 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   @spec expression(R.ref(variables()), R.ref(Kiwi.kiwi_record()), R.u32()) :: stored()
   defrust expression(vars, data, depth) do
-    case data.record(VariableData.VALUE).and_then(fn value ->
-           value.record(VariableAnyValue.EXPRESSION_VALUE)
+    case data.record(Kiwi.VariableData.VALUE).and_then(fn value ->
+           value.record(Kiwi.VariableAnyValue.EXPRESSION_VALUE)
          end) do
       {:some, expression} ->
-        arguments = expression.records(Expression.EXPRESSION_ARGUMENTS)
+        arguments = expression.records(Kiwi.Expression.EXPRESSION_ARGUMENTS)
 
-        case expression.enum_value(Expression.EXPRESSION_FUNCTION) do
-          {:some, ExpressionFunction.COMPOSE_COLOR} -> compose_color(vars, ref(arguments), depth)
-          {:some, function} -> formula(vars, function, ref(arguments), depth)
-          :none -> :unsupported
+        case expression.enum_value(Kiwi.Expression.EXPRESSION_FUNCTION) do
+          {:some, Kiwi.ExpressionFunction.COMPOSE_COLOR} ->
+            compose_color(vars, ref(arguments), depth)
+
+          {:some, function} ->
+            formula(vars, function, ref(arguments), depth)
+
+          :none ->
+            :unsupported
         end
 
       :none ->
@@ -455,23 +445,23 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   defrust formula(vars, function, arguments, depth) do
     supported =
       ref([
-        ExpressionFunction.ADDITION,
-        ExpressionFunction.SUBTRACTION,
-        ExpressionFunction.MULTIPLY,
-        ExpressionFunction.DIVIDE,
-        ExpressionFunction.NEGATE,
-        ExpressionFunction.EQUALS,
-        ExpressionFunction.NOT_EQUAL,
-        ExpressionFunction.LESS_THAN,
-        ExpressionFunction.LESS_THAN_OR_EQUAL,
-        ExpressionFunction.GREATER_THAN,
-        ExpressionFunction.GREATER_THAN_OR_EQUAL,
-        ExpressionFunction.AND,
-        ExpressionFunction.OR,
-        ExpressionFunction.NOT,
-        ExpressionFunction.STRINGIFY,
-        ExpressionFunction.IS_TRUTHY,
-        ExpressionFunction.TERNARY
+        Kiwi.ExpressionFunction.ADDITION,
+        Kiwi.ExpressionFunction.SUBTRACTION,
+        Kiwi.ExpressionFunction.MULTIPLY,
+        Kiwi.ExpressionFunction.DIVIDE,
+        Kiwi.ExpressionFunction.NEGATE,
+        Kiwi.ExpressionFunction.EQUALS,
+        Kiwi.ExpressionFunction.NOT_EQUAL,
+        Kiwi.ExpressionFunction.LESS_THAN,
+        Kiwi.ExpressionFunction.LESS_THAN_OR_EQUAL,
+        Kiwi.ExpressionFunction.GREATER_THAN,
+        Kiwi.ExpressionFunction.GREATER_THAN_OR_EQUAL,
+        Kiwi.ExpressionFunction.AND,
+        Kiwi.ExpressionFunction.OR,
+        Kiwi.ExpressionFunction.NOT,
+        Kiwi.ExpressionFunction.STRINGIFY,
+        Kiwi.ExpressionFunction.IS_TRUTHY,
+        Kiwi.ExpressionFunction.TERNARY
       ])
 
     if supported.contains(ref(function)) do
@@ -705,16 +695,16 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   @spec unary(R.u32(), R.ref(variable_value())) :: R.option(variable_value())
   defrust unary(operator, operand) do
     case {operator, operand} do
-      {ExpressionFunction.NEGATE, {:float, number}} ->
+      {Kiwi.ExpressionFunction.NEGATE, {:float, number}} ->
         some({:float, -deref(number)})
 
-      {ExpressionFunction.NOT, {:boolean, flag}} ->
+      {Kiwi.ExpressionFunction.NOT, {:boolean, flag}} ->
         some({:boolean, not deref(flag)})
 
-      {ExpressionFunction.STRINGIFY, _operand} ->
+      {Kiwi.ExpressionFunction.STRINGIFY, _operand} ->
         text(operand).map(fn text -> {:string, text} end)
 
-      {ExpressionFunction.IS_TRUTHY, _operand} ->
+      {Kiwi.ExpressionFunction.IS_TRUTHY, _operand} ->
         truthy(operand).map(fn truthy -> {:boolean, truthy} end)
 
       _ ->
@@ -726,46 +716,46 @@ defmodule Figler.Codegen.Native.Graph.Variables do
           R.option(variable_value())
   defrust binary(operator, left, right) do
     case {operator, left, right} do
-      {ExpressionFunction.ADDITION, {:float, a}, {:float, b}} ->
+      {Kiwi.ExpressionFunction.ADDITION, {:float, a}, {:float, b}} ->
         some({:float, a + b})
 
-      {ExpressionFunction.ADDITION, _left, _right} ->
+      {Kiwi.ExpressionFunction.ADDITION, _left, _right} ->
         concatenated(left, right)
 
-      {ExpressionFunction.SUBTRACTION, {:float, a}, {:float, b}} ->
+      {Kiwi.ExpressionFunction.SUBTRACTION, {:float, a}, {:float, b}} ->
         some({:float, a - b})
 
-      {ExpressionFunction.MULTIPLY, {:float, a}, {:float, b}} ->
+      {Kiwi.ExpressionFunction.MULTIPLY, {:float, a}, {:float, b}} ->
         some({:float, a * b})
 
-      {ExpressionFunction.DIVIDE, {:float, _a}, {:float, b}} when deref(b) == 0.0 ->
+      {Kiwi.ExpressionFunction.DIVIDE, {:float, _a}, {:float, b}} when deref(b) == 0.0 ->
         nil
 
-      {ExpressionFunction.DIVIDE, {:float, a}, {:float, b}} ->
+      {Kiwi.ExpressionFunction.DIVIDE, {:float, a}, {:float, b}} ->
         some({:float, a / b})
 
-      {ExpressionFunction.EQUALS, _left, _right} ->
+      {Kiwi.ExpressionFunction.EQUALS, _left, _right} ->
         equal(left, right).map(fn same -> {:boolean, same} end)
 
-      {ExpressionFunction.NOT_EQUAL, _left, _right} ->
+      {Kiwi.ExpressionFunction.NOT_EQUAL, _left, _right} ->
         equal(left, right).map(fn same -> {:boolean, not same} end)
 
-      {ExpressionFunction.LESS_THAN, {:float, a}, {:float, b}} ->
+      {Kiwi.ExpressionFunction.LESS_THAN, {:float, a}, {:float, b}} ->
         some({:boolean, a < b})
 
-      {ExpressionFunction.LESS_THAN_OR_EQUAL, {:float, a}, {:float, b}} ->
+      {Kiwi.ExpressionFunction.LESS_THAN_OR_EQUAL, {:float, a}, {:float, b}} ->
         some({:boolean, a <= b})
 
-      {ExpressionFunction.GREATER_THAN, {:float, a}, {:float, b}} ->
+      {Kiwi.ExpressionFunction.GREATER_THAN, {:float, a}, {:float, b}} ->
         some({:boolean, a > b})
 
-      {ExpressionFunction.GREATER_THAN_OR_EQUAL, {:float, a}, {:float, b}} ->
+      {Kiwi.ExpressionFunction.GREATER_THAN_OR_EQUAL, {:float, a}, {:float, b}} ->
         some({:boolean, a >= b})
 
-      {ExpressionFunction.AND, {:boolean, a}, {:boolean, b}} ->
+      {Kiwi.ExpressionFunction.AND, {:boolean, a}, {:boolean, b}} ->
         some({:boolean, deref(a) and deref(b)})
 
-      {ExpressionFunction.OR, {:boolean, a}, {:boolean, b}} ->
+      {Kiwi.ExpressionFunction.OR, {:boolean, a}, {:boolean, b}} ->
         some({:boolean, deref(a) or deref(b)})
 
       _ ->
@@ -781,7 +771,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
         ) :: R.option(variable_value())
   defrust ternary(operator, condition, then, otherwise) do
     case {operator, condition} do
-      {ExpressionFunction.TERNARY, {:boolean, chosen}}
+      {Kiwi.ExpressionFunction.TERNARY, {:boolean, chosen}}
       when value_type(then) == value_type(otherwise) ->
         if deref(chosen), do: some(then.clone()), else: some(otherwise.clone())
 

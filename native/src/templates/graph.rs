@@ -250,10 +250,10 @@ pub mod graph {
         let mut by_type: HashMap<&'static str, Vec<usize>> = HashMap::new();
         let mut by_name: HashMap<String, Vec<usize>> = HashMap::new();
         for (position, node) in graph.nodes.iter().enumerate() {
-            if let Some(node_type) = enum_name(node.record.get(kiwi_records::node_change::TYPE)) {
+            if let Some(node_type) = enum_name(node.record.get(kiwi_records::NodeChange::TYPE)) {
                 by_type.entry(node_type).or_default().push(position);
             }
-            if let Some(name) = node.record.str(kiwi_records::node_change::NAME) {
+            if let Some(name) = node.record.str(kiwi_records::NodeChange::NAME) {
                 by_name.entry(name.to_string()).or_default().push(position);
             }
         }
@@ -554,9 +554,9 @@ pub mod graph {
         guid: Term<'a>,
         parent: Option<Term<'a>>,
     ) -> NifResult<Term<'a>> {
-        use kiwi_records::node_change as field;
+        use kiwi_records::NodeChange as field;
         let nil = atom(env, "nil");
-        let text = record.record(field::TEXT_DATA).and_then(|text| text.str(kiwi_records::text_data::CHARACTERS));
+        let text = record.record(field::TEXT_DATA).and_then(|text| text.str(kiwi_records::TextData::CHARACTERS));
         let font = record.record(field::FONT_NAME);
         let font_field = |name: u32| font.and_then(|font| font.str(name)).map_or(nil, |value| value.encode(env));
         let float = |name: u32| record.float(name).map_or(nil, |value| kiwi_encode_float(env, value));
@@ -569,20 +569,20 @@ pub mod graph {
         let style = |name: u32| {
             record
                 .record(name)
-                .and_then(|style| guid_key(style.record(kiwi_records::style_id::GUID)))
+                .and_then(|style| guid_key(style.record(kiwi_records::StyleId::GUID)))
                 .map_or(nil, |(session, local)| format!("{session}:{local}").encode(env))
         };
         let size = record.record(field::SIZE).and_then(|size| {
             Some(map(
                 env,
                 &[
-                    ("x", kiwi_encode_float(env, size.float(kiwi_records::vector::X)?)),
-                    ("y", kiwi_encode_float(env, size.float(kiwi_records::vector::Y)?)),
+                    ("x", kiwi_encode_float(env, size.float(kiwi_records::Vector::X)?)),
+                    ("y", kiwi_encode_float(env, size.float(kiwi_records::Vector::Y)?)),
                 ],
             ))
         });
         let transform = record.record(field::TRANSFORM).and_then(|matrix| {
-            use kiwi_records::matrix as m;
+            use kiwi_records::Matrix as m;
             let entry = |name: &'static str, id: u32| Some((name, kiwi_encode_float(env, matrix.float(id)?)));
             Some(map(
                 env,
@@ -598,7 +598,7 @@ pub mod graph {
         });
         let position = record
             .record(field::PARENT_INDEX)
-            .and_then(|parent| parent.str(kiwi_records::parent_index::POSITION))
+            .and_then(|parent| parent.str(kiwi_records::ParentIndex::POSITION))
             .map_or(nil, |value| value.encode(env));
         let parent = parent.unwrap_or(nil);
         let node_type = enum_name(record.get(field::TYPE)).map_or(nil, |name| name.encode(env));
@@ -618,9 +618,9 @@ pub mod graph {
                 ("locked", flag(field::LOCKED)),
                 ("opacity", float(field::OPACITY)),
                 ("text", text.map_or(nil, |text| text.encode(env))),
-                ("font_family", font_field(kiwi_records::font_name::FAMILY)),
-                ("font_style", font_field(kiwi_records::font_name::STYLE)),
-                ("font_postscript", font_field(kiwi_records::font_name::POSTSCRIPT)),
+                ("font_family", font_field(kiwi_records::FontName::FAMILY)),
+                ("font_style", font_field(kiwi_records::FontName::STYLE)),
+                ("font_postscript", font_field(kiwi_records::FontName::POSTSCRIPT)),
                 ("font_size", float(field::FONT_SIZE)),
                 ("text_style_guid", style(field::STYLE_ID_FOR_TEXT)),
                 ("component_key", string(field::COMPONENT_KEY)),
@@ -715,7 +715,7 @@ pub mod graph {
     #[cfg(test)]
     mod tests {
         use super::*;
-        use kiwi_records::expression_function as function;
+        use kiwi_records::ExpressionFunction as function;
 
         fn float(value: f64) -> VariableValue {
             VariableValue::Float(value)
