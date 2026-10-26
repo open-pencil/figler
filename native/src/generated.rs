@@ -46399,7 +46399,7 @@ pub mod graph {
                         .unwrap_or(false) => Some(child),
                     _ => None,
                 })
-                .collect::<Vec<_>>();
+                .collect::<Vec<Occurrence>>();
             Occurrence {
                 children,
                 ..occurrence
