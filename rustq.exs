@@ -59,8 +59,6 @@ generate "native", "native/src/generated.rs" do
       entrypoints: [],
       definitions: ["Message"],
       features: [:sparse, :skip, :records],
-      sparse_messages: :descriptor,
-      decoder_sources: ["native/src/runtime.rs"],
       unknown_fields: :runtime_schema,
       module_prefix: "Figler.Schema"
     ),

@@ -2,7 +2,7 @@ defmodule Figler.Codegen.Native.Scene.SkipFieldHelpers do
   use RustQ.Meta,
     rust_sources: ["native/src/templates/kiwi_skip_helpers.rs"],
     callable_modules: [
-      KiwiCodec.RustlerGenerator.Skip.ValueHelpers,
+      KiwiCodec.RustlerGenerator.Skip.Helpers,
       KiwiCodec.RustlerGenerator.UnknownFields
     ]
 

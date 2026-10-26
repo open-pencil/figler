@@ -13,7 +13,7 @@ fn render_guid<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a
 fn render_repeated_terms<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
-    decode: KiwiSparseDecodeFn,
+    decode: KiwiDecodeFn,
 ) -> NifResult<Term<'a>> {
     let values = decoder.read_repeated(|decoder| decode(env, decoder))?;
     Ok(values.encode(env))
