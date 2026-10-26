@@ -34,18 +34,9 @@ defmodule Figler.Codegen.Native.Graph.Layer do
   # Fields an owner sets at a path in its expansion.
   @typep claim :: %{required(:path) => R.vec(GuidKey.t()), required(:props) => Kiwi.kiwi_record()}
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [
-        :own,
-        :mode_claims,
-        :override_path,
-        :structural_layer,
-        :descend
-      ])
-  end
+  def items, do: __rustq_items__()
 
   # Splits an owner's saved overrides into structural layers and property claims. A mode
   # placed on an instance record belongs to the instance even when `symbolOverrides` does not
@@ -55,34 +46,22 @@ defmodule Figler.Codegen.Native.Graph.Layer do
     overrides =
       case source.record(Kiwi.NodeChange.SYMBOL_DATA) do
         {:some, data} -> data.records(Kiwi.SymbolData.SYMBOL_OVERRIDES)
-        :none -> Vec.new()
+        :none -> []
       end
 
     layers =
-      for override <- overrides.iter(),
+      for override <- overrides,
           {:some, layer} <- [structural_layer(override, owner)],
           do: layer
 
-    claims = mode_claims(source)
+    claims =
+      for override <- overrides,
+          path <- [override_path(override)],
+          props <- [override.drop(ref(structural_fields()))],
+          path != [] and not props.is_empty(),
+          do: struct_literal(Claim, path: path, props: props)
 
-    for override <- overrides do
-      path = override_path(override)
-
-      props =
-        override.drop(
-          ref([
-            Kiwi.NodeChange.GUID_PATH,
-            Kiwi.NodeChange.OVERRIDDEN_SYMBOL_ID,
-            Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS
-          ])
-        )
-
-      if not path.is_empty() and not props.is_empty() do
-        claims.push(struct_literal(Claim, path: path, props: props))
-      end
-    end
-
-    {layers, claims}
+    {layers, mode_claims(source) ++ claims}
   end
 
   @spec mode_claims(R.ref(Kiwi.kiwi_record())) :: R.vec(claim())
@@ -97,8 +76,18 @@ defmodule Figler.Codegen.Native.Graph.Layer do
         )
       ]
     else
-      _ -> Vec.new()
+      _ -> []
     end
+  end
+
+  # What an override says about structure rather than properties.
+  @spec structural_fields() :: R.slice(R.u32(), R.lifetime(:static))
+  defrust structural_fields() do
+    ref([
+      Kiwi.NodeChange.GUID_PATH,
+      Kiwi.NodeChange.OVERRIDDEN_SYMBOL_ID,
+      Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS
+    ])
   end
 
   @spec override_path(R.ref(Kiwi.kiwi_record())) :: R.vec(GuidKey.t())
@@ -110,7 +99,7 @@ defmodule Figler.Codegen.Native.Graph.Layer do
             do: key
 
       :none ->
-        Vec.new()
+        []
     end
   end
 
@@ -120,12 +109,11 @@ defmodule Figler.Codegen.Native.Graph.Layer do
     swap = guid_key(override.record(Kiwi.NodeChange.OVERRIDDEN_SYMBOL_ID))
 
     assignments =
-      override.records(Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS)
-      |> into_iter()
-      |> cloned()
-      |> collect()
+      Enum.map(override.records(Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS), fn assignment ->
+        assignment.clone()
+      end)
 
-    if not path.is_empty() and (swap.is_some() or not assignments.is_empty()) do
+    if path != [] and (swap.is_some() or assignments != []) do
       some(
         struct_literal(Layer,
           owner: owner.clone(),

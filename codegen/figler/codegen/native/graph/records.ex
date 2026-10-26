@@ -10,12 +10,9 @@ defmodule Figler.Codegen.Native.Graph.Records do
 
   @type guid_key :: {R.u32(), R.u32()}
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [:guid_key, :record_id, :parent_id, :position])
-  end
+  def items, do: __rustq_items__()
 
   @spec guid_key(R.option(R.ref(Kiwi.kiwi_record()))) :: R.option(guid_key())
   defrust guid_key(guid) do

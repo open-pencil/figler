@@ -18533,10 +18533,11 @@ pub mod graph {
     fn own(source: &KiwiRecord, owner: LayerOwner) -> (Vec<Layer>, Vec<Claim>) {
         let overrides = match source.record(kiwi_records::NodeChange::SYMBOL_DATA) {
             Some(data) => data.records(kiwi_records::SymbolData::SYMBOL_OVERRIDES),
-            None => Vec::new(),
+            None => vec![],
         };
         let layers = overrides
             .iter()
+            .cloned()
             .map(|r#override| (structural_layer(r#override, &owner), r#override))
             .filter_map(|item| match item {
                 (Some(layer), r#override) => Some((layer, r#override)),
@@ -18544,22 +18545,22 @@ pub mod graph {
             })
             .map(|(layer, _)| layer)
             .collect::<Vec<Layer>>();
-        let mut claims = mode_claims(source);
-        for r#override in overrides {
-            let path = override_path(r#override);
-            let props = r#override
-                .drop(
-                    &[
-                        kiwi_records::NodeChange::GUID_PATH,
-                        kiwi_records::NodeChange::OVERRIDDEN_SYMBOL_ID,
-                        kiwi_records::NodeChange::COMPONENT_PROP_ASSIGNMENTS,
-                    ],
-                );
-            if !path.is_empty() && !props.is_empty() {
-                claims.push(Claim { path, props });
-            }
-        }
-        (layers, claims)
+        let claims = overrides
+            .into_iter()
+            .map(|r#override| (override_path(r#override), r#override))
+            .map(|(path, r#override)| (
+                r#override.drop(&structural_fields()),
+                (path, r#override),
+            ))
+            .filter_map(|item| match item {
+                (props, (path, r#override)) if !path.is_empty() && !props.is_empty() => {
+                    Some((props, path, r#override))
+                }
+                _ => None,
+            })
+            .map(|(props, path, _)| Claim { path, props })
+            .collect::<Vec<_>>();
+        (layers, mode_claims(source).into_iter().chain(claims).collect::<Vec<Claim>>())
     }
     fn mode_claims(source: &KiwiRecord) -> Vec<Claim> {
         match source.enum_value(kiwi_records::NodeChange::TYPE)
@@ -18575,14 +18576,21 @@ pub mod graph {
                                     [kiwi_records::NodeChange::VARIABLE_MODE_BY_SET_MAP]) }
                                 ]
                             }
-                            _ => Vec::new(),
+                            _ => vec![],
                         }
                     }
-                    _ => Vec::new(),
+                    _ => vec![],
                 }
             }
-            _ => Vec::new(),
+            _ => vec![],
         }
+    }
+    fn structural_fields() -> &'static [u32] {
+        &[
+            kiwi_records::NodeChange::GUID_PATH,
+            kiwi_records::NodeChange::OVERRIDDEN_SYMBOL_ID,
+            kiwi_records::NodeChange::COMPONENT_PROP_ASSIGNMENTS,
+        ]
     }
     fn override_path(r#override: &KiwiRecord) -> Vec<GuidKey> {
         match r#override.record(kiwi_records::NodeChange::GUID_PATH) {
@@ -18597,7 +18605,7 @@ pub mod graph {
                     .map(|(key, _)| key)
                     .collect()
             }
-            None => Vec::new(),
+            None => vec![],
         }
     }
     fn structural_layer(r#override: &KiwiRecord, owner: &LayerOwner) -> Option<Layer> {
