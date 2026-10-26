@@ -42413,545 +42413,154 @@ mod scene_xpath_runtime {
         let position = decoder.read_string_value()?;
         Ok((guid, position))
     }
-    fn scene_node_record_optional_attr_0(
+    fn scene_node_record_optional_attr(
         record: &SceneNodeRecord,
         index: usize,
     ) -> Option<RecordAttribute> {
-        match record.name.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("name", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_1(record, index - 1)
+        let present = vec![
+            record.name.is_some(), record.parent_guid.is_some(), record.position
+            .is_some(), record.size.is_some(), record.size.is_some(), record.size
+            .is_some(), record.size.is_some(), record.transform.is_some(), record.visible
+            .is_some(), record.locked.is_some(), record.opacity.is_some(), record.text
+            .is_some(), record.font_family.is_some(), record.font_style.is_some(), record
+            .font_postscript.is_some(), record.font_size.is_some(), record
+            .text_style_guid.is_some(), record.component_key.is_some(), record
+            .origin_component_key.is_some(), record.fill_style_guid.is_some(), record
+            .stroke_style_guid.is_some(), record.effect_style_guid.is_some(), record
+            .grid_style_guid.is_some(), record.fill_count.is_some(), record.stroke_count
+            .is_some()
+        ];
+        match present
+            .into_iter()
+            .enumerate()
+            .map(|(index, item)| (item, index))
+            .filter(|&(set, _field)| set)
+            .nth(index)
+        {
+            Some((_set, field)) => {
+                match field {
+                    0 => record.name.as_ref().map(|value| ("name", value.clone())),
+                    1 => {
+                        record
+                            .parent_guid
+                            .as_ref()
+                            .map(|value| ("parent_guid", value.to_string()))
+                    }
+                    2 => {
+                        record.position.as_ref().map(|value| ("position", value.clone()))
+                    }
+                    3 => record.size.as_ref().map(|value| ("x", value.x.to_string())),
+                    4 => record.size.as_ref().map(|value| ("y", value.y.to_string())),
+                    5 => record.size.as_ref().map(|value| ("width", value.x.to_string())),
+                    6 => {
+                        record.size.as_ref().map(|value| ("height", value.y.to_string()))
+                    }
+                    7 => {
+                        record
+                            .transform
+                            .as_ref()
+                            .map(|value| (
+                                "transform",
+                                format!(
+                                    "{},{},{},{},{},{}", value.m00, value.m01, value.m02, value
+                                    .m10, value.m11, value.m12
+                                ),
+                            ))
+                    }
+                    8 => record.visible.map(|value| ("visible", value.to_string())),
+                    9 => record.locked.map(|value| ("locked", value.to_string())),
+                    10 => record.opacity.map(|value| ("opacity", value.to_string())),
+                    11 => record.text.as_ref().map(|value| ("text", value.clone())),
+                    12 => {
+                        record
+                            .font_family
+                            .as_ref()
+                            .map(|value| ("font_family", value.clone()))
+                    }
+                    13 => {
+                        record
+                            .font_style
+                            .as_ref()
+                            .map(|value| ("font_style", value.clone()))
+                    }
+                    14 => {
+                        record
+                            .font_postscript
+                            .as_ref()
+                            .map(|value| ("font_postscript", value.clone()))
+                    }
+                    15 => record.font_size.map(|value| ("font_size", value.to_string())),
+                    16 => {
+                        record
+                            .text_style_guid
+                            .as_ref()
+                            .map(|value| ("text_style_guid", value.clone()))
+                    }
+                    17 => {
+                        record
+                            .component_key
+                            .as_ref()
+                            .map(|value| ("component_key", value.clone()))
+                    }
+                    18 => {
+                        record
+                            .origin_component_key
+                            .as_ref()
+                            .map(|value| ("origin_component_key", value.clone()))
+                    }
+                    19 => {
+                        record
+                            .fill_style_guid
+                            .as_ref()
+                            .map(|value| ("fill_style_guid", value.clone()))
+                    }
+                    20 => {
+                        record
+                            .stroke_style_guid
+                            .as_ref()
+                            .map(|value| ("stroke_style_guid", value.clone()))
+                    }
+                    21 => {
+                        record
+                            .effect_style_guid
+                            .as_ref()
+                            .map(|value| ("effect_style_guid", value.clone()))
+                    }
+                    22 => {
+                        record
+                            .grid_style_guid
+                            .as_ref()
+                            .map(|value| ("grid_style_guid", value.clone()))
+                    }
+                    23 => {
+                        record.fill_count.map(|value| ("fill_count", value.to_string()))
+                    }
+                    24 => {
+                        record
+                            .stroke_count
+                            .map(|value| ("stroke_count", value.to_string()))
+                    }
+                    _ => None,
                 }
             }
-            None => scene_node_record_optional_attr_1(record, index),
+            None => None,
         }
     }
-    fn scene_node_record_optional_attr_1(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.parent_guid.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("parent_guid", value.to_string()))
-                } else {
-                    scene_node_record_optional_attr_2(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_2(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_2(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.position.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("position", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_3(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_3(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_3(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.size.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("x", value.x.to_string()))
-                } else {
-                    scene_node_record_optional_attr_4(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_4(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_4(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.size.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("y", value.y.to_string()))
-                } else {
-                    scene_node_record_optional_attr_5(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_5(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_5(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.size.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("width", value.x.to_string()))
-                } else {
-                    scene_node_record_optional_attr_6(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_6(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_6(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.size.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("height", value.y.to_string()))
-                } else {
-                    scene_node_record_optional_attr_7(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_7(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_7(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.transform.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some((
-                        "transform",
-                        format!(
-                            "{},{},{},{},{},{}", value.m00, value.m01, value.m02, value
-                            .m10, value.m11, value.m12
-                        ),
-                    ))
-                } else {
-                    scene_node_record_optional_attr_8(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_8(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_8(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.visible {
-            Some(value) => {
-                if index == 0 {
-                    Some(("visible", value.to_string()))
-                } else {
-                    scene_node_record_optional_attr_9(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_9(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_9(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.locked {
-            Some(value) => {
-                if index == 0 {
-                    Some(("locked", value.to_string()))
-                } else {
-                    scene_node_record_optional_attr_10(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_10(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_10(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.opacity {
-            Some(value) => {
-                if index == 0 {
-                    Some(("opacity", value.to_string()))
-                } else {
-                    scene_node_record_optional_attr_11(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_11(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_11(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.text.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("text", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_12(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_12(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_12(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.font_family.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("font_family", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_13(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_13(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_13(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.font_style.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("font_style", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_14(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_14(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_14(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.font_postscript.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("font_postscript", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_15(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_15(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_15(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.font_size {
-            Some(value) => {
-                if index == 0 {
-                    Some(("font_size", value.to_string()))
-                } else {
-                    scene_node_record_optional_attr_16(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_16(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_16(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.text_style_guid.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("text_style_guid", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_17(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_17(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_17(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.component_key.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("component_key", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_18(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_18(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_18(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.origin_component_key.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("origin_component_key", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_19(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_19(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_19(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.fill_style_guid.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("fill_style_guid", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_20(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_20(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_20(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.stroke_style_guid.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("stroke_style_guid", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_21(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_21(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_21(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.effect_style_guid.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("effect_style_guid", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_22(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_22(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_22(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.grid_style_guid.as_ref() {
-            Some(value) => {
-                if index == 0 {
-                    Some(("grid_style_guid", value.clone()))
-                } else {
-                    scene_node_record_optional_attr_23(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_23(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_23(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.fill_count {
-            Some(value) => {
-                if index == 0 {
-                    Some(("fill_count", value.to_string()))
-                } else {
-                    scene_node_record_optional_attr_24(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_24(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_24(
-        record: &SceneNodeRecord,
-        index: usize,
-    ) -> Option<RecordAttribute> {
-        match record.stroke_count {
-            Some(value) => {
-                if index == 0 {
-                    Some(("stroke_count", value.to_string()))
-                } else {
-                    scene_node_record_optional_attr_25(record, index - 1)
-                }
-            }
-            None => scene_node_record_optional_attr_25(record, index),
-        }
-    }
-    fn scene_node_record_optional_attr_25(
-        _record: &SceneNodeRecord,
-        _index: usize,
-    ) -> Option<RecordAttribute> {
-        None
-    }
-    fn scene_node_record_optional_attr_count_0(record: &SceneNodeRecord) -> usize {
-        match record.name.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_1(record),
-            None => scene_node_record_optional_attr_count_1(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_1(record: &SceneNodeRecord) -> usize {
-        match record.parent_guid.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_2(record),
-            None => scene_node_record_optional_attr_count_2(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_2(record: &SceneNodeRecord) -> usize {
-        match record.position.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_3(record),
-            None => scene_node_record_optional_attr_count_3(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_3(record: &SceneNodeRecord) -> usize {
-        match record.size.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_4(record),
-            None => scene_node_record_optional_attr_count_4(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_4(record: &SceneNodeRecord) -> usize {
-        match record.size.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_5(record),
-            None => scene_node_record_optional_attr_count_5(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_5(record: &SceneNodeRecord) -> usize {
-        match record.size.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_6(record),
-            None => scene_node_record_optional_attr_count_6(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_6(record: &SceneNodeRecord) -> usize {
-        match record.size.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_7(record),
-            None => scene_node_record_optional_attr_count_7(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_7(record: &SceneNodeRecord) -> usize {
-        match record.transform.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_8(record),
-            None => scene_node_record_optional_attr_count_8(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_8(record: &SceneNodeRecord) -> usize {
-        match record.visible {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_9(record),
-            None => scene_node_record_optional_attr_count_9(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_9(record: &SceneNodeRecord) -> usize {
-        match record.locked {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_10(record),
-            None => scene_node_record_optional_attr_count_10(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_10(record: &SceneNodeRecord) -> usize {
-        match record.opacity {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_11(record),
-            None => scene_node_record_optional_attr_count_11(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_11(record: &SceneNodeRecord) -> usize {
-        match record.text.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_12(record),
-            None => scene_node_record_optional_attr_count_12(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_12(record: &SceneNodeRecord) -> usize {
-        match record.font_family.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_13(record),
-            None => scene_node_record_optional_attr_count_13(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_13(record: &SceneNodeRecord) -> usize {
-        match record.font_style.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_14(record),
-            None => scene_node_record_optional_attr_count_14(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_14(record: &SceneNodeRecord) -> usize {
-        match record.font_postscript.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_15(record),
-            None => scene_node_record_optional_attr_count_15(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_15(record: &SceneNodeRecord) -> usize {
-        match record.font_size {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_16(record),
-            None => scene_node_record_optional_attr_count_16(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_16(record: &SceneNodeRecord) -> usize {
-        match record.text_style_guid.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_17(record),
-            None => scene_node_record_optional_attr_count_17(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_17(record: &SceneNodeRecord) -> usize {
-        match record.component_key.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_18(record),
-            None => scene_node_record_optional_attr_count_18(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_18(record: &SceneNodeRecord) -> usize {
-        match record.origin_component_key.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_19(record),
-            None => scene_node_record_optional_attr_count_19(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_19(record: &SceneNodeRecord) -> usize {
-        match record.fill_style_guid.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_20(record),
-            None => scene_node_record_optional_attr_count_20(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_20(record: &SceneNodeRecord) -> usize {
-        match record.stroke_style_guid.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_21(record),
-            None => scene_node_record_optional_attr_count_21(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_21(record: &SceneNodeRecord) -> usize {
-        match record.effect_style_guid.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_22(record),
-            None => scene_node_record_optional_attr_count_22(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_22(record: &SceneNodeRecord) -> usize {
-        match record.grid_style_guid.as_ref() {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_23(record),
-            None => scene_node_record_optional_attr_count_23(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_23(record: &SceneNodeRecord) -> usize {
-        match record.fill_count {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_24(record),
-            None => scene_node_record_optional_attr_count_24(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_24(record: &SceneNodeRecord) -> usize {
-        match record.stroke_count {
-            Some(_value) => 1 + scene_node_record_optional_attr_count_25(record),
-            None => scene_node_record_optional_attr_count_25(record),
-        }
-    }
-    fn scene_node_record_optional_attr_count_25(_record: &SceneNodeRecord) -> usize {
-        0
+    fn scene_node_record_optional_attr_count(record: &SceneNodeRecord) -> usize {
+        let present = vec![
+            record.name.is_some(), record.parent_guid.is_some(), record.position
+            .is_some(), record.size.is_some(), record.size.is_some(), record.size
+            .is_some(), record.size.is_some(), record.transform.is_some(), record.visible
+            .is_some(), record.locked.is_some(), record.opacity.is_some(), record.text
+            .is_some(), record.font_family.is_some(), record.font_style.is_some(), record
+            .font_postscript.is_some(), record.font_size.is_some(), record
+            .text_style_guid.is_some(), record.component_key.is_some(), record
+            .origin_component_key.is_some(), record.fill_style_guid.is_some(), record
+            .stroke_style_guid.is_some(), record.effect_style_guid.is_some(), record
+            .grid_style_guid.is_some(), record.fill_count.is_some(), record.stroke_count
+            .is_some()
+        ];
+        present.into_iter().filter(|&set| set).count()
     }
     fn read_scene_float64_value(decoder: &mut Decoder<'_>) -> NifResult<f64> {
         Ok(decoder.read_var_float_value()? as f64)
@@ -42996,12 +42605,12 @@ mod scene_xpath_runtime {
         } else if index == 1 {
             Some(("type", record.node_type.to_string()))
         } else {
-            scene_node_record_optional_attr_0(record, index - 2)
+            scene_node_record_optional_attr(record, index - 2)
         }
     }
     fn scene_node_record_attr_count(record: &SceneNodeRecord) -> usize {
         scene_node_record_base_attr_count()
-            + scene_node_record_optional_attr_count_0(record)
+            + scene_node_record_optional_attr_count(record)
     }
     fn scene_query_node(scene: &SceneIndex, node_index: usize) -> SceneQueryNode {
         let node = &scene.nodes[node_index];

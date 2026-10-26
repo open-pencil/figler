@@ -37,7 +37,10 @@ defmodule Figler.Codegen.Native.Scene.Record do
       fields:
         Schema.struct_fields(guid: T.path(:SceneGuid), node_type: T.ref(:str, lifetime: :static)) ++
           record_fields() ++
-          Schema.struct_fields(parent: option_type(:usize), children: T.vec(:usize))
+          Schema.struct_fields(
+            parent: T.path(:Option, generics: [T.path(:usize)]),
+            children: T.vec(:usize)
+          )
     }
   end
 
@@ -52,14 +55,28 @@ defmodule Figler.Codegen.Native.Scene.Record do
     |> Schema.struct_fields()
   end
 
+  @doc """
+  The map type of a scene record's projected fields, which `defrust` code reading a record
+  names, so RustQ knows their types.
+  """
+  @spec record_type() :: Macro.t()
+  def record_type do
+    fields =
+      [guid: quote(do: RustQ.Type.path(:SceneGuid))] ++
+        Enum.map(optional_fields(), &{&1.name, record_spec(&1)})
+
+    {:%{}, [], Enum.map(fields, fn {name, spec} -> {{:required, [], [name]}, spec} end)}
+  end
+
   defp record_fields do
     optional_fields()
-    |> Enum.map(&{&1.name, record_rust_type(&1)})
+    |> Enum.map(&{&1.name, RustQ.Spec.type(record_spec(&1)).ast})
     |> Schema.struct_fields()
   end
 
-  defp record_rust_type(%{source: {:parent_index, :guid}}), do: option_type(:SceneGuid)
-  defp record_rust_type(field), do: ProjectionNative.rust_type(field)
+  # A record keeps its parent's GUID, which the query node writes as text.
+  defp record_spec(%{source: {:parent_index, :guid}}),
+    do: quote(do: RustQ.Type.option(RustQ.Type.path(:SceneGuid)))
 
-  defp option_type(type), do: T.path(:Option, generics: [T.path(type)])
+  defp record_spec(field), do: ProjectionNative.rust_spec(field)
 end

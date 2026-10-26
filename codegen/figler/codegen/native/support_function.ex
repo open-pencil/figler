@@ -6,13 +6,53 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
   alias Figler.Scene.Projection.Native.XPathAttr
   alias Figler.Scene.Projection.Native.XPathValue
 
-  defmacro defrust_functions do
-    attrs = optional_xpath_attrs()
-
-    functions = optional_attr_functions(attrs) ++ optional_attr_count_functions(attrs)
+  @doc "Declares `scene_node_record`, the type of the scene records RustQ code reads."
+  defmacro deftype_scene_node_record do
+    record = Code.ensure_compiled!(Figler.Codegen.Native.Scene.Record)
 
     quote do
-      (unquote_splicing(functions))
+      @type scene_node_record :: unquote(record.record_type())
+    end
+  end
+
+  defmacro defrust_functions do
+    attrs = optional_xpath_attrs()
+    present = Enum.map(attrs, &present/1)
+
+    values =
+      attrs
+      |> Enum.with_index()
+      |> Enum.map(fn {attr, field} -> {:->, [], [[field], attr_value(attr)]} end)
+
+    quote do
+      # The optional attributes present on a record, in projection order.
+      @spec scene_node_record_optional_attr(
+              RustQ.Type.ref(scene_node_record()),
+              RustQ.Type.usize()
+            ) :: RustQ.Type.option(RustQ.Type.path(:RecordAttribute))
+      defrust scene_node_record_optional_attr(record, index) do
+        present = unquote(present)
+
+        case present
+             |> Enum.with_index()
+             |> Enum.filter(fn {set, _field} -> set end)
+             |> Enum.at(index) do
+          {:some, {_set, field}} ->
+            case field do
+              unquote(values ++ [{:->, [], [[{:_, [], nil}], nil]}])
+            end
+
+          :none ->
+            nil
+        end
+      end
+
+      @spec scene_node_record_optional_attr_count(RustQ.Type.ref(scene_node_record())) ::
+              RustQ.Type.usize()
+      defrust scene_node_record_optional_attr_count(record) do
+        present = unquote(present)
+        Enum.count(present, fn set -> set end)
+      end
     end
   end
 
@@ -22,104 +62,13 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
     |> Enum.flat_map(&ProjectionNative.xpath_attr_entries/1)
   end
 
-  defp optional_attr_functions(attrs) do
-    names = optional_attr_function_names(length(attrs))
+  defp present(%XPathAttr{field: field}), do: quote(do: record.unquote(field).is_some())
 
-    functions =
-      attrs
-      |> Enum.zip(name_pairs(names))
-      |> Enum.map(fn {%XPathAttr{} = attr, {name, next_name}} ->
-        optional_attr_function(attr, name, next_name)
-      end)
-
-    functions ++ [optional_attr_base_function(List.last(names))]
-  end
-
-  defp optional_attr_count_functions(attrs) do
-    names = optional_attr_count_function_names(length(attrs))
-
-    functions =
-      attrs
-      |> Enum.zip(name_pairs(names))
-      |> Enum.map(fn {%XPathAttr{} = attr, {name, next_name}} ->
-        optional_attr_count_function(attr, name, next_name)
-      end)
-
-    functions ++ [optional_attr_count_base_function(List.last(names))]
-  end
-
-  defp name_pairs(names) do
-    names
-    |> Enum.chunk_every(2, 1, :discard)
-    |> Enum.map(fn [name, next_name] -> {name, next_name} end)
-  end
-
-  defp optional_attr_function_names(count) do
-    for index <- 0..count do
-      :"scene_node_record_optional_attr_#{index}"
-    end
-  end
-
-  defp optional_attr_count_function_names(count) do
-    for index <- 0..count do
-      :"scene_node_record_optional_attr_count_#{index}"
-    end
-  end
-
-  defp optional_attr_function(%XPathAttr{} = attr, name, next_name) do
-    accessor = xpath_accessor(attr)
+  defp attr_value(%XPathAttr{} = attr) do
     value = xpath_value(attr.value)
 
     quote do
-      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.path(:SceneNodeRecord)), RustQ.Type.usize()) ::
-              RustQ.Type.option(RustQ.Type.path(:RecordAttribute))
-      defrust unquote(name)(record, index) do
-        case unquote(accessor) do
-          {:some, value} ->
-            if index == 0 do
-              some({unquote(attr.attr), unquote(value)})
-            else
-              unquote(next_name)(record, index - 1)
-            end
-
-          :none ->
-            unquote(next_name)(record, index)
-        end
-      end
-    end
-  end
-
-  defp optional_attr_base_function(name) do
-    quote do
-      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.path(:SceneNodeRecord)), RustQ.Type.usize()) ::
-              RustQ.Type.option(RustQ.Type.path(:RecordAttribute))
-      defrust unquote(name)(_record, _index) do
-        nil
-      end
-    end
-  end
-
-  defp optional_attr_count_function(%XPathAttr{} = attr, name, next_name) do
-    accessor = xpath_accessor(attr)
-
-    quote do
-      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.path(:SceneNodeRecord))) ::
-              RustQ.Type.usize()
-      defrust unquote(name)(record) do
-        case unquote(accessor) do
-          {:some, _value} -> 1 + unquote(next_name)(record)
-          :none -> unquote(next_name)(record)
-        end
-      end
-    end
-  end
-
-  defp optional_attr_count_base_function(name) do
-    quote do
-      @spec unquote(name)(RustQ.Type.ref(RustQ.Type.path(:SceneNodeRecord))) :: RustQ.Type.usize()
-      defrust unquote(name)(_record) do
-        0
-      end
+      unquote(xpath_accessor(attr)).map(fn value -> {unquote(attr.attr), unquote(value)} end)
     end
   end
 
@@ -200,6 +149,8 @@ defmodule Figler.Codegen.Native.SupportFunction do
 
   defrustmod(SceneXpathRuntime, as: :scene_xpath_runtime)
 
+  OptionalRecordAttrs.deftype_scene_node_record()
+
   @type decoder :: R.mut_ref(R.path(:Decoder, R.lifetime(:_)))
   @type graph_focus_guid :: term()
   @type scene_query_node :: R.path(:SceneQueryNode)
@@ -226,10 +177,6 @@ defmodule Figler.Codegen.Native.SupportFunction do
   @scene_query_atom_vars AtomCache.static_var_map(Projection.field_names())
 
   @optional_field_names Projection.field_names() -- Projection.required_field_names()
-  @optional_xpath_attrs Enum.flat_map(
-                          @optional_field_names,
-                          &ProjectionNative.xpath_attr_entries/1
-                        )
 
   @doc """
   Returns graph-focus helper items authored with `defrust`.
@@ -377,7 +324,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
     2
   end
 
-  @spec scene_node_record_attr(R.ref(R.path(:SceneNodeRecord)), R.usize()) ::
+  @spec scene_node_record_attr(R.ref(scene_node_record()), R.usize()) ::
           R.option(R.path(:RecordAttribute))
   defrust scene_node_record_attr(record, index) do
     if index == 0 do
@@ -386,14 +333,14 @@ defmodule Figler.Codegen.Native.SupportFunction do
       if index == 1 do
         some({"type", record.node_type.to_string()})
       else
-        scene_node_record_optional_attr_0(record, index - 2)
+        scene_node_record_optional_attr(record, index - 2)
       end
     end
   end
 
-  @spec scene_node_record_attr_count(R.ref(R.path(:SceneNodeRecord))) :: R.usize()
+  @spec scene_node_record_attr_count(R.ref(scene_node_record())) :: R.usize()
   defrust scene_node_record_attr_count(record) do
-    scene_node_record_base_attr_count() + scene_node_record_optional_attr_count_0(record)
+    scene_node_record_base_attr_count() + scene_node_record_optional_attr_count(record)
   end
 
   @spec scene_query_node(R.ref(R.path(:SceneIndex)), R.usize()) :: scene_query_node()
@@ -587,25 +534,12 @@ defmodule Figler.Codegen.Native.SupportFunction do
   end
 
   defp optional_field_names, do: @optional_field_names
-  defp optional_xpath_attrs, do: @optional_xpath_attrs
 
   defp optional_scene_node_record_attr_items do
-    MetaAST.functions!(
-      __MODULE__,
-      optional_attr_function_names() ++ optional_attr_count_function_names()
-    )
-  end
-
-  defp optional_attr_function_names do
-    for index <- 0..length(optional_xpath_attrs()) do
-      :"scene_node_record_optional_attr_#{index}"
-    end
-  end
-
-  defp optional_attr_count_function_names do
-    for index <- 0..length(optional_xpath_attrs()) do
-      :"scene_node_record_optional_attr_count_#{index}"
-    end
+    MetaAST.functions!(__MODULE__, [
+      :scene_node_record_optional_attr,
+      :scene_node_record_optional_attr_count
+    ])
   end
 
   defp scene_query_node_struct_field(:parent_guid) do

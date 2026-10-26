@@ -35,15 +35,20 @@ defmodule Figler.Scene.Projection.Native do
   end
 
   alias Figler.Scene.Projection
-  alias RustQ.Rust.AST.Builder, as: A
+  def rust_type(field), do: RustQ.Spec.type(rust_spec(field)).ast
 
-  def rust_type(field) when is_atom(field), do: field |> Projection.field!() |> rust_type()
-  def rust_type(%{value: :vector}), do: option_type(:SceneSize)
-  def rust_type(%{value: :matrix}), do: option_type(:SceneTransform)
-  def rust_type(%{decode: :bool}), do: option_type(:bool)
-  def rust_type(%{decode: :float}), do: option_type(:f32)
-  def rust_type(%{value: :count}), do: option_type(:usize)
-  def rust_type(%{name: _name}), do: option_type(:String)
+  @doc "The spec of a projected field's native value, which its Rust type is."
+  @spec rust_spec(atom() | map()) :: Macro.t()
+  def rust_spec(field) when is_atom(field), do: field |> Projection.field!() |> rust_spec()
+  def rust_spec(%{value: :vector}), do: quote(do: RustQ.Type.option(RustQ.Type.path(:SceneSize)))
+
+  def rust_spec(%{value: :matrix}),
+    do: quote(do: RustQ.Type.option(RustQ.Type.path(:SceneTransform)))
+
+  def rust_spec(%{decode: :bool}), do: quote(do: RustQ.Type.option(RustQ.Type.bool()))
+  def rust_spec(%{decode: :float}), do: quote(do: RustQ.Type.option(RustQ.Type.f32()))
+  def rust_spec(%{value: :count}), do: quote(do: RustQ.Type.option(RustQ.Type.usize()))
+  def rust_spec(%{name: _name}), do: quote(do: RustQ.Type.option(String.t()))
 
   def rust_copy?(field) when is_atom(field), do: field |> Projection.field!() |> rust_copy?()
   def rust_copy?(%{decode: kind}) when kind in [:bool, :float], do: true
@@ -75,8 +80,6 @@ defmodule Figler.Scene.Projection.Native do
       by_ref?: Keyword.get(opts, :by_ref?, true)
     }
   end
-
-  defp option_type(type), do: A.type_path(:Option, generics: [A.type_path(type)])
 
   defp default_xpath_value(field) do
     if rust_copy?(field), do: :value_to_string, else: :value_clone
