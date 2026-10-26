@@ -191,7 +191,7 @@ defmodule Figler.MixProject do
 
   defp rustq_dep do
     case System.get_env("RUSTQ_PATH") do
-      nil -> {:rustq, "~> 1.0.0-rc.19", only: [:dev, :test], runtime: false}
+      nil -> {:rustq, "~> 1.0.0-rc.20", only: [:dev, :test], runtime: false}
       path -> {:rustq, path: path, only: [:dev, :test], runtime: false, override: true}
     end
   end
