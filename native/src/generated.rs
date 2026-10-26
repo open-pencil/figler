@@ -18338,7 +18338,7 @@ pub mod graph {
                 value: prop_value(value),
                 origin: Origin::Default,
                 rank: None,
-                superseded: Vec::new(),
+                superseded: vec![],
             })
             .collect()
     }
@@ -18373,27 +18373,65 @@ pub mod graph {
             }
         }
     }
+    fn text_characters(text: Option<&KiwiRecord>) -> Option<String> {
+        text.and_then(|text| text.str(kiwi_records::TextData::CHARACTERS))
+            .map(|characters| characters.to_string())
+    }
+    fn slot_content(value: &KiwiRecord) -> Option<GuidKey> {
+        value
+            .record(kiwi_records::VariableAnyValue::SLOT_CONTENT_ID_VALUE)
+            .and_then(|slot| guid_key(slot.record(kiwi_records::SlotContentId::GUID)))
+            .filter(|key| *key != (4294967295, 4294967295))
+    }
     fn assign(
-        mut bindings: Vec<Binding>,
+        bindings: Vec<Binding>,
         assignments: &[&KiwiRecord],
         rank: Option<u32>,
     ) -> Vec<Binding> {
-        for assignment in assignments {
-            if let Some(binding) = assignment_binding(assignment, rank) {
-                match bindings.iter().rposition(|previous| previous.id == binding.id) {
-                    Some(index) => {
-                        let previous = bindings.remove(index);
-                        let mut superseded = previous.superseded;
-                        superseded.push(previous.value);
-                        bindings.insert(index, Binding { superseded, ..binding });
+        assignments
+            .iter()
+            .copied()
+            .fold(
+                bindings,
+                |bindings, assignment| match assignment_binding(assignment, rank) {
+                    Some(binding) => assigned(bindings, binding),
+                    None => bindings,
+                },
+            )
+    }
+    fn assigned(bindings: Vec<Binding>, binding: Binding) -> Vec<Binding> {
+        let last = bindings
+            .iter()
+            .map(|previous| previous.id)
+            .enumerate()
+            .map(|(index, item)| (item, index))
+            .rev()
+            .find_map(|(id, index)| if id == binding.id { Some(index) } else { None });
+        match last {
+            Some(index) => {
+                let superseded = bindings[index]
+                    .superseded
+                    .iter()
+                    .cloned()
+                    .chain(vec![bindings[index].value.clone()])
+                    .collect::<Vec<PropValue>>();
+                {
+                    let rustq_item = Binding { superseded, ..binding };
+                    {
+                        let mut rustq_updated = bindings;
+                        if let Some(rustq_slot) = rustq_updated.get_mut(index) {
+                            *rustq_slot = rustq_item;
+                        }
+                        rustq_updated
                     }
-                    None => {
-                        bindings.push(binding);
-                    }
-                };
+                }
+            }
+            None => {
+                let mut rustq_updated = bindings;
+                rustq_updated.push(binding);
+                rustq_updated
             }
         }
-        bindings
     }
     fn assignment_binding(
         assignment: &KiwiRecord,
@@ -18410,7 +18448,7 @@ pub mod graph {
                             value,
                             origin: Origin::Assignment,
                             rank,
-                            superseded: Vec::new(),
+                            superseded: vec![],
                         })
                     }
                     _ => None,
@@ -18473,29 +18511,33 @@ pub mod graph {
             None
         }
     }
-    fn slot_content(value: &KiwiRecord) -> Option<GuidKey> {
-        value
-            .record(kiwi_records::VariableAnyValue::SLOT_CONTENT_ID_VALUE)
-            .and_then(|slot| guid_key(slot.record(kiwi_records::SlotContentId::GUID)))
-            .filter(|key| *key != (4294967295, 4294967295))
-    }
-    fn text_characters(text: Option<&KiwiRecord>) -> Option<String> {
-        text.and_then(|text| text.str(kiwi_records::TextData::CHARACTERS))
-            .map(|characters| characters.to_string())
-    }
     fn bind(
         record: &KiwiRecord,
         bindings: &[Binding],
     ) -> (KiwiRecord, Vec<(BindingClaim, Binding)>) {
-        let mut bound = record.clone();
-        let mut claims = Vec::new();
-        for reference in record.records(kiwi_records::NodeChange::COMPONENT_PROP_REFS) {
-            if let Some((next, claim, binding)) = bind_ref(&bound, reference, bindings) {
-                bound = next;
-                claims.push((claim, binding));
-            }
-        }
-        (bound, claims)
+        record
+            .records(kiwi_records::NodeChange::COMPONENT_PROP_REFS)
+            .into_iter()
+            .fold(
+                (record.clone(), vec![]),
+                |(bound, claims), reference| match bind_ref(
+                    &bound,
+                    reference,
+                    bindings,
+                ) {
+                    Some((next, claim, binding)) => {
+                        (
+                            next,
+                            {
+                                let mut rustq_updated = claims;
+                                rustq_updated.push((claim, binding));
+                                rustq_updated
+                            },
+                        )
+                    }
+                    None => (bound, claims),
+                },
+            )
     }
     fn bind_ref(
         record: &KiwiRecord,
@@ -18509,7 +18551,7 @@ pub mod graph {
                     reference.record(kiwi_records::ComponentPropRef::DEF_ID),
                 ) {
                     Some(id) => {
-                        match bindings.iter().find(|binding| binding.id == id) {
+                        match bindings.iter().find(|binding| binding.id == id).cloned() {
                             Some(binding) => {
                                 match bind_field(record, reference, &binding.value) {
                                     Some((bound, field)) => {
@@ -18518,7 +18560,7 @@ pub mod graph {
                                             field,
                                             origin: binding.origin,
                                         };
-                                        Some((bound, claim, binding.clone()))
+                                        Some((bound, claim, binding))
                                     }
                                     _ => None,
                                 }

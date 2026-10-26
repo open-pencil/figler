@@ -37,27 +37,9 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
            required(:superseded) => R.vec(prop_value())
          }
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [
-        :empty_value,
-        :component,
-        :prop_value,
-        :assign,
-        :assignment_binding,
-        :assignment_value,
-        :variable_value,
-        :slot_content,
-        :text_characters,
-        :bind,
-        :bind_ref,
-        :bind_field,
-        :bind_symbol,
-        :bind_text
-      ])
-  end
+  def items, do: __rustq_items__()
 
   @spec empty_value() :: prop_value()
   defrust empty_value() do
@@ -81,7 +63,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
         value: prop_value(value),
         origin: :default,
         rank: nil,
-        superseded: Vec.new()
+        superseded: []
       )
     end
   end
@@ -133,26 +115,33 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   @spec assign(R.vec(binding()), R.slice(R.ref(Kiwi.kiwi_record())), R.option(R.u32())) ::
           R.vec(binding())
   defrust assign(bindings, assignments, rank) do
-    for assignment <- assignments do
+    Enum.reduce(assignments, bindings, fn assignment, bindings ->
       case assignment_binding(assignment, rank) do
-        {:some, binding} ->
-          case bindings.iter().rposition(fn previous -> previous.id == binding.id end) do
-            {:some, index} ->
-              previous = bindings.remove(index)
-              superseded = previous.superseded
-              superseded.push(previous.value)
-              bindings.insert(index, %{binding | superseded: superseded})
-
-            :none ->
-              bindings.push(binding)
-          end
-
-        :none ->
-          :ok
+        {:some, binding} -> assigned(bindings, binding)
+        :none -> bindings
       end
-    end
+    end)
+  end
 
-    bindings
+  # A binding replaces the last one for its property, keeping its position and remembering the
+  # value it replaced; a binding for a new property comes last.
+  @spec assigned(R.vec(binding()), binding()) :: R.vec(binding())
+  defrust assigned(bindings, binding) do
+    last =
+      bindings
+      |> Enum.map(fn previous -> previous.id end)
+      |> Enum.with_index()
+      |> Enum.reverse()
+      |> Enum.find_value(fn {id, index} -> if id == binding.id, do: some(index) end)
+
+    case last do
+      {:some, index} ->
+        superseded = bindings[index].superseded ++ [bindings[index].value]
+        List.replace_at(bindings, index, %{binding | superseded: superseded})
+
+      :none ->
+        bindings ++ [binding]
+    end
   end
 
   @spec assignment_binding(R.ref(Kiwi.kiwi_record()), R.option(R.u32())) :: R.option(binding())
@@ -165,7 +154,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
           value: value,
           origin: :assignment,
           rank: rank,
-          superseded: Vec.new()
+          superseded: []
         )
       )
     else
@@ -231,21 +220,13 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   @spec bind(R.ref(Kiwi.kiwi_record()), R.slice(binding())) ::
           {Kiwi.kiwi_record(), R.vec({Occurrence.binding_claim(), binding()})}
   defrust bind(record, bindings) do
-    bound = record.clone()
-    claims = Vec.new()
-
-    for reference <- record.records(Kiwi.NodeChange.COMPONENT_PROP_REFS) do
-      case bind_ref(ref(bound), reference, bindings) do
-        {:some, {next, claim, binding}} ->
-          assign!(bound, next)
-          claims.push({claim, binding})
-
-        :none ->
-          :ok
-      end
-    end
-
-    {bound, claims}
+    Enum.reduce(record.records(Kiwi.NodeChange.COMPONENT_PROP_REFS), {record.clone(), []}, fn
+      reference, {bound, claims} ->
+        case bind_ref(bound, reference, bindings) do
+          {:some, {next, claim, binding}} -> {next, claims ++ [{claim, binding}]}
+          :none -> {bound, claims}
+        end
+    end)
   end
 
   @spec bind_ref(R.ref(Kiwi.kiwi_record()), R.ref(Kiwi.kiwi_record()), R.slice(binding())) ::
@@ -253,12 +234,12 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   defrust bind_ref(record, reference, bindings) do
     with false <- reference.bool(Kiwi.ComponentPropRef.IS_DELETED).unwrap_or(false),
          {:some, id} <- guid_key(reference.record(Kiwi.ComponentPropRef.DEF_ID)),
-         {:some, binding} <- bindings.iter().find(fn binding -> binding.id == id end),
+         {:some, binding} <- Enum.find(bindings, fn binding -> binding.id == id end),
          {:some, {bound, field}} <- bind_field(record, reference, ref(binding.value)) do
       claim =
         struct_literal(BindingClaim, definition_id: id, field: field, origin: binding.origin)
 
-      some({bound, claim, binding.clone()})
+      some({bound, claim, binding})
     else
       _ -> nil
     end
