@@ -17115,7 +17115,7 @@ pub mod graph {
             .record(kiwi_records::NodeChange::PARAMETER_CONSUMPTION_MAP)
         {
             Some(map) => map.records(kiwi_records::VariableDataMap::ENTRIES),
-            None => Vec::new(),
+            None => vec![],
         };
         let saved = record
             .records(kiwi_records::NodeChange::COMPONENT_PROP_REFS)
@@ -17123,8 +17123,13 @@ pub mod graph {
             .cloned()
             .collect::<Vec<_>>();
         let refs = entries
-            .iter()
-            .filter_map(prop_ref)
+            .into_iter()
+            .map(|entry| (prop_ref(entry), entry))
+            .filter_map(|item| match item {
+                (Some(prop_ref), entry) => Some((prop_ref, entry)),
+                _ => None,
+            })
+            .map(|(prop_ref, _)| prop_ref)
             .fold(saved, |refs, prop_ref| upsert_ref(refs, prop_ref));
         if refs.is_empty() {
             record
@@ -17132,7 +17137,7 @@ pub mod graph {
             record.put_records(kiwi_records::NodeChange::COMPONENT_PROP_REFS, refs)
         }
     }
-    fn prop_ref(entry: &&KiwiRecord) -> Option<KiwiRecord> {
+    fn prop_ref(entry: &KiwiRecord) -> Option<KiwiRecord> {
         match entry.enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD) {
             Some(variable_field) => {
                 match node_field(variable_field) {
@@ -17205,26 +17210,36 @@ pub mod graph {
             _ => None,
         }
     }
-    fn upsert_ref(mut refs: Vec<KiwiRecord>, prop_ref: KiwiRecord) -> Vec<KiwiRecord> {
+    fn upsert_ref(refs: Vec<KiwiRecord>, prop_ref: KiwiRecord) -> Vec<KiwiRecord> {
         let field = prop_ref
             .enum_value(kiwi_records::ComponentPropRef::COMPONENT_PROP_NODE_FIELD);
-        match refs
+        let last = refs
             .iter()
-            .rposition(|saved| {
+            .map(|saved| {
                 saved
                     .enum_value(
                         kiwi_records::ComponentPropRef::COMPONENT_PROP_NODE_FIELD,
-                    ) == field
+                    )
             })
-        {
+            .enumerate()
+            .map(|(index, item)| (item, index))
+            .rev()
+            .find_map(|(saved, index)| if saved == field { Some(index) } else { None });
+        match last {
             Some(index) => {
-                refs.remove(index);
-                refs.insert(index, prop_ref);
-                refs
+                let rustq_item = prop_ref;
+                {
+                    let mut rustq_updated = refs;
+                    if let Some(rustq_slot) = rustq_updated.get_mut(index) {
+                        *rustq_slot = rustq_item;
+                    }
+                    rustq_updated
+                }
             }
             None => {
-                refs.push(prop_ref);
-                refs
+                let mut rustq_updated = refs;
+                rustq_updated.push(prop_ref);
+                rustq_updated
             }
         }
     }
@@ -17233,7 +17248,7 @@ pub mod graph {
     ) -> NifResult<Vec<KiwiRecord>> {
         if records.iter().any(linked_definitions) {
             let by_id = records_by_id(&records);
-            let mut resolved: Resolved = HashMap::new();
+            let mut resolved = HashMap::new();
             records
                 .iter()
                 .map(|record| resolve(record, &by_id, &mut resolved, &HashSet::new()))
@@ -17278,15 +17293,18 @@ pub mod graph {
                     Err(rustler::Error::BadArg)
                 } else {
                     {
-                        let mut visiting = visiting.clone();
-                        visiting.insert(id);
+                        let visiting = {
+                            let mut rustq_updated = visiting.clone();
+                            rustq_updated.insert(id);
+                            rustq_updated
+                        };
                         let ancestors = resolved_ancestors(
                             record,
                             by_id,
                             resolved,
                             &visiting,
                         )?;
-                        let definitions = inherit_from(record, &&ancestors)?;
+                        let definitions = inherit_from(record, &ancestors)?;
                         resolved.insert(id, definitions.clone());
                         Ok(definitions)
                     }
@@ -17295,8 +17313,8 @@ pub mod graph {
         }
     }
     fn cached(resolved: &Resolved, id: GuidKey) -> NifResult<KiwiRecord> {
-        match resolved.get(&id) {
-            Some(record) => Ok(record.clone()),
+        match resolved.get(&id).cloned() {
+            Some(record) => Ok(record),
             None => Err(rustler::Error::BadArg),
         }
     }
@@ -17306,18 +17324,16 @@ pub mod graph {
         resolved: &mut Resolved,
         visiting: &HashSet<GuidKey>,
     ) -> NifResult<Vec<KiwiRecord>> {
-        match parent_id(record).and_then(|id| by_id.get(&id)) {
-            None => Ok(Vec::new()),
+        match parent_id(record).and_then(|id| by_id.get(&id).copied()) {
+            None => Ok(vec![]),
             Some(parent) => {
                 let parent = resolve(parent, by_id, resolved, visiting)?;
-                let mut ancestors = resolved_ancestors(
-                    &parent,
-                    by_id,
-                    resolved,
-                    visiting,
-                )?;
-                ancestors.insert(0, parent);
-                Ok(ancestors)
+                let ancestors = resolved_ancestors(&parent, by_id, resolved, visiting);
+                Ok({
+                    let mut rustq_updated = vec![parent];
+                    rustq_updated.extend(ancestors?);
+                    rustq_updated
+                })
             }
         }
     }
@@ -17373,10 +17389,9 @@ pub mod graph {
         match found {
             None => Ok(KiwiRecord::new(kiwi_record_definitions::COMPONENT_PROP_DEF)),
             Some(definitions) => {
-                if definitions.len() == 1 {
-                    Ok(definitions[0].clone())
-                } else {
-                    Err(rustler::Error::BadArg)
+                match definitions.as_slice() {
+                    [definition] => Ok((*definition).clone()),
+                    _definitions => Err(rustler::Error::BadArg),
                 }
             }
         }
@@ -17392,11 +17407,11 @@ pub mod graph {
             .collect::<Vec<&KiwiRecord>>()
     }
     fn apply_styles(records: Vec<KiwiRecord>) -> Vec<KiwiRecord> {
-        let styles = style_records(&&records);
+        let styles = style_records(&records);
         if styles.is_empty() {
             records
         } else {
-            let keys = style_keys(&&records);
+            let keys = style_keys(&records);
             records
                 .into_iter()
                 .map(|record| apply_style_refs(&record, &styles, &keys))
@@ -17593,8 +17608,8 @@ pub mod graph {
             Some(key) => {
                 match asset.str(kiwi_records::AssetRef::VERSION) {
                     Some(version) => {
-                        match keys.get(&format!("{key}@{version}")) {
-                            Some(id) => style_by_id(styles, *id),
+                        match keys.get(&format!("{}@{}", key, version)).copied() {
+                            Some(id) => style_by_id(styles, id),
                             None => unversioned_style(styles, keys, key),
                         }
                     }
@@ -17608,16 +17623,10 @@ pub mod graph {
         keys: &StyleKeys,
         key: &str,
     ) -> Option<KiwiRecord> {
-        match keys.get(key) {
-            Some(id) => style_by_id(styles, *id),
-            None => None,
-        }
+        keys.get(key).copied().and_then(|id| style_by_id(styles, id))
     }
     fn style_by_id(styles: &Styles, id: GuidKey) -> Option<KiwiRecord> {
-        match styles.get(&id) {
-            Some(style) => Some(style.clone()),
-            None => None,
-        }
+        styles.get(&id).cloned()
     }
     pub type Children = HashMap<GuidKey, Vec<GuidKey>>;
     #[derive(Clone, Debug)]

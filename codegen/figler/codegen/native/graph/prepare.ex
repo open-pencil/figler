@@ -90,24 +90,23 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     entries =
       case record.record(Kiwi.NodeChange.PARAMETER_CONSUMPTION_MAP) do
         {:some, map} -> map.records(Kiwi.VariableDataMap.ENTRIES)
-        :none -> Vec.new()
+        :none -> []
       end
 
     saved =
-      record.records(Kiwi.NodeChange.COMPONENT_PROP_REFS) |> into_iter() |> cloned() |> collect()
+      Enum.map(record.records(Kiwi.NodeChange.COMPONENT_PROP_REFS), fn saved -> saved.clone() end)
 
     refs =
-      entries
-      |> iter()
-      |> filter_map(fn entry -> prop_ref(entry) end)
-      |> fold(saved, fn refs, prop_ref -> upsert_ref(refs, prop_ref) end)
+      for entry <- entries, {:some, prop_ref} <- [prop_ref(entry)], reduce: saved do
+        refs -> upsert_ref(refs, prop_ref)
+      end
 
-    if refs.is_empty(),
+    if refs == [],
       do: record,
       else: record.put_records(Kiwi.NodeChange.COMPONENT_PROP_REFS, refs)
   end
 
-  @spec prop_ref(R.ref(R.ref(Kiwi.kiwi_record()))) :: R.option(Kiwi.kiwi_record())
+  @spec prop_ref(R.ref(Kiwi.kiwi_record())) :: R.option(Kiwi.kiwi_record())
   defrust prop_ref(entry) do
     with {:some, variable_field} <- entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD),
          {:some, field} <- node_field(variable_field),
@@ -158,19 +157,18 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrust upsert_ref(refs, prop_ref) do
     field = prop_ref.enum_value(Kiwi.ComponentPropRef.COMPONENT_PROP_NODE_FIELD)
 
-    case refs
-         |> iter()
-         |> rposition(fn saved ->
-           saved.enum_value(Kiwi.ComponentPropRef.COMPONENT_PROP_NODE_FIELD) == field
-         end) do
-      {:some, index} ->
-        refs.remove(index)
-        refs.insert(index, prop_ref)
-        refs
+    last =
+      refs
+      |> Enum.map(fn saved ->
+        saved.enum_value(Kiwi.ComponentPropRef.COMPONENT_PROP_NODE_FIELD)
+      end)
+      |> Enum.with_index()
+      |> Enum.reverse()
+      |> Enum.find_value(fn {saved, index} -> if saved == field, do: some(index) end)
 
-      :none ->
-        refs.push(prop_ref)
-        refs
+    case last do
+      {:some, index} -> List.replace_at(refs, index, prop_ref)
+      :none -> refs ++ [prop_ref]
     end
   end
 
@@ -180,10 +178,10 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrust inherit_property_definitions(records) do
     if Enum.any?(records, &linked_definitions/1) do
       by_id = records_by_id(records)
-      resolved = HashMap.new()
-      Enum.map(records, fn record -> resolve(record, by_id, resolved, HashSet.new()) end)
+      resolved = %{}
+      Enum.map(records, fn record -> resolve(record, by_id, resolved, MapSet.new()) end)
     else
-      ok(records)
+      {:ok, records}
     end
   end
 
@@ -192,7 +190,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrust records_by_id(records) do
     for record <- records,
         {:some, id} <- [record_id(record)],
-        into: HashMap.new(),
+        into: %{},
         do: {id, record}
   end
 
@@ -211,37 +209,36 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrust resolve(record, by_id, resolved, visiting) do
     case record_id(record) do
       :none ->
-        ok(record.clone())
+        {:ok, record.clone()}
 
       {:some, id} ->
         cond do
-          resolved.contains_key(ref(id)) ->
+          Map.has_key?(resolved, id) ->
             cached(resolved, id)
 
           # Only definitions that name a parent take anything from ancestors.
           not linked_definitions(record) ->
             resolved.insert(id, record.clone())
-            ok(record.clone())
+            {:ok, record.clone()}
 
-          visiting.contains(ref(id)) ->
-            err(badarg())
+          MapSet.member?(visiting, id) ->
+            {:error, badarg()}
 
           true ->
-            visiting = visiting.clone()
-            visiting.insert(id)
-            ancestors = resolved_ancestors(record, by_id, resolved, ref(visiting))
-            definitions = inherit_from(record, ref(ancestors))
+            visiting = MapSet.put(visiting, id)
+            ancestors = resolved_ancestors(record, by_id, resolved, visiting)
+            definitions = inherit_from(record, ancestors)
             resolved.insert(id, definitions.clone())
-            ok(definitions)
+            {:ok, definitions}
         end
     end
   end
 
   @spec cached(R.ref(resolved()), Records.guid_key()) :: R.nif_result(Kiwi.kiwi_record())
   defrust cached(resolved, id) do
-    case resolved.get(ref(id)) do
-      {:some, record} -> ok(record.clone())
-      :none -> err(badarg())
+    case Map.get(resolved, id) do
+      {:some, record} -> {:ok, record}
+      :none -> {:error, badarg()}
     end
   end
 
@@ -252,15 +249,14 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
           R.ref(HashSet.t(Records.guid_key()))
         ) :: R.nif_result(R.vec(Kiwi.kiwi_record()))
   defrust resolved_ancestors(record, by_id, resolved, visiting) do
-    case parent_id(record).and_then(fn id -> by_id.get(ref(id)) end) do
+    case parent_id(record).and_then(fn id -> Map.get(by_id, id) end) do
       :none ->
-        ok(Vec.new())
+        {:ok, []}
 
       {:some, parent} ->
         parent = resolve(parent, by_id, resolved, visiting)
-        ancestors = resolved_ancestors(ref(parent), by_id, resolved, visiting)
-        ancestors.insert(0, parent)
-        ok(ancestors)
+        ancestors = resolved_ancestors(parent, by_id, resolved, visiting)
+        {:ok, [parent] ++ ancestors}
     end
   end
 
@@ -270,8 +266,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     definitions = inherit_definitions(record, ancestors)
 
     if record.has(Kiwi.NodeChange.COMPONENT_PROP_DEFS),
-      do: ok(record.put_records(Kiwi.NodeChange.COMPONENT_PROP_DEFS, definitions)),
-      else: ok(record.clone())
+      do: {:ok, record.put_records(Kiwi.NodeChange.COMPONENT_PROP_DEFS, definitions)},
+      else: {:ok, record.clone()}
   end
 
   @spec inherit_definitions(R.ref(Kiwi.kiwi_record()), R.slice(Kiwi.kiwi_record())) ::
@@ -288,11 +284,11 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   defrust inherit_definition(definition, ancestors) do
     case guid_key(definition.record(Kiwi.ComponentPropDef.PARENT_PROP_DEF_ID)) do
       :none ->
-        ok(definition.clone())
+        {:ok, definition.clone()}
 
       {:some, parent_id} ->
         parent = parent_definition(ancestors, parent_id)
-        ok(parent.merge(definition))
+        {:ok, parent.merge(definition)}
     end
   end
 
@@ -302,14 +298,17 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     found =
       ancestors
       |> Enum.map(fn ancestor -> definitions_named(ancestor, parent_id) end)
-      |> Enum.find(fn definitions -> not definitions.is_empty() end)
+      |> Enum.find(fn definitions -> definitions != [] end)
 
     case found do
       :none ->
-        ok(KiwiRecord.new(Kiwi.Definitions.COMPONENT_PROP_DEF))
+        {:ok, KiwiRecord.new(Kiwi.Definitions.COMPONENT_PROP_DEF)}
 
       {:some, definitions} ->
-        if definitions.len() == 1, do: ok(definitions[0].clone()), else: err(badarg())
+        case definitions do
+          [definition] -> {:ok, definition.clone()}
+          _definitions -> {:error, badarg()}
+        end
     end
   end
 
@@ -324,12 +323,12 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
 
   @spec apply_styles(R.vec(Kiwi.kiwi_record())) :: R.vec(Kiwi.kiwi_record())
   defrust apply_styles(records) do
-    styles = style_records(ref(records))
+    styles = style_records(records)
 
-    if styles.is_empty() do
+    if styles == %{} do
       records
     else
-      keys = style_keys(ref(records))
+      keys = style_keys(records)
 
       Enum.map(records, fn record -> apply_style_refs(record, styles, keys) end)
     end
@@ -340,7 +339,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     for record <- records,
         record.has(Kiwi.NodeChange.STYLE_TYPE),
         {:some, id} <- [record_id(record)],
-        into: HashMap.new(),
+        into: %{},
         do: {id, record.clone()}
   end
 
@@ -507,8 +506,8 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
       {:some, key} ->
         case asset.str(Kiwi.AssetRef.VERSION) do
           {:some, version} ->
-            case keys.get(ref(format!("{key}@{version}"))) do
-              {:some, id} -> style_by_id(styles, deref(id))
+            case Map.get(keys, "#{key}@#{version}") do
+              {:some, id} -> style_by_id(styles, id)
               :none -> unversioned_style(styles, keys, key)
             end
 
@@ -521,17 +520,11 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   @spec unversioned_style(R.ref(styles()), R.ref(style_keys()), R.str()) ::
           R.option(Kiwi.kiwi_record())
   defrust unversioned_style(styles, keys, key) do
-    case keys.get(key) do
-      {:some, id} -> style_by_id(styles, deref(id))
-      :none -> nil
-    end
+    Map.get(keys, key) |> and_then(fn id -> style_by_id(styles, id) end)
   end
 
   @spec style_by_id(R.ref(styles()), Records.guid_key()) :: R.option(Kiwi.kiwi_record())
   defrust style_by_id(styles, id) do
-    case styles.get(ref(id)) do
-      {:some, style} -> some(style.clone())
-      :none -> nil
-    end
+    Map.get(styles, id)
   end
 end
