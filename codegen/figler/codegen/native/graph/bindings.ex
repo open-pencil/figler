@@ -251,7 +251,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
     case {reference.enum_value(Kiwi.ComponentPropRef.COMPONENT_PROP_NODE_FIELD), ref(value.bool),
           ref(value.text), ref(value.guid)} do
       {{:some, Kiwi.ComponentPropNodeField.VISIBLE}, {:some, visible}, _text, _guid} ->
-        some({record.put_bool(Kiwi.NodeChange.VISIBLE, deref(visible)), :visible})
+        some({record.put_bool(Kiwi.NodeChange.VISIBLE, visible), :visible})
 
       {{:some, Kiwi.ComponentPropNodeField.TEXT_DATA}, _visible, {:some, text}, _guid} ->
         some({bind_text(record, text), :text_data})
