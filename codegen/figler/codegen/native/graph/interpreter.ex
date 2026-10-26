@@ -102,13 +102,9 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           R.nif_result({Occurrence.occurrence(), R.vec(diagnostic())})
   defrust interpret(index, root_id) do
     state =
-      struct_literal(State,
-        expanding: HashSet.new(),
-        diagnostics: Vec.new(),
-        pending: HashMap.new()
-      )
+      struct_literal(State, expanding: MapSet.new(), diagnostics: [], pending: %{})
 
-    occurrence = expand(index, root_id, ref([]), Vec.new(), 0, mut_ref(state))
+    occurrence = expand(index, root_id, [], [], 0, mut_ref(state))
     ok({drop_slot_content(index, occurrence), state.diagnostics})
   end
 
@@ -139,7 +135,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         ) :: R.nif_result(Occurrence.occurrence())
   defrust expand(index, id, bindings, layers, rank, state) do
     case source(index, id) do
-      {:some, raw} when not state.expanding.contains(ref(id)) ->
+      {:some, raw} when not MapSet.member?(state.expanding, id) ->
         expand_source(index, id, raw, bindings, layers, rank, state)
 
       _ ->
@@ -161,35 +157,34 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     state.expanding.insert(id)
 
     owner = struct_literal(LayerOwner, id: id, rank: rank)
-    {structural, own_claims} = own(ref(record.source), owner.clone())
-    structural.extend(layers)
-    structural = Enum.sort_by(structural, fn layer -> layer.owner.rank end, :desc)
-    root = resolve_root(index, raw, ref(record), structural, rank)
+    {structural, own_claims} = own(record.source, owner.clone())
+    structural = Enum.sort_by(structural ++ layers, fn layer -> layer.owner.rank end, :desc)
+    root = resolve_root(index, raw, record, structural, rank)
 
     {subtree, children} =
-      expand_subtree(index, ref(owner), ref(record), bindings, ref(root), rank, state)
+      expand_subtree(index, owner, record, bindings, root, rank, state)
 
     base = subtree.base.as_ref()
 
     occurrence =
-      create_occurrence(index, id, raw, ref(record.source), ref(root), base, children)
+      create_occurrence(index, id, raw, record.source, root, base, children)
 
     occurrence = %{
       occurrence
       | binding_claims: record.claims.clone(),
         slot_content_id: record.slot_content,
         bound_fields: record.bound.clone(),
-        overridden: assigned_visibility(ref(record.claims)),
-        replaced_components: if(base.is_some(), do: root.replaced.clone(), else: Vec.new())
+        overridden: assigned_visibility(record.claims),
+        replaced_components: if(base != nil, do: root.replaced.clone(), else: [])
     }
 
     claims =
       if subtree.dangling,
-        do: for(claim <- own_claims, root_claim?(ref(occurrence), ref(claim)), do: claim),
+        do: for(claim <- own_claims, root_claim?(occurrence, claim), do: claim),
         else: own_claims
 
     occurrence =
-      finish_occurrence(index, occurrence, ref(subtree), ref(record.source), claims, rank, state)
+      finish_occurrence(index, occurrence, subtree, record.source, claims, rank, state)
 
     report_owner(state, id, occurrence.main_component_id)
     state.expanding.remove(ref(id))
@@ -206,38 +201,34 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           R.mut_ref(state())
         ) :: R.nif_result({subtree(), R.vec(Occurrence.occurrence())})
   defrust expand_subtree(index, owner, record, bindings, root, rank, state) do
-    cond do
-      root.effective.is_some() ->
+    case {root.effective, record.slot_content} do
+      {{:some, _effective}, _content} ->
         expand_base(index, owner, root, rank, state)
 
-      record.slot_content.is_some() ->
-        expand_children_of(
-          index,
-          record.slot_content.unwrap(),
-          ref([]),
-          ref(root.descendant),
-          rank,
-          state
-        )
+      {:none, {:some, content}} ->
+        expand_children_of(index, content, [], root.descendant, rank, state)
 
-      record.source.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.SYMBOL) ->
+      _ when record.source.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.SYMBOL) ->
         expand_children_of(
           index,
           owner.id,
-          scoped_bindings(ref(record.source), ref(root.groups)),
-          ref(root.descendant),
+          scoped_bindings(record.source, root.groups),
+          root.descendant,
           rank,
           state
         )
 
-      true ->
-        expand_children_of(index, owner.id, bindings, ref(root.descendant), rank, state)
+      _ ->
+        expand_children_of(index, owner.id, bindings, root.descendant, rank, state)
     end
   end
 
   @spec root_claim?(R.ref(Occurrence.occurrence()), R.ref(Layer.claim())) :: R.bool()
   defrust root_claim?(occurrence, claim) do
-    claim.path.len() == 1 and root_guid?(occurrence, claim.path[0])
+    case claim.path do
+      [segment] -> root_guid?(occurrence, segment)
+      _ -> false
+    end
   end
 
   # Binds the record's fields from the enclosing component scope.
@@ -250,28 +241,28 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   defrust bind_record(index, raw, bindings, state) do
     {source, bound_claims} = bind(raw, bindings)
 
-    record =
-      bound_claims
-      |> iter()
-      |> fold(
-        struct_literal(BoundRecord,
-          source: source,
-          claims: Vec.new(),
-          bound: HashMap.new(),
-          superseded: Vec.new(),
-          slot_content: nil
-        ),
-        fn record, {claim, binding} -> collect_binding(record, claim, binding) end
+    unbound =
+      struct_literal(BoundRecord,
+        source: source,
+        claims: [],
+        bound: %{},
+        superseded: [],
+        slot_content: nil
       )
 
+    record =
+      Enum.reduce(bound_claims, unbound, fn {claim, binding}, record ->
+        collect_binding(record, claim, binding)
+      end)
+
     case record.slot_content do
-      {:some, content} when not index.sources.contains_key(ref(content)) ->
+      {:some, content} when not Map.has_key?(index.sources, content) ->
         state.diagnostics.push(
           struct_literal(Diagnostic,
             kind: :missing_slot_content,
             owner: record_id(raw).unwrap_or_default(),
             component: some(content),
-            path: Vec.new(),
+            path: [],
             reason: nil
           )
         )
@@ -290,25 +281,22 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         ) ::
           bound_record()
   defrust collect_binding(record, claim, binding) do
-    record.claims.push(claim.clone())
+    bound =
+      case {binding.origin, binding.rank, bound_node_field(claim.field)} do
+        {:assignment, {:some, rank}, {:some, field}} -> Map.put(record.bound, field, rank)
+        _ -> record.bound
+      end
 
-    case {binding.origin, binding.rank, bound_node_field(claim.field)} do
-      {:assignment, {:some, rank}, {:some, field}} -> record.bound.insert(field, rank)
-      _ -> nil
-    end
+    record = %{record | claims: record.claims ++ [claim.clone()], bound: bound}
 
     case claim.field do
       :symbol_data ->
         superseded =
-          binding.superseded
-          |> iter()
-          |> filter_map(fn value ->
-            value.guid.as_ref().and_then(fn guid -> guid_key(some(guid)) end)
-          end)
-          |> collect()
+          for value <- binding.superseded,
+              {:some, guid} <- [guid_key(value.guid.as_ref())],
+              do: guid
 
-        superseded.extend(record.superseded)
-        %{record | superseded: superseded}
+        %{record | superseded: superseded ++ record.superseded}
 
       :slot_content ->
         %{record | slot_content: binding.value.slot_content}
@@ -332,12 +320,9 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # Visibility an outer instance assigns counts as that instance's override.
   @spec assigned_visibility(R.slice(Occurrence.binding_claim())) :: HashSet.t(R.u32())
   defrust assigned_visibility(claims) do
-    overridden = HashSet.new()
-
     if Enum.any?(claims, &assigned_visible?/1),
-      do: overridden.insert(Kiwi.NodeChange.VISIBLE)
-
-    overridden
+      do: MapSet.new([Kiwi.NodeChange.VISIBLE]),
+      else: MapSet.new()
   end
 
   @spec assigned_visible?(R.ref(Occurrence.binding_claim())) :: R.bool()
@@ -357,7 +342,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         end
 
       :none ->
-        Vec.new()
+        []
     end
   end
 
@@ -372,23 +357,21 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         ) :: R.nif_result(root())
   defrust resolve_root(index, raw, record, structural, rank) do
     original = symbol_id(raw)
-    effective = symbol_id(ref(record.source))
-    keys = component_keys(index, original)
-    keys.extend(component_keys(index, effective))
+    effective = symbol_id(record.source)
+    keys = component_keys(index, original) ++ component_keys(index, effective)
 
     assignments =
-      record.source.records(Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS)
-      |> into_iter()
-      |> cloned()
-      |> collect()
+      Enum.map(record.source.records(Kiwi.NodeChange.COMPONENT_PROP_ASSIGNMENTS), fn assignment ->
+        assignment.clone()
+      end)
 
     root =
       struct_literal(Root,
         effective: effective,
-        replaced: replaced_before(original, effective, ref(record.superseded)),
+        replaced: replaced_before(original, effective, record.superseded),
         keys: keys,
         groups: [struct_literal(Group, assignments: assignments, rank: rank)],
-        descendant: Vec.new()
+        descendant: []
       )
 
     for layer <- structural do
@@ -415,32 +398,26 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         |> collect()
 
       :none ->
-        Vec.new()
+        []
     end
   end
 
   @spec route_root_layer(R.ref(SourceIndex.source_index()), R.mut_ref(root()), Layer.layer()) ::
           R.nif_result(R.unit())
   defrust route_root_layer(index, root, layer) do
-    at_root =
-      case layer.path.first() do
-        {:some, first} -> root.keys.contains(first)
-        :none -> true
-      end
-
-    cond do
-      not at_root ->
+    case layer.path do
+      [first | _rest] when first not in root.keys ->
         root.descendant.push(layer)
         ok(:ok)
 
-      layer.path.len() >= 2 ->
-        root.descendant.push(descend(ref(layer)))
+      [_first, _second | _rest] ->
+        root.descendant.push(descend(layer))
         ok(:ok)
 
-      true ->
+      _ ->
         swap_root(index, root, layer.swap)
 
-        if not layer.assignments.is_empty() do
+        if layer.assignments != [] do
           root.groups.push(
             struct_literal(Group, assignments: layer.assignments, rank: layer.owner.rank)
           )
@@ -469,7 +446,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
       {{:some, swap}, {:some, effective}} ->
         for key <- component_keys(index, some(swap)) do
-          if not root.keys.contains(ref(key)), do: root.keys.push(key)
+          if key not in root.keys, do: root.keys.push(key)
         end
 
         root.replaced.push(effective)
@@ -501,44 +478,37 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   defrust expand_base(index, owner, root, rank, state) do
     component_id = root.effective.unwrap()
 
-    if index.sources.contains_key(ref(component_id)) do
-      layers = root_layers(owner, ref(root.groups))
+    if Map.has_key?(index.sources, component_id) do
+      layers =
+        root_layers(owner, root.groups) ++
+          Enum.map(root.descendant, fn layer -> cross_boundary(layer, root.replaced) end)
 
-      layers.extend(
-        root.descendant
-        |> iter()
-        |> map(fn layer -> cross_boundary(layer, ref(root.replaced)) end)
-      )
-
-      base = expand(index, component_id, ref([]), layers, rank + 1, state)
+      base = expand(index, component_id, [], layers, rank + 1, state)
       children = base.children
 
-      ok(
-        {struct_literal(Subtree, base: some(%{base | children: Vec.new()}), dangling: false),
-         children}
-      )
+      ok({struct_literal(Subtree, base: some(%{base | children: []}), dangling: false), children})
     else
       state.diagnostics.push(
         struct_literal(Diagnostic,
           kind: :missing_component,
           owner: owner.id,
           component: some(component_id),
-          path: Vec.new(),
+          path: [],
           reason: nil
         )
       )
 
-      ok({struct_literal(Subtree, base: nil, dangling: true), Vec.new()})
+      ok({struct_literal(Subtree, base: nil, dangling: true), []})
     end
   end
 
   @spec root_layers(R.ref(Layer.layer_owner()), R.slice(group())) :: R.vec(Layer.layer())
   defrust root_layers(owner, groups) do
-    for group <- groups, not group.assignments.is_empty() do
+    for group <- groups, group.assignments != [] do
       struct_literal(Layer,
         owner: struct_literal(LayerOwner, id: owner.id, rank: group.rank),
-        declared_path: Vec.new(),
-        path: Vec.new(),
+        declared_path: [],
+        path: [],
         swap: nil,
         boundary: nil,
         assignments: group.assignments.clone()
@@ -548,10 +518,10 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   @spec cross_boundary(R.ref(Layer.layer()), R.slice(Records.guid_key())) :: Layer.layer()
   defrust cross_boundary(layer, replaced) do
-    if replaced.is_empty() do
+    if replaced == [] do
       layer.clone()
     else
-      boundary = struct_literal(Boundary, replaced: replaced.to_vec(), path: layer.path.clone())
+      boundary = struct_literal(Boundary, replaced: replaced, path: layer.path.clone())
       %{layer.clone() | boundary: some(boundary)}
     end
   end
@@ -566,11 +536,11 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         ) :: R.nif_result({subtree(), R.vec(Occurrence.occurrence())})
   defrust expand_children_of(index, id, bindings, descendant, rank, state) do
     routed = route_to_children(index, id, descendant, state)
-    children = Vec.new()
+    children = []
 
     for child_id <- children_of(index, id) do
       layers = routed.remove(child_id).unwrap_or_default()
-      children.push(expand(index, deref(child_id), bindings, layers, rank + 1, state))
+      children.push(expand(index, child_id, bindings, layers, rank + 1, state))
     end
 
     ok({struct_literal(Subtree, base: nil, dangling: false), children})
@@ -585,21 +555,20 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           R.mut_ref(state())
         ) :: HashMap.t(Records.guid_key(), R.vec(Layer.layer()))
   defrust route_to_children(index, id, layers, state) do
-    routed = HashMap.new()
+    for layer <- layers, reduce: %{} do
+      routed ->
+        found = find_static_segment(index, id, layer.path[0])
 
-    for layer <- layers do
-      found = find_static_segment(index, id, layer.path[0])
+        case found.top do
+          {:some, top} ->
+            routed_layer = routed_layer(index, top, layer)
+            Map.update(routed, top, [routed_layer], fn found -> found ++ [routed_layer] end)
 
-      case found.top do
-        {:some, top} ->
-          routed.entry(top).or_default().push(routed_layer(index, top, layer))
-
-        :none ->
-          unresolved_structural(index, layer, found.count, state)
-      end
+          :none ->
+            unresolved_structural(index, layer, found.count, state)
+            routed
+        end
     end
-
-    routed
   end
 
   @spec routed_layer(R.ref(SourceIndex.source_index()), Records.guid_key(), R.ref(Layer.layer())) ::
@@ -629,12 +598,10 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   @spec stale_layer?(R.ref(SourceIndex.source_index()), R.ref(Layer.layer())) :: R.bool()
   defrust stale_layer?(index, layer) do
-    case ref(layer.boundary) do
+    case layer.boundary do
       {:some, boundary} ->
-        boundary.replaced
-        |> iter()
-        |> any(fn component ->
-          resolves_in_source_component?(index, deref(component), ref(boundary.path))
+        Enum.any?(boundary.replaced, fn component ->
+          resolves_in_source_component?(index, component, boundary.path)
         end)
 
       :none ->
@@ -676,7 +643,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     occurrence = %{
       occurrence
       | source_component_id: original,
-        source_component_override_key: component_keys(index, original).get(1).copied(),
+        source_component_override_key: Enum.at(component_keys(index, original), 1),
         override_key: override_key(source)
     }
 
@@ -693,13 +660,13 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
                   base.has_own_name
           }
 
-          rename_swapped(inherited, base, ref(root.replaced))
+          rename_swapped(inherited, base, root.replaced)
 
         :none ->
           occurrence
       end
 
-    name = default_instance_name(index, ref(occurrence))
+    name = default_instance_name(index, occurrence)
     %{occurrence | default_instance_name: name}
   end
 
@@ -718,13 +685,13 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
       default_instance_name: nil,
       properties: properties,
       children: children,
-      property_claims: Vec.new(),
-      binding_claims: Vec.new(),
+      property_claims: [],
+      binding_claims: [],
       layout_scale: 1.0,
       has_own_name: false,
-      bound_fields: HashMap.new(),
-      replaced_components: Vec.new(),
-      overridden: HashSet.new()
+      bound_fields: %{},
+      replaced_components: [],
+      overridden: MapSet.new()
     )
   end
 
@@ -739,9 +706,9 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         ) :: Kiwi.kiwi_record()
   defrust effective_properties(index, source, base, original, root) do
     placed =
-      if base.is_some() and original != root.effective and
+      if base != nil and original != root.effective and
            source.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.INSTANCE) do
-        source.drop(ref([Kiwi.NodeChange.FILL_PAINTS, Kiwi.NodeChange.STYLE_ID_FOR_FILL]))
+        source.drop([Kiwi.NodeChange.FILL_PAINTS, Kiwi.NodeChange.STYLE_ID_FOR_FILL])
       else
         source.clone()
       end
@@ -753,11 +720,11 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
       end
 
     properties =
-      base_properties.drop(component_identity()).merge(ref(placed))
+      base_properties.drop(component_identity()).merge(placed)
       |> put_effective_symbol(root.effective, source)
 
     properties =
-      case merge_variable_consumption(ref(base_properties), source) do
+      case merge_variable_consumption(base_properties, source) do
         {:some, consumption} ->
           properties.put_record(Kiwi.NodeChange.PARAMETER_CONSUMPTION_MAP, consumption)
 
@@ -765,7 +732,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           properties
       end
 
-    put_assignments(index, properties, source, ref(root.groups))
+    put_assignments(index, properties, source, root.groups)
   end
 
   @spec put_effective_symbol(
@@ -807,7 +774,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     if source.enum_value(Kiwi.NodeChange.TYPE) == some(Kiwi.NodeType.INSTANCE) do
       assignments =
         for group <- groups,
-            assignment <- group.assignments.iter(),
+            assignment <- group.assignments,
             not missing_slot_content?(index, assignment),
             do: assignment.clone()
 
@@ -823,7 +790,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     assignment.record(Kiwi.ComponentPropAssignment.VAR_VALUE)
     |> and_then(fn variable -> variable.record(Kiwi.VariableData.VALUE) end)
     |> and_then(fn value -> slot_content(value) end)
-    |> is_some_and(fn content -> not index.sources.contains_key(ref(content)) end)
+    |> is_some_and(fn content -> not Map.has_key?(index.sources, content) end)
   end
 
   # A swapped instance without a name of its own takes the replacement's default.
@@ -834,18 +801,18 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         ) ::
           Occurrence.occurrence()
   defrust rename_swapped(occurrence, base, replaced) do
-    if replaced.is_empty() or occurrence.has_own_name do
+    if replaced == [] or occurrence.has_own_name do
       occurrence
     else
       name =
-        case ref(base.default_instance_name) do
+        case base.default_instance_name do
           {:some, name} -> some(name.clone())
           :none -> base.properties.str(Kiwi.NodeChange.NAME).map(fn name -> name.to_string() end)
         end
 
       properties =
         case name do
-          {:some, name} -> occurrence.properties.put_str(Kiwi.NodeChange.NAME, ref(name))
+          {:some, name} -> occurrence.properties.put_str(Kiwi.NodeChange.NAME, name)
           :none -> occurrence.properties.delete(Kiwi.NodeChange.NAME)
         end
 
@@ -885,12 +852,12 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         ) :: R.nif_result(Occurrence.occurrence())
   defrust finish_occurrence(index, occurrence, subtree, source, claims, rank, state) do
     # Claims change properties, never the subtree's shape, so its path lookups are shared.
-    tables = HashMap.new()
+    tables = %{}
 
-    for claim <- claims.iter() do
-      case resolve_claim_target(index, ref(occurrence), ref(claim.path), state, mut_ref(tables)) do
+    for claim <- claims do
+      case resolve_claim_target(index, occurrence, claim.path, state, mut_ref(tables)) do
         {:some, target_path} ->
-          apply_property_claim(mut_ref(occurrence), rank, ref(target_path), claim)
+          apply_property_claim(mut_ref(occurrence), rank, target_path, claim)
 
         :none ->
           :ok
@@ -932,10 +899,10 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           R.ref(Layer.claim())
         ) :: R.unit()
   defrust apply_property_claim(owner, owner_rank, target_path, claim) do
-    retained = retained(ref(claim.props), get_at(owner, target_path), owner_rank)
+    retained = retained(claim.props, get_at(owner, target_path), owner_rank)
 
-    if not retained.is_empty() do
-      apply_claim(at_mut(owner, target_path), ref(retained))
+    if retained != [] do
+      apply_claim(at_mut(owner, target_path), retained)
 
       owner.property_claims.push(
         struct_literal(PropertyClaim,
@@ -983,7 +950,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
       kind: :unresolved_property,
       owner: owner.source_id,
       component: owner.main_component_id,
-      path: path.to_vec(),
+      path: path,
       reason: some(reason(count))
     )
   end
@@ -1004,32 +971,30 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           R.usize()
         ) :: R.bool()
   defrust removed_from?(index, current, path, position) do
-    case path.get(position) do
-      {:some, segment} ->
-        rest = Enum.drop(path, position)
+    rest = Enum.drop(path, position)
 
+    case rest do
+      [segment | _later] ->
         cond do
-          current.replaced_components
-          |> iter()
-          |> any(fn component ->
-            resolves_in_source_component?(index, deref(component), ref(rest))
+          Enum.any?(current.replaced_components, fn component ->
+            resolves_in_source_component?(index, component, rest)
           end) ->
             true
 
-          position == 0 and root_guid?(current, deref(segment)) ->
+          position == 0 and root_guid?(current, segment) ->
             removed_from?(index, current, path, position + 1)
 
           true ->
-            case find_segment(current, deref(segment)) do
+            case find_segment(current, segment) do
               {:ok, indexes} ->
-                removed_from?(index, get_at(current, ref(indexes)), path, position + 1)
+                removed_from?(index, get_at(current, indexes), path, position + 1)
 
               {:error, _count} ->
                 false
             end
         end
 
-      :none ->
+      [] ->
         false
     end
   end
@@ -1043,15 +1008,15 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
         ) :: Occurrence.occurrence()
   defrust apply_derived_bounds(index, owner, source, state) do
     # Derived entries change properties, never the subtree's shape.
-    tables = HashMap.new()
+    tables = %{}
 
     for entry <- source.records(Kiwi.NodeChange.DERIVED_SYMBOL_DATA) do
       path = override_path(entry)
 
-      if not path.is_empty() do
-        case resolve_claim_target(index, ref(owner), ref(path), state, mut_ref(tables)) do
-          {:some, target_path} when not target_path.is_empty() ->
-            apply_derived_entry(at_mut(mut_ref(owner), ref(target_path)), entry)
+      if path != [] do
+        case resolve_claim_target(index, owner, path, state, mut_ref(tables)) do
+          {:some, target_path} when target_path != [] ->
+            apply_derived_entry(at_mut(mut_ref(owner), target_path), entry)
 
           _ ->
             :ok

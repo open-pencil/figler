@@ -192,14 +192,14 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   defrust put_variable(vars, record) do
     collection =
       record.record(Kiwi.NodeChange.VARIABLE_SET_ID)
-      |> and_then(fn set -> reference(ref(vars), set) end)
+      |> and_then(fn set -> reference(vars, set) end)
       |> or_else(fn -> parent_id(record) end)
 
     with {:some, id} <- record_id(record),
          {:some, type} <- variable_type(record),
          {:some, collection} <- collection,
          {:some, found} <- vars.collections.get(ref(collection)) do
-      {values, diagnostics} = mode_values(ref(vars), record, id, ref(found.modes))
+      {values, diagnostics} = mode_values(vars, record, id, ref(found.modes))
       vars = %{vars | diagnostics: vars.diagnostics ++ diagnostics}
 
       if values == %{} do
@@ -460,13 +460,13 @@ defmodule Figler.Codegen.Native.Graph.Variables do
           else
             vars.variables.get(next)
             |> and_then(fn target ->
-              resolve_chain(vars, target, modes, ref(visited), depth + 1)
+              resolve_chain(vars, target, modes, visited, depth + 1)
             end)
             |> and_then(fn value -> drawable(value, variable.type) end)
           end
 
         {:some, stored} ->
-          evaluate(vars, stored, modes, ref(visited))
+          evaluate(vars, stored, modes, visited)
           |> and_then(fn value -> drawable(value, variable.type) end)
 
         :none ->
@@ -506,9 +506,9 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
       {:compose_color, composed} ->
         with {:some, {:color, color}} <-
-               evaluate_operand(vars, ref(composed.color), modes, visiting),
+               evaluate_operand(vars, composed.color, modes, visiting),
              {:some, {:float, opacity}} <-
-               evaluate_operand(vars, ref(composed.opacity), modes, visiting) do
+               evaluate_operand(vars, composed.opacity, modes, visiting) do
           some({:color, %{color | a: (opacity / 100.0).clamp(0.0, 1.0)}})
         else
           _ -> nil
@@ -553,7 +553,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   @spec drawable(variable_value(), variable_type()) :: R.option(variable_value())
   defrust drawable(value, type) do
-    if value_type(ref(value)) == type, do: some(value), else: nil
+    if value_type(value) == type, do: some(value), else: nil
   end
 
   @spec value_type(R.ref(variable_value())) :: variable_type()
@@ -585,7 +585,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
         |> and_then(fn value -> finite(value) end)
 
       {:operation, operation} ->
-        evaluated_operands(vars, ref(operation.operands), modes, visiting)
+        evaluated_operands(vars, operation.operands, modes, visiting)
         |> and_then(fn operands -> apply_operator(operation.operator, operands) end)
         |> and_then(fn value -> finite(value) end)
     end

@@ -19284,10 +19284,10 @@ pub mod graph {
     ) -> NifResult<(Occurrence, Vec<Diagnostic>)> {
         let mut state = State {
             expanding: HashSet::new(),
-            diagnostics: Vec::new(),
+            diagnostics: vec![],
             pending: HashMap::new(),
         };
-        let occurrence = expand(index, root_id, &[], Vec::new(), 0, &mut state)?;
+        let occurrence = expand(index, root_id, &[], vec![], 0, &mut state)?;
         Ok((drop_slot_content(index, occurrence), state.diagnostics))
     }
     fn drop_slot_content(index: &SourceIndex, occurrence: Occurrence) -> Occurrence {
@@ -19340,9 +19340,17 @@ pub mod graph {
         let record = bind_record(index, raw, bindings, state);
         state.expanding.insert(id);
         let owner = LayerOwner { id, rank };
-        let (mut structural, own_claims) = own(&record.source, owner.clone());
-        structural.extend(layers);
-        structural.sort_by_key(|rustq_item| std::cmp::Reverse(rustq_item.owner.rank));
+        let (structural, own_claims) = own(&record.source, owner.clone());
+        let structural = {
+            let mut rustq_updated = {
+                let mut rustq_updated = structural;
+                rustq_updated.extend(layers);
+                rustq_updated
+            };
+            rustq_updated
+                .sort_by_key(|rustq_item| std::cmp::Reverse(rustq_item.owner.rank));
+            rustq_updated
+        };
         let root = resolve_root(index, raw, &record, structural, rank)?;
         let (subtree, children) = expand_subtree(
             index,
@@ -19367,11 +19375,11 @@ pub mod graph {
             binding_claims: record.claims.clone(),
             slot_content_id: record.slot_content,
             bound_fields: record.bound.clone(),
-            overridden: assigned_visibility(&&record.claims),
+            overridden: assigned_visibility(&record.claims),
             replaced_components: if base.is_some() {
                 root.replaced.clone()
             } else {
-                Vec::new()
+                vec![]
             },
             ..occurrence
         };
@@ -19408,34 +19416,39 @@ pub mod graph {
         rank: u32,
         state: &mut State,
     ) -> NifResult<(Subtree, Vec<Occurrence>)> {
-        if root.effective.is_some() {
-            expand_base(index, owner, root, rank, state)
-        } else if record.slot_content.is_some() {
-            expand_children_of(
-                index,
-                record.slot_content.unwrap(),
-                &[],
-                &&root.descendant,
-                rank,
-                state,
-            )
-        } else if record.source.enum_value(kiwi_records::NodeChange::TYPE)
-            == Some(kiwi_records::NodeType::SYMBOL)
-        {
-            expand_children_of(
-                index,
-                owner.id,
-                &scoped_bindings(&record.source, &&root.groups),
-                &&root.descendant,
-                rank,
-                state,
-            )
-        } else {
-            expand_children_of(index, owner.id, bindings, &&root.descendant, rank, state)
+        match (root.effective, record.slot_content) {
+            (Some(_effective), _content) => expand_base(index, owner, root, rank, state),
+            (None, Some(content)) => {
+                expand_children_of(index, content, &[], &root.descendant, rank, state)
+            }
+            _ if record.source.enum_value(kiwi_records::NodeChange::TYPE)
+                == Some(kiwi_records::NodeType::SYMBOL) => {
+                expand_children_of(
+                    index,
+                    owner.id,
+                    &scoped_bindings(&record.source, &root.groups),
+                    &root.descendant,
+                    rank,
+                    state,
+                )
+            }
+            _ => {
+                expand_children_of(
+                    index,
+                    owner.id,
+                    bindings,
+                    &root.descendant,
+                    rank,
+                    state,
+                )
+            }
         }
     }
     fn root_claim(occurrence: &Occurrence, claim: &Claim) -> bool {
-        claim.path.len() == 1 && root_guid(occurrence, claim.path[0])
+        match claim.path.as_slice() {
+            [segment] => root_guid(occurrence, *segment),
+            _ => false,
+        }
     }
     fn bind_record(
         index: &SourceIndex,
@@ -19444,17 +19457,18 @@ pub mod graph {
         state: &mut State,
     ) -> BoundRecord {
         let (source, bound_claims) = bind(raw, bindings);
+        let unbound = BoundRecord {
+            source,
+            claims: vec![],
+            bound: HashMap::new(),
+            superseded: vec![],
+            slot_content: None,
+        };
         let record = bound_claims
-            .iter()
+            .into_iter()
             .fold(
-                BoundRecord {
-                    source,
-                    claims: Vec::new(),
-                    bound: HashMap::new(),
-                    superseded: Vec::new(),
-                    slot_content: None,
-                },
-                |record, (claim, binding)| collect_binding(record, claim, binding),
+                unbound,
+                |record, (claim, binding)| collect_binding(record, &claim, &binding),
             );
         match record.slot_content {
             Some(content) if !index.sources.contains_key(&content) => {
@@ -19464,7 +19478,7 @@ pub mod graph {
                         kind: DiagnosticKind::MissingSlotContent,
                         owner: record_id(raw).unwrap_or_default(),
                         component: Some(content),
-                        path: Vec::new(),
+                        path: vec![],
                         reason: None,
                     });
                 BoundRecord {
@@ -19476,30 +19490,46 @@ pub mod graph {
         }
     }
     fn collect_binding(
-        mut record: BoundRecord,
+        record: BoundRecord,
         claim: &BindingClaim,
         binding: &Binding,
     ) -> BoundRecord {
-        record.claims.push(claim.clone());
-        if let (Origin::Assignment, Some(rank), Some(field)) = (
-            binding.origin,
-            binding.rank,
-            bound_node_field(claim.field),
-        ) {
-            record.bound.insert(field, rank);
-        }
+        let bound = match (binding.origin, binding.rank, bound_node_field(claim.field)) {
+            (Origin::Assignment, Some(rank), Some(field)) => {
+                let mut rustq_updated = record.bound.clone();
+                rustq_updated.insert(field, rank);
+                rustq_updated
+            }
+            _ => record.bound,
+        };
+        let record = BoundRecord {
+            claims: {
+                let mut rustq_updated = record.claims;
+                rustq_updated.push(claim.clone());
+                rustq_updated
+            },
+            bound,
+            ..record
+        };
         match claim.field {
             BoundField::SymbolData => {
-                let mut superseded = binding
+                let superseded = binding
                     .superseded
                     .iter()
-                    .filter_map(|value| {
-                        value.guid.as_ref().and_then(|guid| guid_key(Some(guid)))
+                    .cloned()
+                    .map(|value| (guid_key(value.guid.as_ref()), value))
+                    .filter_map(|item| match item {
+                        (Some(guid), value) => Some((guid, value)),
+                        _ => None,
                     })
-                    .collect::<Vec<_>>();
-                superseded.extend(record.superseded);
+                    .map(|(guid, _)| guid)
+                    .collect::<Vec<GuidKey>>();
                 BoundRecord {
-                    superseded,
+                    superseded: {
+                        let mut rustq_updated = superseded;
+                        rustq_updated.extend(record.superseded);
+                        rustq_updated
+                    },
                     ..record
                 }
             }
@@ -19521,11 +19551,11 @@ pub mod graph {
         }
     }
     fn assigned_visibility(claims: &[BindingClaim]) -> HashSet<u32> {
-        let mut overridden: HashSet<u32> = HashSet::new();
         if claims.iter().any(assigned_visible) {
-            overridden.insert(kiwi_records::NodeChange::VISIBLE);
+            HashSet::from([kiwi_records::NodeChange::VISIBLE])
+        } else {
+            HashSet::new()
         }
-        overridden
     }
     fn assigned_visible(claim: &BindingClaim) -> bool {
         match (claim.field, claim.origin) {
@@ -19541,7 +19571,7 @@ pub mod graph {
                     None => vec![guid],
                 }
             }
-            None => Vec::new(),
+            None => vec![],
         }
     }
     fn resolve_root(
@@ -19553,8 +19583,11 @@ pub mod graph {
     ) -> NifResult<Root> {
         let original = symbol_id(raw);
         let effective = symbol_id(&record.source);
-        let mut keys = component_keys(index, original);
-        keys.extend(component_keys(index, effective));
+        let keys = {
+            let mut rustq_updated = component_keys(index, original);
+            rustq_updated.extend(component_keys(index, effective));
+            rustq_updated
+        };
         let assignments = record
             .source
             .records(kiwi_records::NodeChange::COMPONENT_PROP_ASSIGNMENTS)
@@ -19563,10 +19596,10 @@ pub mod graph {
             .collect::<Vec<KiwiRecord>>();
         let mut root = Root {
             effective,
-            replaced: replaced_before(original, effective, &&record.superseded),
+            replaced: replaced_before(original, effective, &record.superseded),
             keys,
             groups: vec![Group { assignments, rank }],
-            descendant: Vec::new(),
+            descendant: vec![],
         };
         for layer in structural {
             route_root_layer(index, &mut root, layer)?;
@@ -19586,7 +19619,7 @@ pub mod graph {
                     .filter(|component| *component != effective)
                     .collect()
             }
-            None => Vec::new(),
+            None => vec![],
         }
     }
     fn route_root_layer(
@@ -19594,18 +19627,16 @@ pub mod graph {
         root: &mut Root,
         layer: Layer,
     ) -> NifResult<()> {
-        let at_root = match layer.path.first() {
-            Some(first) => root.keys.contains(first),
-            None => true,
-        };
-        if !at_root {
-            root.descendant.push(layer);
-            Ok(())
-        } else if layer.path.len() >= 2 {
-            root.descendant.push(descend(&layer));
-            Ok(())
-        } else {
-            {
+        match layer.path.as_slice() {
+            [first, _rest @ ..] if !root.keys.contains(&first) => {
+                root.descendant.push(layer);
+                Ok(())
+            }
+            [_first, _second, _rest @ ..] => {
+                root.descendant.push(descend(&layer));
+                Ok(())
+            }
+            _ => {
                 swap_root(index, root, layer.swap)?;
                 if !layer.assignments.is_empty() {
                     root.groups
@@ -19663,20 +19694,23 @@ pub mod graph {
     ) -> NifResult<(Subtree, Vec<Occurrence>)> {
         let component_id = root.effective.unwrap();
         if index.sources.contains_key(&component_id) {
-            let mut layers = root_layers(owner, &&root.groups);
-            layers
-                .extend(
-                    root
-                        .descendant
-                        .iter()
-                        .map(|layer| cross_boundary(layer, &&root.replaced)),
-                );
+            let layers = {
+                let mut rustq_updated = root_layers(owner, &root.groups);
+                rustq_updated
+                    .extend(
+                        root
+                            .descendant
+                            .iter()
+                            .map(|layer| cross_boundary(layer, &root.replaced)),
+                    );
+                rustq_updated
+            };
             let base = expand(index, component_id, &[], layers, rank + 1, state)?;
             let children = base.children;
             Ok((
                 Subtree {
                     base: Some(Occurrence {
-                        children: Vec::new(),
+                        children: vec![],
                         ..base
                     }),
                     dangling: false,
@@ -19690,7 +19724,7 @@ pub mod graph {
                     kind: DiagnosticKind::MissingComponent,
                     owner: owner.id,
                     component: Some(component_id),
-                    path: Vec::new(),
+                    path: vec![],
                     reason: None,
                 });
             Ok((
@@ -19698,7 +19732,7 @@ pub mod graph {
                     base: None,
                     dangling: true,
                 },
-                Vec::new(),
+                vec![],
             ))
         }
     }
@@ -19714,8 +19748,8 @@ pub mod graph {
                     id: owner.id,
                     rank: group.rank,
                 },
-                declared_path: Vec::new(),
-                path: Vec::new(),
+                declared_path: vec![],
+                path: vec![],
                 swap: None,
                 boundary: None,
                 assignments: group.assignments.clone(),
@@ -19745,7 +19779,7 @@ pub mod graph {
         state: &mut State,
     ) -> NifResult<(Subtree, Vec<Occurrence>)> {
         let mut routed = route_to_children(index, id, descendant, state);
-        let mut children = Vec::new();
+        let mut children = vec![];
         for child_id in children_of(index, id) {
             let layers = routed.remove(child_id).unwrap_or_default();
             children.push(expand(index, *child_id, bindings, layers, rank + 1, state)?);
@@ -19764,19 +19798,38 @@ pub mod graph {
         layers: &[Layer],
         state: &mut State,
     ) -> HashMap<GuidKey, Vec<Layer>> {
-        let mut routed: HashMap<GuidKey, Vec<Layer>> = HashMap::new();
-        for layer in layers {
-            let found = find_static_segment(index, id, layer.path[0]);
-            match found.top {
-                Some(top) => {
-                    routed.entry(top).or_default().push(routed_layer(index, top, layer));
-                }
-                None => {
-                    unresolved_structural(index, layer, found.count, state);
-                }
-            };
+        {
+            let mut routed: HashMap<GuidKey, Vec<Layer>> = HashMap::new();
+            for layer in layers {
+                routed = {
+                    let found = find_static_segment(index, id, layer.path[0]);
+                    match found.top {
+                        Some(top) => {
+                            let routed_layer = routed_layer(index, top, layer);
+                            {
+                                let mut rustq_updated = routed;
+                                let rustq_key = top;
+                                let rustq_value = match rustq_updated.remove(&rustq_key) {
+                                    Some(found) => {
+                                        let mut rustq_updated = found;
+                                        rustq_updated.push(routed_layer.clone());
+                                        rustq_updated
+                                    }
+                                    None => vec![routed_layer.clone()],
+                                };
+                                rustq_updated.insert(rustq_key, rustq_value);
+                                rustq_updated
+                            }
+                        }
+                        None => {
+                            unresolved_structural(index, layer, found.count, state);
+                            routed
+                        }
+                    }
+                };
+            }
+            routed
         }
-        routed
     }
     fn routed_layer(index: &SourceIndex, top: GuidKey, layer: &Layer) -> Layer {
         if source(index, top).is_some_and(|record| matches(record, layer.path[0])) {
@@ -19808,9 +19861,10 @@ pub mod graph {
                 boundary
                     .replaced
                     .iter()
+                    .copied()
                     .any(|component| resolves_in_source_component(
                         index,
-                        *component,
+                        component,
                         &boundary.path,
                     ))
             }
@@ -19865,7 +19919,7 @@ pub mod graph {
                         == Some(kiwi_records::NodeType::INSTANCE) && base.has_own_name,
                     ..occurrence
                 };
-                rename_swapped(inherited, base, &&root.replaced)
+                rename_swapped(inherited, base, &root.replaced)
             }
             None => occurrence,
         };
@@ -19892,12 +19946,12 @@ pub mod graph {
             default_instance_name: None,
             properties,
             children,
-            property_claims: Vec::new(),
-            binding_claims: Vec::new(),
+            property_claims: vec![],
+            binding_claims: vec![],
             layout_scale: 1.0,
             has_own_name: false,
             bound_fields: HashMap::new(),
-            replaced_components: Vec::new(),
+            replaced_components: vec![],
             overridden: HashSet::new(),
         }
     }
@@ -19941,7 +19995,7 @@ pub mod graph {
             }
             None => properties,
         };
-        put_assignments(index, properties, source, &&root.groups)
+        put_assignments(index, properties, source, &root.groups)
     }
     fn put_effective_symbol(
         properties: KiwiRecord,
@@ -20070,7 +20124,7 @@ pub mod graph {
         state: &mut State,
     ) -> NifResult<Occurrence> {
         let mut tables = HashMap::new();
-        for claim in claims.iter() {
+        for claim in claims {
             if let Some(target_path) = resolve_claim_target(
                 index,
                 &occurrence,
@@ -20078,7 +20132,7 @@ pub mod graph {
                 state,
                 &mut tables,
             ) {
-                apply_property_claim(&mut occurrence, rank, &&target_path, claim);
+                apply_property_claim(&mut occurrence, rank, &target_path, &claim);
             }
         }
         let scaled = apply_layout_scale(occurrence, source)?;
@@ -20174,16 +20228,17 @@ pub mod graph {
         path: &[GuidKey],
         position: usize,
     ) -> bool {
-        match path.get(position) {
-            Some(segment) => {
-                let rest = path.iter().copied().skip(position).collect::<Vec<GuidKey>>();
+        let rest = path.iter().copied().skip(position).collect::<Vec<GuidKey>>();
+        match rest.as_slice() {
+            [segment, _later @ ..] => {
                 if current
                     .replaced_components
                     .iter()
+                    .copied()
                     .any(|component| resolves_in_source_component(
                         index,
-                        *component,
-                        &&rest,
+                        component,
+                        &rest,
                     ))
                 {
                     true
@@ -20194,7 +20249,7 @@ pub mod graph {
                         Ok(indexes) => {
                             removed_from(
                                 index,
-                                get_at(current, &&indexes),
+                                get_at(current, &indexes),
                                 path,
                                 position + 1,
                             )
@@ -20203,7 +20258,7 @@ pub mod graph {
                     }
                 }
             }
-            None => false,
+            [] => false,
         }
     }
     fn apply_derived_bounds(
@@ -20216,9 +20271,9 @@ pub mod graph {
         for entry in source.records(kiwi_records::NodeChange::DERIVED_SYMBOL_DATA) {
             let path = override_path(entry);
             if !path.is_empty() {
-                match resolve_claim_target(index, &owner, &&path, state, &mut tables) {
+                match resolve_claim_target(index, &owner, &path, state, &mut tables) {
                     Some(target_path) if !target_path.is_empty() => {
-                        apply_derived_entry(at_mut(&mut owner, &&target_path), entry);
+                        apply_derived_entry(at_mut(&mut owner, &target_path), entry);
                     }
                     _ => {}
                 };
@@ -20934,7 +20989,7 @@ pub mod graph {
                 resolve_reference(vars, *id, modes, visiting).and_then(finite)
             }
             Formula::Operation(operation) => {
-                evaluated_operands(vars, &&operation.operands, modes, visiting)
+                evaluated_operands(vars, &operation.operands, modes, visiting)
                     .and_then(|operands| apply_operator(operation.operator, operands))
                     .and_then(finite)
             }
