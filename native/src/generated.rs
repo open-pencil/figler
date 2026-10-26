@@ -17376,12 +17376,12 @@ pub mod graph {
                 }
                 _ => None,
             })
-            .map(|record| (record, record_id(record)))
+            .map(|record| (record_id(record), record))
             .filter_map(|item| match item {
-                (record, Some(id)) => Some((record, id)),
+                (Some(id), record) => Some((id, record)),
                 _ => None,
             })
-            .map(|(record, id)| (id, record.clone()))
+            .map(|(id, record)| (id, record.clone()))
             .collect()
     }
     fn style_keys(records: &[KiwiRecord]) -> StyleKeys {
@@ -17531,12 +17531,11 @@ pub mod graph {
     fn records_by_id(records: &[KiwiRecord]) -> HashMap<GuidKey, &KiwiRecord> {
         records
             .iter()
-            .map(|record| (record, record_id(record)))
+            .map(|record| (record_id(record), record))
             .filter_map(|item| match item {
-                (record, Some(id)) => Some((record, id)),
+                (Some(id), record) => Some((id, record)),
                 _ => None,
             })
-            .map(|(record, id)| (id, record))
             .collect()
     }
     fn inherit_definitions(
@@ -17552,12 +17551,11 @@ pub mod graph {
     fn definitions_named(ancestor: &KiwiRecord, id: GuidKey) -> Vec<&KiwiRecord> {
         ancestor
             .records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS)
-            .iter()
-            .filter(|definition| {
+            .into_iter()
+            .filter(|&definition| {
                 guid_key(definition.record(kiwi_records::ComponentPropDef::ID))
                     == Some(id)
             })
-            .cloned()
             .collect::<Vec<&KiwiRecord>>()
     }
     fn with_text_style(record: KiwiRecord, style: &KiwiRecord) -> KiwiRecord {
@@ -17671,12 +17669,12 @@ pub mod graph {
     fn record_ids(records: &[&KiwiRecord]) -> Vec<GuidKey> {
         records
             .iter()
-            .map(|record| (record, record_id(record)))
+            .map(|record| (record_id(record), record))
             .filter_map(|item| match item {
-                (record, Some(id)) => Some((record, id)),
+                (Some(id), record) => Some((id, record)),
                 _ => None,
             })
-            .map(|(_, id)| id)
+            .map(|(id, _)| id)
             .collect()
     }
     fn id_set(ids: &[GuidKey]) -> HashSet<GuidKey> {
@@ -17685,12 +17683,12 @@ pub mod graph {
     fn sources(records: &[KiwiRecord]) -> Sources {
         records
             .iter()
-            .map(|record| (record, record_id(record)))
+            .map(|record| (record_id(record), record))
             .filter_map(|item| match item {
-                (record, Some(id)) => Some((record, id)),
+                (Some(id), record) => Some((id, record)),
                 _ => None,
             })
-            .map(|(record, id)| (id, record.clone()))
+            .map(|(id, record)| (id, record.clone()))
             .collect()
     }
     fn children(records: &[KiwiRecord]) -> Children {
@@ -17708,17 +17706,17 @@ pub mod graph {
         };
         ordered
             .into_iter()
-            .map(|record| (record, record_id(record)))
+            .map(|record| (record_id(record), record))
             .filter_map(|item| match item {
-                (record, Some(id)) => Some((record, id)),
+                (Some(id), record) => Some((id, record)),
                 _ => None,
             })
-            .map(|(record, id)| ((record, id), parent_id(record)))
+            .map(|(id, record)| (parent_id(record), (id, record)))
             .filter_map(|item| match item {
-                ((record, id), Some(parent)) => Some((record, id, parent)),
+                (Some(parent), (id, record)) => Some((parent, id, record)),
                 _ => None,
             })
-            .map(|(_, id, parent)| (parent, id))
+            .map(|(parent, id, _)| (parent, id))
             .collect()
     }
     fn record_refs(records: &[KiwiRecord]) -> Vec<&KiwiRecord> {
@@ -17887,7 +17885,7 @@ pub mod graph {
     fn find_segment(root: &Occurrence, guid: GuidKey) -> Result<Vec<usize>, usize> {
         let mut found = Vec::new();
         for (index, child) in root.children.iter().enumerate() {
-            find_within(child, vec![index], guid, &mut found);
+            find_within(&child, vec![index], guid, &mut found);
         }
         if found.len() == 1 { Ok(found.remove(0)) } else { Err(found.len()) }
     }
@@ -17904,7 +17902,7 @@ pub mod graph {
                 for (index, child) in node.children.iter().enumerate() {
                     let mut child_path = path.clone();
                     child_path.push(index);
-                    find_within(child, child_path, guid, found);
+                    find_within(&child, child_path, guid, found);
                 }
             }
         };
@@ -17957,7 +17955,7 @@ pub mod graph {
     fn segment_lookup(root: &Occurrence) -> SegmentTable {
         let mut table: SegmentTable = HashMap::new();
         for (index, child) in root.children.iter().enumerate() {
-            collect_segments(child, vec![index], &HashSet::new(), &mut table);
+            collect_segments(&child, vec![index], &HashSet::new(), &mut table);
         }
         table
     }
@@ -17977,7 +17975,7 @@ pub mod graph {
             for (index, child) in node.children.iter().enumerate() {
                 let mut child_path = path.clone();
                 child_path.push(index);
-                collect_segments(child, child_path, &matched, table);
+                collect_segments(&child, child_path, &matched, table);
             }
         }
     }
@@ -18042,10 +18040,8 @@ pub mod graph {
             .field_ids()
             .into_iter()
             .filter_map(|item| match item {
-                field if target
-                    .bound_fields
-                    .get(&field)
-                    .is_none_or(|rank| *rank >= owner_rank) => Some(field),
+                field if target.bound_fields.get(&field).copied().unwrap_or(owner_rank)
+                    >= owner_rank => Some(field),
                 _ => None,
             })
             .collect::<Vec<u32>>();
@@ -18086,6 +18082,7 @@ pub mod graph {
                 match properties.record(kiwi_records::NodeChange::TEXT_DATA) {
                     Some(source) => {
                         text.fields()
+                            .into_iter()
                             .any(|(field, value)| source.get(field) != Some(value))
                     }
                     None => true,
@@ -18109,48 +18106,32 @@ pub mod graph {
         if incoming.is_empty() {
             None
         } else {
-            let mut entries = consumption_entries(base);
-            entries.extend(incoming);
+            let entries = dedupe_by_field(
+                &consumption_entries(base)
+                    .into_iter()
+                    .chain(incoming)
+                    .collect::<Vec<KiwiRecord>>(),
+            );
             Some(
                 KiwiRecord::new(kiwi_record_definitions::VARIABLE_DATA_MAP)
-                    .put_records(
-                        kiwi_records::VariableDataMap::ENTRIES,
-                        dedupe_by_field(&entries),
-                    ),
+                    .put_records(kiwi_records::VariableDataMap::ENTRIES, entries),
             )
         }
     }
     fn consumption_entries(record: &KiwiRecord) -> Vec<KiwiRecord> {
-        let mut entries = map_entries(
-            record,
-            kiwi_records::NodeChange::VARIABLE_CONSUMPTION_MAP,
-        );
-        entries
-            .extend(
+        let entries = map_entries(
+                record,
+                kiwi_records::NodeChange::VARIABLE_CONSUMPTION_MAP,
+            )
+            .into_iter()
+            .chain(
                 map_entries(record, kiwi_records::NodeChange::PARAMETER_CONSUMPTION_MAP),
-            );
-        let mut unkeyed = entries
-            .iter()
-            .filter_map(|item| match item {
-                entry if entry
-                    .enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD)
-                    .is_none() => Some(entry),
-                _ => None,
-            })
-            .cloned()
+            )
             .collect::<Vec<KiwiRecord>>();
-        let keyed = entries
-            .iter()
-            .filter_map(|item| match item {
-                entry if entry
-                    .enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD)
-                    .is_some() => Some(entry),
-                _ => None,
-            })
-            .cloned()
-            .collect::<Vec<KiwiRecord>>();
-        unkeyed.extend(dedupe_by_field(&keyed));
-        unkeyed
+        let (keyed, unkeyed) = entries
+            .into_iter()
+            .partition::<Vec<KiwiRecord>, _>(|entry| variable_field(entry).is_some());
+        unkeyed.into_iter().chain(dedupe_by_field(&keyed)).collect::<Vec<KiwiRecord>>()
     }
     fn map_entries(record: &KiwiRecord, field: u32) -> Vec<KiwiRecord> {
         match record.record(field) {
@@ -18160,33 +18141,54 @@ pub mod graph {
                     .cloned()
                     .collect()
             }
-            None => Vec::new(),
+            None => vec![],
         }
     }
     fn dedupe_by_field(entries: &[KiwiRecord]) -> Vec<KiwiRecord> {
-        let mut last = HashMap::new();
-        for (index, entry) in entries.iter().enumerate() {
-            if let Some(field) = entry
-                .enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD)
-            {
-                last.insert(field, index);
-            }
-        }
-        let mut seen = HashSet::new();
-        let mut kept = Vec::new();
-        for entry in entries {
-            match entry.enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD) {
-                Some(field) => {
-                    if seen.insert(field) {
-                        kept.push(entries[last[&field]].clone());
-                    }
-                }
-                None => {
-                    kept.push(entry.clone());
-                }
-            };
-        }
-        kept
+        let last = entries
+            .iter()
+            .enumerate()
+            .map(|(index, entry)| (variable_field(entry), (index, entry)))
+            .filter_map(|item| match item {
+                (Some(field), (index, entry)) => Some((field, index, entry)),
+                _ => None,
+            })
+            .map(|(field, index, _)| (field, index))
+            .collect::<HashMap<u32, usize>>();
+        let first = entries
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(index, item)| (item, index))
+            .rev()
+            .map(|(entry, index)| (variable_field(&entry), (entry, index)))
+            .filter_map(|item| match item {
+                (Some(field), (entry, index)) => Some((field, entry, index)),
+                _ => None,
+            })
+            .map(|(field, _, index)| (field, index))
+            .collect::<HashMap<u32, usize>>();
+        entries
+            .iter()
+            .enumerate()
+            .filter_map(|item| match item {
+                (
+                    index,
+                    entry,
+                ) if match variable_field(entry) {
+                    Some(field) => first[&field] == index,
+                    None => true,
+                } => Some((index, entry)),
+                _ => None,
+            })
+            .map(|(_, entry)| match variable_field(entry) {
+                Some(field) => entries[last[&field]].clone(),
+                None => entry.clone(),
+            })
+            .collect()
+    }
+    fn variable_field(entry: &KiwiRecord) -> Option<u32> {
+        entry.enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD)
     }
     #[derive(Clone, Debug)]
     pub struct Binding {
@@ -18217,22 +18219,22 @@ pub mod graph {
         definitions
             .iter()
             .map(|definition| (
-                definition,
                 guid_key(definition.record(kiwi_records::ComponentPropDef::ID)),
+                definition,
             ))
             .filter_map(|item| match item {
-                (definition, Some(id)) => Some((definition, id)),
+                (Some(id), definition) => Some((id, definition)),
                 _ => None,
             })
-            .map(|(definition, id)| (
-                (definition, id),
+            .map(|(id, definition)| (
                 definition.record(kiwi_records::ComponentPropDef::INITIAL_VALUE),
+                (id, definition),
             ))
             .filter_map(|item| match item {
-                ((definition, id), Some(value)) => Some((definition, id, value)),
+                (Some(value), (id, definition)) => Some((value, id, definition)),
                 _ => None,
             })
-            .map(|(_, id, value)| Binding {
+            .map(|(value, id, _)| Binding {
                 id,
                 value: prop_value(value),
                 origin: Origin::Default,
@@ -18535,12 +18537,12 @@ pub mod graph {
         };
         let layers = overrides
             .iter()
-            .map(|r#override| (r#override, structural_layer(r#override, &owner)))
+            .map(|r#override| (structural_layer(r#override, &owner), r#override))
             .filter_map(|item| match item {
-                (r#override, Some(layer)) => Some((r#override, layer)),
+                (Some(layer), r#override) => Some((layer, r#override)),
                 _ => None,
             })
-            .map(|(_, layer)| layer)
+            .map(|(layer, _)| layer)
             .collect::<Vec<Layer>>();
         let mut claims = mode_claims(source);
         for r#override in overrides {
@@ -18587,12 +18589,12 @@ pub mod graph {
             Some(path) => {
                 path.records(kiwi_records::GuidPath::GUIDS)
                     .into_iter()
-                    .map(|guid| (guid, guid_key(Some(guid))))
+                    .map(|guid| (guid_key(Some(guid)), guid))
                     .filter_map(|item| match item {
-                        (guid, Some(key)) => Some((guid, key)),
+                        (Some(key), guid) => Some((key, guid)),
                         _ => None,
                     })
-                    .map(|(_, key)| key)
+                    .map(|(key, _)| key)
                     .collect()
             }
             None => Vec::new(),
@@ -20178,7 +20180,7 @@ pub mod graph {
             .collect::<Vec<_>>();
         ids.sort();
         for id in ids {
-            put_variable(&mut vars, &records[&id]);
+            put_variable(&mut vars, &records[&&id]);
         }
         vars
     }
@@ -20234,13 +20236,13 @@ pub mod graph {
         let modes = record
             .records(kiwi_records::NodeChange::VARIABLE_SET_MODES)
             .into_iter()
-            .map(|mode| (mode, guid_key(mode.record(kiwi_records::VariableSetMode::ID))))
+            .map(|mode| (guid_key(mode.record(kiwi_records::VariableSetMode::ID)), mode))
             .filter_map(|item| match item {
-                (mode, Some(id)) => Some((mode, id)),
+                (Some(id), mode) => Some((id, mode)),
                 _ => None,
             })
-            .map(|(_, id)| id)
-            .collect::<Vec<_>>();
+            .map(|(id, _)| id)
+            .collect::<Vec<GuidKey>>();
         match modes.first() {
             Some(default) => {
                 Some(Collection {

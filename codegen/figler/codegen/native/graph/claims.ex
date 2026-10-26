@@ -12,23 +12,9 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  @doc false
+  @doc "The Rust functions this module defines."
   @spec items() :: [term()]
-  def items do
-    RustQ.Meta.AST.functions!(__MODULE__, [
-      :component_identity,
-      :text_shaping,
-      :retained,
-      :apply_claim,
-      :invalidate_inherited_text,
-      :changed_text?,
-      :changed_shaping?,
-      :merge_variable_consumption,
-      :consumption_entries,
-      :map_entries,
-      :dedupe_by_field
-    ])
-  end
+  def items, do: __rustq_items__()
 
   # A component's own identity, which an instance does not take from it.
   @spec component_identity() :: R.slice(R.u32(), R.lifetime(:static))
@@ -72,9 +58,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   defrust retained(props, target, owner_rank) do
     kept =
       for field <- props.field_ids(),
-          target.bound_fields.get(ref(field)).is_none_or(fn rank ->
-            deref(rank) >= owner_rank
-          end),
+          Map.get(target.bound_fields, field, owner_rank) >= owner_rank,
           do: field
 
     props.take(kept)
@@ -117,7 +101,7 @@ defmodule Figler.Codegen.Native.Graph.Claims do
       {:some, text} ->
         case properties.record(Kiwi.NodeChange.TEXT_DATA) do
           {:some, source} ->
-            text.fields().any(fn {field, value} -> source.get(field) != some(value) end)
+            Enum.any?(text.fields(), fn {field, value} -> source.get(field) != some(value) end)
 
           :none ->
             true
@@ -143,15 +127,14 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   defrust merge_variable_consumption(base, patch) do
     incoming = consumption_entries(patch)
 
-    if incoming.is_empty() do
+    if incoming == [] do
       nil
     else
-      entries = consumption_entries(base)
-      entries.extend(incoming)
+      entries = dedupe_by_field(consumption_entries(base) ++ incoming)
 
       some(
         KiwiRecord.new(Kiwi.Definitions.VARIABLE_DATA_MAP)
-        |> put_records(Kiwi.VariableDataMap.ENTRIES, dedupe_by_field(entries))
+        |> put_records(Kiwi.VariableDataMap.ENTRIES, entries)
       )
     end
   end
@@ -161,21 +144,12 @@ defmodule Figler.Codegen.Native.Graph.Claims do
   # first-seen order.
   @spec consumption_entries(R.ref(Kiwi.kiwi_record())) :: R.vec(Kiwi.kiwi_record())
   defrust consumption_entries(record) do
-    entries = map_entries(record, Kiwi.NodeChange.VARIABLE_CONSUMPTION_MAP)
-    entries.extend(map_entries(record, Kiwi.NodeChange.PARAMETER_CONSUMPTION_MAP))
+    entries =
+      map_entries(record, Kiwi.NodeChange.VARIABLE_CONSUMPTION_MAP) ++
+        map_entries(record, Kiwi.NodeChange.PARAMETER_CONSUMPTION_MAP)
 
-    unkeyed =
-      for entry <- entries.iter(),
-          entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD).is_none(),
-          do: entry.clone()
-
-    keyed =
-      for entry <- entries.iter(),
-          entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD).is_some(),
-          do: entry.clone()
-
-    unkeyed.extend(dedupe_by_field(keyed))
-    unkeyed
+    {keyed, unkeyed} = Enum.split_with(entries, fn entry -> variable_field(entry).is_some() end)
+    unkeyed ++ dedupe_by_field(keyed)
   end
 
   @spec map_entries(R.ref(Kiwi.kiwi_record()), R.u32()) :: R.vec(Kiwi.kiwi_record())
@@ -185,35 +159,38 @@ defmodule Figler.Codegen.Native.Graph.Claims do
         map.records(Kiwi.VariableDataMap.ENTRIES) |> into_iter() |> cloned() |> collect()
 
       :none ->
-        Vec.new()
+        []
     end
   end
 
   # Entries keep the position of a field's first entry and the value of its last.
   @spec dedupe_by_field(R.slice(Kiwi.kiwi_record())) :: R.vec(Kiwi.kiwi_record())
   defrust dedupe_by_field(entries) do
-    last = HashMap.new()
+    last =
+      for {entry, index} <- Enum.with_index(entries),
+          {:some, field} <- [variable_field(entry)],
+          into: %{},
+          do: {field, index}
 
-    for {entry, index} <- Enum.with_index(entries) do
-      case entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD) do
-        {:some, field} -> last.insert(field, index)
-        :none -> nil
+    # The reversed entries leave each field's first index last, to be kept.
+    first =
+      for {entry, index} <- entries |> Enum.with_index() |> Enum.reverse(),
+          {:some, field} <- [variable_field(entry)],
+          into: %{},
+          do: {field, index}
+
+    for {entry, index} <- Enum.with_index(entries),
+        (case variable_field(entry) do
+           {:some, field} -> first[field] == index
+           :none -> true
+         end) do
+      case variable_field(entry) do
+        {:some, field} -> entries[last[field]].clone()
+        :none -> entry.clone()
       end
     end
-
-    seen = HashSet.new()
-    kept = Vec.new()
-
-    for entry <- entries do
-      case entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD) do
-        {:some, field} ->
-          if seen.insert(field), do: kept.push(entries[last[ref(field)]].clone())
-
-        :none ->
-          kept.push(entry.clone())
-      end
-    end
-
-    kept
   end
+
+  @spec variable_field(R.ref(Kiwi.kiwi_record())) :: R.option(R.u32())
+  defrust variable_field(entry), do: entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD)
 end
