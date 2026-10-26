@@ -13,18 +13,19 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
       Figler.Codegen.Native.Graph.SourceIndex
     ]
 
+  alias Figler.Codegen.Native.Graph.Records
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   @typep occurrence :: %{
-           required(:source_id) => GuidKey.t(),
-           required(:override_key) => R.option(GuidKey.t()),
-           required(:main_component_id) => R.option(GuidKey.t()),
-           required(:main_component_override_key) => R.option(GuidKey.t()),
-           required(:source_component_id) => R.option(GuidKey.t()),
-           required(:source_component_override_key) => R.option(GuidKey.t()),
+           required(:source_id) => Records.guid_key(),
+           required(:override_key) => R.option(Records.guid_key()),
+           required(:main_component_id) => R.option(Records.guid_key()),
+           required(:main_component_override_key) => R.option(Records.guid_key()),
+           required(:source_component_id) => R.option(Records.guid_key()),
+           required(:source_component_override_key) => R.option(Records.guid_key()),
            required(:derived_size) => R.option(Kiwi.kiwi_record()),
-           required(:slot_content_id) => R.option(GuidKey.t()),
+           required(:slot_content_id) => R.option(Records.guid_key()),
            required(:default_instance_name) => R.option(String.t()),
            required(:properties) => Kiwi.kiwi_record(),
            required(:children) => R.vec(occurrence()),
@@ -33,20 +34,20 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
            required(:layout_scale) => R.f64(),
            required(:has_own_name) => R.bool(),
            required(:bound_fields) => HashMap.t(R.u32(), R.u32()),
-           required(:replaced_components) => R.vec(GuidKey.t()),
+           required(:replaced_components) => R.vec(Records.guid_key()),
            required(:overridden) => HashSet.t(R.u32())
          }
 
   # Fields an owner's override set on a layer of its expansion.
   @typep property_claim :: %{
-           required(:declared_by) => GuidKey.t(),
-           required(:path) => R.vec(GuidKey.t()),
+           required(:declared_by) => Records.guid_key(),
+           required(:path) => R.vec(Records.guid_key()),
            required(:properties) => Kiwi.kiwi_record()
          }
 
   # A field a component property bound on a record.
   @typep binding_claim :: %{
-           required(:definition_id) => GuidKey.t(),
+           required(:definition_id) => Records.guid_key(),
            required(:field) => bound_field(),
            required(:origin) => origin()
          }
@@ -56,36 +57,19 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
 
   # Segment lookups of the occurrences already searched under one owner, by index path. They
   # stay valid while the subtree's shape does.
-  @typep segment_table :: HashMap.t(GuidKey.t(), R.vec(R.vec(R.usize())))
+  @typep segment_table :: HashMap.t(Records.guid_key(), R.vec(R.vec(R.usize())))
   @typep segment_tables :: HashMap.t(R.vec(R.usize()), segment_table())
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [
-        :instance?,
-        :root_guid?,
-        :find_segment,
-        :find_within,
-        :resolve_path,
-        :resolve_segments,
-        :segment_matches,
-        :segment_lookup,
-        :collect_segments,
-        :new_segment_keys,
-        :segment_keys,
-        :get_at,
-        :at_mut
-      ])
-  end
+  def items, do: __rustq_items__()
 
   # Whether this occurrence expands a component.
   @spec instance?(R.ref(occurrence())) :: R.bool()
   defrust(instance?(occurrence), do: occurrence.main_component_id.is_some())
 
   # Whether `guid` addresses the root of this occurrence's expansion.
-  @spec root_guid?(R.ref(occurrence()), GuidKey.t()) :: R.bool()
+  @spec root_guid?(R.ref(occurrence()), Records.guid_key()) :: R.bool()
   defrust root_guid?(owner, guid) do
     symbol_id(ref(owner.properties)) == some(guid) or
       owner.main_component_override_key == some(guid) or
@@ -95,90 +79,93 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
 
   # Finds one segment below `root`, through ordinary containers but never into a nested
   # instance: the index path to it, or how many occurrences matched.
-  @spec find_segment(R.ref(occurrence()), GuidKey.t()) :: R.result(R.vec(R.usize()), R.usize())
+  @spec find_segment(R.ref(occurrence()), Records.guid_key()) ::
+          R.result(R.vec(R.usize()), R.usize())
   defrust find_segment(root, guid) do
-    found = Vec.new()
+    found =
+      root.children
+      |> Enum.with_index()
+      |> Enum.reduce([], fn {child, index}, found -> find_within(child, [index], guid, found) end)
 
-    for {child, index} <- Enum.with_index(root.children) do
-      find_within(child, [index], guid, mut_ref(found))
+    case found do
+      [path] -> {:ok, path.clone()}
+      found -> {:error, length(found)}
     end
-
-    if found.len() == 1, do: ok(found.remove(0)), else: err(found.len())
   end
 
+  # `found`, with the index paths of the occurrences matching `guid` at and below `node`.
   @spec find_within(
           R.ref(occurrence()),
           R.vec(R.usize()),
-          GuidKey.t(),
-          R.mut_ref(R.vec(R.vec(R.usize())))
-        ) :: R.unit()
+          Records.guid_key(),
+          R.vec(R.vec(R.usize()))
+        ) :: R.vec(R.vec(R.usize()))
   defrust find_within(node, path, guid, found) do
     cond do
       node.override_key == some(guid) or node.source_id == guid ->
-        found.push(path)
+        found ++ [path]
 
-      not instance?(node) ->
-        for {child, index} <- Enum.with_index(node.children) do
-          child_path = path.clone()
-          child_path.push(index)
-          find_within(child, child_path, guid, found)
-        end
+      instance?(node) ->
+        found
 
       true ->
-        :ok
+        node.children
+        |> Enum.with_index()
+        |> Enum.reduce(found, fn {child, index}, found ->
+          find_within(child, path ++ [index], guid, found)
+        end)
     end
   end
 
   # Resolves an owner's declared path to an index path in its subtree, or the first segment
   # that matches no occurrence or more than one, with the match count. `tables` keeps the
   # segment lookups of every level searched, for the owner's other paths.
-  @spec resolve_path(R.ref(occurrence()), R.slice(GuidKey.t()), R.mut_ref(segment_tables())) ::
-          R.result(R.vec(R.usize()), {GuidKey.t(), R.usize()})
+  @spec resolve_path(
+          R.ref(occurrence()),
+          R.slice(Records.guid_key()),
+          R.mut_ref(segment_tables())
+        ) ::
+          R.result(R.vec(R.usize()), {Records.guid_key(), R.usize()})
   defrust resolve_path(owner, path, tables) do
-    case path.first() do
-      {:some, first} ->
-        start = if root_guid?(owner, deref(first)), do: 1, else: 0
-        resolve_segments(owner, path, start, Vec.new(), tables)
+    case path do
+      [first | _rest] ->
+        start = if root_guid?(owner, first), do: 1, else: 0
+        resolve_segments(owner, path, start, [], tables)
 
-      :none ->
-        ok(Vec.new())
+      [] ->
+        {:ok, []}
     end
   end
 
   @spec resolve_segments(
           R.ref(occurrence()),
-          R.slice(GuidKey.t()),
+          R.slice(Records.guid_key()),
           R.usize(),
           R.vec(R.usize()),
           R.mut_ref(segment_tables())
-        ) :: R.result(R.vec(R.usize()), {GuidKey.t(), R.usize()})
+        ) :: R.result(R.vec(R.usize()), {Records.guid_key(), R.usize()})
   defrust resolve_segments(owner, path, position, at, tables) do
-    case path.get(position) do
+    case Enum.at(path, position) do
       {:some, guid} ->
-        matches = segment_matches(owner, at, deref(guid), tables)
-
-        if matches.len() == 1 do
-          next = at.clone()
-          next.extend_from_slice(ref(matches[0]))
-          resolve_segments(owner, path, position + 1, next, tables)
-        else
-          err({deref(guid), matches.len()})
+        case segment_matches(owner, at, guid, tables) do
+          [segment] -> resolve_segments(owner, path, position + 1, at ++ segment, tables)
+          matches -> {:error, {guid, length(matches)}}
         end
 
       :none ->
-        ok(at)
+        {:ok, at}
     end
   end
 
   @spec segment_matches(
           R.ref(occurrence()),
           R.slice(R.usize()),
-          GuidKey.t(),
+          Records.guid_key(),
           R.mut_ref(segment_tables())
         ) :: R.vec(R.vec(R.usize()))
   defrust segment_matches(owner, at, guid, tables) do
-    table = tables.entry(at.to_vec()).or_insert_with(fn -> segment_lookup(get_at(owner, at)) end)
-    table.get(ref(guid)).cloned().unwrap_or_default()
+    tables.entry(at.to_vec()).or_insert_with(fn -> segment_lookup(get_at(owner, at)) end)
+    Map.get(tables[at], guid, [])
   end
 
   # Every GUID and override key under `root` with the index paths of its matches, as
@@ -186,48 +173,49 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
   # matched the same key.
   @spec segment_lookup(R.ref(occurrence())) :: segment_table()
   defrust segment_lookup(root) do
-    table = HashMap.new()
-
-    for {child, index} <- Enum.with_index(root.children) do
-      collect_segments(child, [index], ref(HashSet.new()), mut_ref(table))
-    end
-
-    table
+    root.children
+    |> Enum.with_index()
+    |> Enum.reduce(%{}, fn {child, index}, table ->
+      collect_segments(child, [index], ref(MapSet.new()), table)
+    end)
   end
 
+  # `table`, with the keys at and below `node` that no ancestor matched.
   @spec collect_segments(
           R.ref(occurrence()),
           R.vec(R.usize()),
-          R.ref(HashSet.t(GuidKey.t())),
-          R.mut_ref(segment_table())
-        ) :: R.unit()
+          R.ref(HashSet.t(Records.guid_key())),
+          segment_table()
+        ) :: segment_table()
   defrust collect_segments(node, path, matched, table) do
     new_keys = new_segment_keys(node, matched)
 
-    for key <- new_keys.iter() do
-      table.entry(deref(key)).or_default().push(path.clone())
-    end
+    table =
+      Enum.reduce(new_keys, table, fn key, table ->
+        Map.update(table, key, [path], fn paths -> paths ++ [path] end)
+      end)
 
-    if not instance?(node) do
-      matched = matched.clone()
-      matched.extend(new_keys)
+    if instance?(node) do
+      table
+    else
+      matched = MapSet.union(matched, MapSet.new(new_keys))
 
-      for {child, index} <- Enum.with_index(node.children) do
-        child_path = path.clone()
-        child_path.push(index)
-        collect_segments(child, child_path, ref(matched), table)
-      end
+      node.children
+      |> Enum.with_index()
+      |> Enum.reduce(table, fn {child, index}, table ->
+        collect_segments(child, path ++ [index], matched, table)
+      end)
     end
   end
 
-  @spec new_segment_keys(R.ref(occurrence()), R.ref(HashSet.t(GuidKey.t()))) ::
-          R.vec(GuidKey.t())
+  @spec new_segment_keys(R.ref(occurrence()), R.ref(HashSet.t(Records.guid_key()))) ::
+          R.vec(Records.guid_key())
   defrust new_segment_keys(node, matched) do
-    for key <- segment_keys(node), not matched.contains(ref(key)), do: key
+    for key <- segment_keys(node), not MapSet.member?(matched, key), do: key
   end
 
   # An occurrence is addressed by its override key and its source GUID.
-  @spec segment_keys(R.ref(occurrence())) :: R.vec(GuidKey.t())
+  @spec segment_keys(R.ref(occurrence())) :: R.vec(Records.guid_key())
   defrust segment_keys(node) do
     case node.override_key do
       {:some, key} when key != node.source_id -> [key, node.source_id]
@@ -239,18 +227,18 @@ defmodule Figler.Codegen.Native.Graph.Occurrence do
   @spec get_at(R.ref(occurrence(), R.lifetime(:a)), R.slice(R.usize())) ::
           R.ref(occurrence(), R.lifetime(:a))
   defrust get_at(occurrence, path) do
-    case path.split_first() do
-      {:some, {index, rest}} -> get_at(ref(occurrence.children[deref(index)]), rest)
-      :none -> occurrence
+    case path do
+      [index | rest] -> get_at(ref(occurrence.children[index]), rest)
+      [] -> occurrence
     end
   end
 
   @spec at_mut(R.mut_ref(occurrence(), R.lifetime(:a)), R.slice(R.usize())) ::
           R.mut_ref(occurrence(), R.lifetime(:a))
   defrust at_mut(occurrence, path) do
-    case path.split_first() do
-      {:some, {index, rest}} -> at_mut(mut_ref(occurrence.children[deref(index)]), rest)
-      :none -> occurrence
+    case path do
+      [index | rest] -> at_mut(mut_ref(occurrence.children[index]), rest)
+      [] -> occurrence
     end
   end
 end

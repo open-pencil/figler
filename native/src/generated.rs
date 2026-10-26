@@ -17883,41 +17883,63 @@ pub mod graph {
             || owner.source_component_id == Some(guid)
     }
     fn find_segment(root: &Occurrence, guid: GuidKey) -> Result<Vec<usize>, usize> {
-        let mut found = Vec::new();
-        for (index, child) in root.children.iter().enumerate() {
-            find_within(&child, vec![index], guid, &mut found);
+        let found = root
+            .children
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(index, item)| (item, index))
+            .fold(
+                vec![],
+                |found, (child, index)| find_within(&child, vec![index], guid, found),
+            );
+        match found.as_slice() {
+            [path] => Ok(path.clone()),
+            found => Err(found.len()),
         }
-        if found.len() == 1 { Ok(found.remove(0)) } else { Err(found.len()) }
     }
     fn find_within(
         node: &Occurrence,
         path: Vec<usize>,
         guid: GuidKey,
-        found: &mut Vec<Vec<usize>>,
-    ) {
+        found: Vec<Vec<usize>>,
+    ) -> Vec<Vec<usize>> {
         if node.override_key == Some(guid) || node.source_id == guid {
-            found.push(path);
-        } else {
-            if !instance(node) {
-                for (index, child) in node.children.iter().enumerate() {
-                    let mut child_path = path.clone();
-                    child_path.push(index);
-                    find_within(&child, child_path, guid, found);
-                }
+            {
+                let mut rustq_updated = found;
+                rustq_updated.push(path);
+                rustq_updated
             }
-        };
+        } else if instance(node) {
+            found
+        } else {
+            node.children
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(index, item)| (item, index))
+                .fold(
+                    found,
+                    |found, (child, index)| find_within(
+                        &child,
+                        path.iter().copied().chain(vec![index]).collect::<Vec<usize>>(),
+                        guid,
+                        found,
+                    ),
+                )
+        }
     }
     fn resolve_path(
         owner: &Occurrence,
         path: &[GuidKey],
         tables: &mut SegmentTables,
     ) -> Result<Vec<usize>, (GuidKey, usize)> {
-        match path.first() {
-            Some(first) => {
+        match path {
+            [first, _rest @ ..] => {
                 let start = if root_guid(owner, *first) { 1 } else { 0 };
-                resolve_segments(owner, path, start, Vec::new(), tables)
+                resolve_segments(owner, path, start, vec![], tables)
             }
-            None => Ok(Vec::new()),
+            [] => Ok(vec![]),
         }
     }
     fn resolve_segments(
@@ -17927,15 +17949,23 @@ pub mod graph {
         at: Vec<usize>,
         tables: &mut SegmentTables,
     ) -> Result<Vec<usize>, (GuidKey, usize)> {
-        match path.get(position) {
+        match path.get(position).copied() {
             Some(guid) => {
-                let matches = segment_matches(owner, &at, *guid, tables);
-                if matches.len() == 1 {
-                    let mut next = at.clone();
-                    next.extend_from_slice(&matches[0]);
-                    resolve_segments(owner, path, position + 1, next, tables)
-                } else {
-                    Err((*guid, matches.len()))
+                match segment_matches(owner, &at, guid, tables).as_slice() {
+                    [segment] => {
+                        resolve_segments(
+                            owner,
+                            path,
+                            position + 1,
+                            {
+                                let mut rustq_updated = at;
+                                rustq_updated.extend(segment.iter());
+                                rustq_updated
+                            },
+                            tables,
+                        )
+                    }
+                    matches => Err((guid, matches.len())),
                 }
             }
             None => Ok(at),
@@ -17947,36 +17977,74 @@ pub mod graph {
         guid: GuidKey,
         tables: &mut SegmentTables,
     ) -> Vec<Vec<usize>> {
-        let table = tables
-            .entry(at.to_vec())
-            .or_insert_with(|| segment_lookup(get_at(owner, at)));
-        table.get(&guid).cloned().unwrap_or_default()
+        tables.entry(at.to_vec()).or_insert_with(|| segment_lookup(get_at(owner, at)));
+        tables[at].get(&guid).cloned().unwrap_or_default()
     }
     fn segment_lookup(root: &Occurrence) -> SegmentTable {
-        let mut table: SegmentTable = HashMap::new();
-        for (index, child) in root.children.iter().enumerate() {
-            collect_segments(&child, vec![index], &HashSet::new(), &mut table);
-        }
-        table
+        root.children
+            .iter()
+            .cloned()
+            .enumerate()
+            .map(|(index, item)| (item, index))
+            .fold(
+                HashMap::new(),
+                |table, (child, index)| collect_segments(
+                    &child,
+                    vec![index],
+                    &HashSet::new(),
+                    table,
+                ),
+            )
     }
     fn collect_segments(
         node: &Occurrence,
         path: Vec<usize>,
         matched: &HashSet<GuidKey>,
-        table: &mut SegmentTable,
-    ) {
+        table: SegmentTable,
+    ) -> SegmentTable {
         let new_keys = new_segment_keys(node, matched);
-        for key in new_keys.iter() {
-            table.entry(*key).or_default().push(path.clone());
-        }
-        if !instance(node) {
-            let mut matched = matched.clone();
-            matched.extend(new_keys);
-            for (index, child) in node.children.iter().enumerate() {
-                let mut child_path = path.clone();
-                child_path.push(index);
-                collect_segments(&child, child_path, &matched, table);
-            }
+        let table = new_keys
+            .iter()
+            .copied()
+            .fold(
+                table,
+                |table, key| {
+                    let mut rustq_updated = table;
+                    let rustq_key = key;
+                    let rustq_value = match rustq_updated.remove(&rustq_key) {
+                        Some(paths) => {
+                            let mut rustq_updated = paths;
+                            rustq_updated.push(path.clone());
+                            rustq_updated
+                        }
+                        None => vec![path.clone()],
+                    };
+                    rustq_updated.insert(rustq_key, rustq_value);
+                    rustq_updated
+                },
+            );
+        if instance(node) {
+            table
+        } else {
+            let matched = {
+                let mut rustq_updated = matched.clone();
+                rustq_updated.extend(new_keys.into_iter().collect::<HashSet<_>>());
+                rustq_updated
+            };
+            node.children
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(index, item)| (item, index))
+                .fold(
+                    table,
+                    |table, (child, index)| collect_segments(
+                        &child,
+                        path.iter().copied().chain(vec![index]).collect::<Vec<usize>>(),
+                        &matched,
+                        table,
+                    ),
+                )
         }
     }
     fn new_segment_keys(node: &Occurrence, matched: &HashSet<GuidKey>) -> Vec<GuidKey> {
@@ -17995,15 +18063,15 @@ pub mod graph {
         }
     }
     fn get_at<'a>(occurrence: &'a Occurrence, path: &[usize]) -> &'a Occurrence {
-        match path.split_first() {
-            Some((index, rest)) => get_at(&occurrence.children[*index], rest),
-            None => occurrence,
+        match path {
+            [index, rest @ ..] => get_at(&occurrence.children[*index], rest),
+            [] => occurrence,
         }
     }
     fn at_mut<'a>(occurrence: &'a mut Occurrence, path: &[usize]) -> &'a mut Occurrence {
-        match path.split_first() {
-            Some((index, rest)) => at_mut(&mut occurrence.children[*index], rest),
-            None => occurrence,
+        match path {
+            [index, rest @ ..] => at_mut(&mut occurrence.children[*index], rest),
+            [] => occurrence,
         }
     }
     fn component_identity() -> &'static [u32] {
@@ -18107,10 +18175,11 @@ pub mod graph {
             None
         } else {
             let entries = dedupe_by_field(
-                &consumption_entries(base)
-                    .into_iter()
-                    .chain(incoming)
-                    .collect::<Vec<KiwiRecord>>(),
+                &{
+                    let mut rustq_updated = consumption_entries(base);
+                    rustq_updated.extend(incoming);
+                    rustq_updated
+                },
             );
             Some(
                 KiwiRecord::new(kiwi_record_definitions::VARIABLE_DATA_MAP)
@@ -18119,19 +18188,28 @@ pub mod graph {
         }
     }
     fn consumption_entries(record: &KiwiRecord) -> Vec<KiwiRecord> {
-        let entries = map_entries(
+        let entries = {
+            let mut rustq_updated = map_entries(
                 record,
                 kiwi_records::NodeChange::VARIABLE_CONSUMPTION_MAP,
-            )
-            .into_iter()
-            .chain(
-                map_entries(record, kiwi_records::NodeChange::PARAMETER_CONSUMPTION_MAP),
-            )
-            .collect::<Vec<KiwiRecord>>();
+            );
+            rustq_updated
+                .extend(
+                    map_entries(
+                        record,
+                        kiwi_records::NodeChange::PARAMETER_CONSUMPTION_MAP,
+                    ),
+                );
+            rustq_updated
+        };
         let (keyed, unkeyed) = entries
             .into_iter()
             .partition::<Vec<KiwiRecord>, _>(|entry| variable_field(entry).is_some());
-        unkeyed.into_iter().chain(dedupe_by_field(&keyed)).collect::<Vec<KiwiRecord>>()
+        {
+            let mut rustq_updated = unkeyed;
+            rustq_updated.extend(dedupe_by_field(&keyed));
+            rustq_updated
+        }
     }
     fn map_entries(record: &KiwiRecord, field: u32) -> Vec<KiwiRecord> {
         match record.record(field) {
@@ -18560,7 +18638,14 @@ pub mod graph {
             })
             .map(|(props, path, _)| Claim { path, props })
             .collect::<Vec<_>>();
-        (layers, mode_claims(source).into_iter().chain(claims).collect::<Vec<Claim>>())
+        (
+            layers,
+            {
+                let mut rustq_updated = mode_claims(source);
+                rustq_updated.extend(claims);
+                rustq_updated
+            },
+        )
     }
     fn mode_claims(source: &KiwiRecord) -> Vec<Claim> {
         match source.enum_value(kiwi_records::NodeChange::TYPE)
