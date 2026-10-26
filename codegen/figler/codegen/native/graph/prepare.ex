@@ -13,12 +13,13 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   use RustQ.Meta,
     callable_modules: [Figler.Codegen.Native.Graph.Records]
 
+  alias Figler.Codegen.Native.Graph.Records
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  @typep resolved :: HashMap.t(GuidKey.t(), Kiwi.kiwi_record())
-  @typep styles :: HashMap.t(GuidKey.t(), Kiwi.kiwi_record())
-  @typep style_keys :: HashMap.t(String.t(), GuidKey.t())
+  @typep resolved :: HashMap.t(Records.guid_key(), Kiwi.kiwi_record())
+  @typep styles :: HashMap.t(Records.guid_key(), Kiwi.kiwi_record())
+  @typep style_keys :: HashMap.t(String.t(), Records.guid_key())
 
   @doc false
   @spec items() :: [term()]
@@ -222,7 +223,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   end
 
   @spec records_by_id(R.slice(Kiwi.kiwi_record())) ::
-          HashMap.t(GuidKey.t(), R.ref(Kiwi.kiwi_record()))
+          HashMap.t(Records.guid_key(), R.ref(Kiwi.kiwi_record()))
   defrust records_by_id(records) do
     for record <- records,
         {:some, id} <- [record_id(record)],
@@ -238,9 +239,9 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
 
   @spec resolve(
           R.ref(Kiwi.kiwi_record()),
-          R.ref(HashMap.t(GuidKey.t(), R.ref(Kiwi.kiwi_record()))),
+          R.ref(HashMap.t(Records.guid_key(), R.ref(Kiwi.kiwi_record()))),
           R.mut_ref(resolved()),
-          R.ref(HashSet.t(GuidKey.t()))
+          R.ref(HashSet.t(Records.guid_key()))
         ) :: R.nif_result(Kiwi.kiwi_record())
   defrust resolve(record, by_id, resolved, visiting) do
     case record_id(record) do
@@ -271,7 +272,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec cached(R.ref(resolved()), GuidKey.t()) :: R.nif_result(Kiwi.kiwi_record())
+  @spec cached(R.ref(resolved()), Records.guid_key()) :: R.nif_result(Kiwi.kiwi_record())
   defrust cached(resolved, id) do
     case resolved.get(ref(id)) do
       {:some, record} -> ok(record.clone())
@@ -281,9 +282,9 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
 
   @spec resolved_ancestors(
           R.ref(Kiwi.kiwi_record()),
-          R.ref(HashMap.t(GuidKey.t(), R.ref(Kiwi.kiwi_record()))),
+          R.ref(HashMap.t(Records.guid_key(), R.ref(Kiwi.kiwi_record()))),
           R.mut_ref(resolved()),
-          R.ref(HashSet.t(GuidKey.t()))
+          R.ref(HashSet.t(Records.guid_key()))
         ) :: R.nif_result(R.vec(Kiwi.kiwi_record()))
   defrust resolved_ancestors(record, by_id, resolved, visiting) do
     case parent_id(record).and_then(fn id -> by_id.get(ref(id)) end) do
@@ -330,7 +331,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec parent_definition(R.slice(Kiwi.kiwi_record()), GuidKey.t()) ::
+  @spec parent_definition(R.slice(Kiwi.kiwi_record()), Records.guid_key()) ::
           R.nif_result(Kiwi.kiwi_record())
   defrust parent_definition(ancestors, parent_id) do
     found =
@@ -347,7 +348,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec definitions_named(R.ref(Kiwi.kiwi_record()), GuidKey.t()) ::
+  @spec definitions_named(R.ref(Kiwi.kiwi_record()), Records.guid_key()) ::
           R.vec(R.ref(Kiwi.kiwi_record()))
   defrust definitions_named(ancestor, id) do
     ancestor.records(Kiwi.NodeChange.COMPONENT_PROP_DEFS)
@@ -384,7 +385,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     Enum.flat_map(records, &style_names/1)
   end
 
-  @spec style_names(R.ref(Kiwi.kiwi_record())) :: R.vec({String.t(), GuidKey.t()})
+  @spec style_names(R.ref(Kiwi.kiwi_record())) :: R.vec({String.t(), Records.guid_key()})
   defrust style_names(record) do
     with {:some, key} <- record.str(Kiwi.NodeChange.KEY),
          {:some, id} <- record_id(record) do
@@ -561,7 +562,7 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
     end
   end
 
-  @spec style_by_id(R.ref(styles()), GuidKey.t()) :: R.option(Kiwi.kiwi_record())
+  @spec style_by_id(R.ref(styles()), Records.guid_key()) :: R.option(Kiwi.kiwi_record())
   defrust style_by_id(styles, id) do
     case styles.get(ref(id)) do
       {:some, style} -> some(style.clone())

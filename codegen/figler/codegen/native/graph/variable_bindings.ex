@@ -18,6 +18,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   alias Figler.Codegen.Native.Graph.Occurrence
   alias Figler.Codegen.Native.Graph.Variables
+  alias Figler.Codegen.Native.Graph.Records
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
@@ -29,7 +30,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
 
   @typep variable_binding :: %{
            required(:target) => bound_target(),
-           required(:variable) => R.option(GuidKey.t()),
+           required(:variable) => R.option(Records.guid_key()),
            required(:multiplier) => R.f64()
          }
 
@@ -136,7 +137,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   @spec put_binding(
           R.mut_ref(R.vec(variable_binding())),
           bound_target(),
-          R.option(GuidKey.t()),
+          R.option(Records.guid_key()),
           R.f64()
         ) ::
           R.unit()

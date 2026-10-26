@@ -12,27 +12,31 @@ defmodule Figler.Codegen.Native.Graph.Layer do
       Figler.Codegen.Native.Graph.SourceIndex
     ]
 
+  alias Figler.Codegen.Native.Graph.Records
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  @typep layer_owner :: %{required(:id) => GuidKey.t(), required(:rank) => R.u32()}
+  @typep layer_owner :: %{required(:id) => Records.guid_key(), required(:rank) => R.u32()}
 
   @typep boundary :: %{
-           required(:replaced) => R.vec(GuidKey.t()),
-           required(:path) => R.vec(GuidKey.t())
+           required(:replaced) => R.vec(Records.guid_key()),
+           required(:path) => R.vec(Records.guid_key())
          }
 
   @typep layer :: %{
            required(:owner) => layer_owner(),
-           required(:declared_path) => R.vec(GuidKey.t()),
-           required(:path) => R.vec(GuidKey.t()),
-           required(:swap) => R.option(GuidKey.t()),
+           required(:declared_path) => R.vec(Records.guid_key()),
+           required(:path) => R.vec(Records.guid_key()),
+           required(:swap) => R.option(Records.guid_key()),
            required(:boundary) => R.option(boundary()),
            required(:assignments) => R.vec(Kiwi.kiwi_record())
          }
 
   # Fields an owner sets at a path in its expansion.
-  @typep claim :: %{required(:path) => R.vec(GuidKey.t()), required(:props) => Kiwi.kiwi_record()}
+  @typep claim :: %{
+           required(:path) => R.vec(Records.guid_key()),
+           required(:props) => Kiwi.kiwi_record()
+         }
 
   @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
@@ -90,7 +94,7 @@ defmodule Figler.Codegen.Native.Graph.Layer do
     ])
   end
 
-  @spec override_path(R.ref(Kiwi.kiwi_record())) :: R.vec(GuidKey.t())
+  @spec override_path(R.ref(Kiwi.kiwi_record())) :: R.vec(Records.guid_key())
   defrust override_path(override) do
     case override.record(Kiwi.NodeChange.GUID_PATH) do
       {:some, path} ->

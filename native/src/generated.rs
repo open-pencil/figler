@@ -17637,7 +17637,10 @@ pub mod graph {
         if duplicate_ids(&live) {
             Err(rustler::Error::BadArg)
         } else {
-            match prepare(live.into_iter().cloned().collect(), styles) {
+            match prepare(
+                live.into_iter().cloned().collect::<Vec<KiwiRecord>>(),
+                styles,
+            ) {
                 Ok(prepared) => {
                     Ok(SourceIndex {
                         sources: sources(&prepared),
@@ -17664,7 +17667,7 @@ pub mod graph {
     }
     fn duplicate_ids(records: &[&KiwiRecord]) -> bool {
         let ids = record_ids(records);
-        ids.len() != id_set(&&ids).len()
+        ids.len() as i64 != ids.into_iter().collect::<HashSet<_>>().len() as i64
     }
     fn record_ids(records: &[&KiwiRecord]) -> Vec<GuidKey> {
         records
@@ -17676,9 +17679,6 @@ pub mod graph {
             })
             .map(|(id, _)| id)
             .collect()
-    }
-    fn id_set(ids: &[GuidKey]) -> HashSet<GuidKey> {
-        ids.iter().copied().collect()
     }
     fn sources(records: &[KiwiRecord]) -> Sources {
         records
@@ -17692,11 +17692,20 @@ pub mod graph {
             .collect()
     }
     fn children(records: &[KiwiRecord]) -> Children {
-        let mut children: Children = HashMap::new();
-        for (parent, id) in child_pairs(records) {
-            children.entry(parent).or_default().push(id);
+        let mut rustq_groups: Children = HashMap::new();
+        for rustq_item in child_pairs(records) {
+            rustq_groups
+                .entry({
+                    let (parent, _id) = rustq_item;
+                    parent
+                })
+                .or_default()
+                .push({
+                    let (_parent, id) = rustq_item;
+                    id
+                });
         }
-        children
+        rustq_groups
     }
     fn child_pairs(records: &[KiwiRecord]) -> Vec<(GuidKey, GuidKey)> {
         let ordered = {
@@ -17748,22 +17757,24 @@ pub mod graph {
         parent_id: GuidKey,
         guid: GuidKey,
     ) -> StaticSegment {
-        let mut found = Vec::new();
-        for top in children_of(index, parent_id) {
-            collect_static(index, *top, *top, guid, &mut found);
-        }
-        if found.len() == 1 {
-            let (record, top) = found[0];
-            StaticSegment {
-                count: 1,
-                record: Some(record),
-                top: Some(top),
+        let found = children_of(index, parent_id)
+            .iter()
+            .copied()
+            .fold(vec![], |found, top| collect_static(index, top, top, guid, found));
+        match found.as_slice() {
+            [(record, top)] => {
+                StaticSegment {
+                    count: 1,
+                    record: Some(*record),
+                    top: Some(*top),
+                }
             }
-        } else {
-            StaticSegment {
-                count: found.len(),
-                record: None,
-                top: None,
+            found => {
+                StaticSegment {
+                    count: found.len(),
+                    record: None,
+                    top: None,
+                }
             }
         }
     }
@@ -17772,18 +17783,29 @@ pub mod graph {
         id: GuidKey,
         top: GuidKey,
         guid: GuidKey,
-        found: &mut Vec<(GuidKey, GuidKey)>,
-    ) {
-        if let Some(record) = source(index, id) {
-            if matches(record, guid) {
-                found.push((id, top));
-            } else {
-                if symbol_id(record).is_none() {
-                    for child in children_of(index, id) {
-                        collect_static(index, *child, top, guid, found);
+        found: Vec<(GuidKey, GuidKey)>,
+    ) -> Vec<(GuidKey, GuidKey)> {
+        match source(index, id) {
+            Some(record) => {
+                if matches(record, guid) {
+                    {
+                        let mut rustq_updated = found;
+                        rustq_updated.push((id, top));
+                        rustq_updated
                     }
+                } else if symbol_id(record).is_none() {
+                    children_of(index, id)
+                        .iter()
+                        .copied()
+                        .fold(
+                            found,
+                            |found, child| collect_static(index, child, top, guid, found),
+                        )
+                } else {
+                    found
                 }
-            };
+            }
+            None => found,
         }
     }
     fn resolves_in_source_component(
@@ -17799,14 +17821,14 @@ pub mod graph {
         path: &[GuidKey],
         position: usize,
     ) -> bool {
-        match path.get(position) {
+        match path.get(position).copied() {
             Some(segment) => {
                 match source(index, current) {
                     Some(record) => {
-                        if position == 0 && matches(record, *segment) {
+                        if position == 0 && matches(record, segment) {
                             resolves_from(index, current, path, position + 1)
                         } else {
-                            match find_static_segment(index, current, *segment).record {
+                            match find_static_segment(index, current, segment).record {
                                 Some(_found) if position + 1 == path.len() => true,
                                 Some(found) => {
                                     match source(index, found)
@@ -18162,9 +18184,8 @@ pub mod graph {
     fn changed_shaping(properties: &KiwiRecord, patch: &KiwiRecord) -> bool {
         text_shaping()
             .iter()
-            .any(|field| {
-                patch.has(*field) && properties.get(*field) != patch.get(*field)
-            })
+            .copied()
+            .any(|field| patch.has(field) && properties.get(field) != patch.get(field))
     }
     fn merge_variable_consumption(
         base: &KiwiRecord,
@@ -18718,7 +18739,7 @@ pub mod graph {
     }
     fn descend(layer: &Layer) -> Layer {
         Layer {
-            path: layer.path.iter().cloned().skip(1).collect(),
+            path: layer.path.iter().copied().skip(1).collect(),
             ..layer.clone()
         }
     }
@@ -18960,11 +18981,12 @@ pub mod graph {
     fn scale_numbers(record: &KiwiRecord, fields: &[u32], factor: f64) -> KiwiRecord {
         fields
             .iter()
+            .copied()
             .fold(
                 record.clone(),
-                |scaled, field| match scaled.float(*field) {
+                |scaled, field| match scaled.float(field) {
                     Some(value) => {
-                        scaled.put_float(*field, (value as f64 * factor) as f32)
+                        scaled.put_float(field, (value as f64 * factor) as f32)
                     }
                     None => scaled,
                 },
@@ -20079,7 +20101,7 @@ pub mod graph {
     ) -> bool {
         match path.get(position) {
             Some(segment) => {
-                let rest = path.iter().cloned().skip(position).collect::<Vec<GuidKey>>();
+                let rest = path.iter().copied().skip(position).collect::<Vec<GuidKey>>();
                 if current
                     .replaced_components
                     .iter()

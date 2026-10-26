@@ -22,21 +22,25 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   alias Figler.Codegen.Native.Graph.Occurrence
   alias Figler.Codegen.Native.Graph.SourceIndex
   alias Figler.Codegen.Native.Graph.Variables
+  alias Figler.Codegen.Native.Graph.Records
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
   # A layer of an instance expansion: the outermost instance and the source GUIDs below it.
   @typep clone_guid ::
-           R.hashable(%{required(:root) => GuidKey.t(), required(:path) => R.vec(GuidKey.t())})
-  @typep graph_guid :: R.hashable(R.enum(source: [GuidKey.t()], clone: [clone_guid()]))
+           R.hashable(%{
+             required(:root) => Records.guid_key(),
+             required(:path) => R.vec(Records.guid_key())
+           })
+  @typep graph_guid :: R.hashable(R.enum(source: [Records.guid_key()], clone: [clone_guid()]))
 
   # Where a layer came from: its source record, the instance whose expansion holds it, its
   # component, and the claims and bindings that changed it.
   @typep provenance :: %{
            required(:clone) => R.bool(),
-           required(:source_guid) => GuidKey.t(),
+           required(:source_guid) => Records.guid_key(),
            required(:instance_guid) => R.option(graph_guid()),
-           required(:component_guid) => R.option(GuidKey.t()),
+           required(:component_guid) => R.option(Records.guid_key()),
            required(:applied) => R.vec(Occurrence.property_claim()),
            required(:bindings) => R.vec(Occurrence.binding_claim())
          }
@@ -58,7 +62,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   @typep graph :: %{
            required(:nodes) => R.vec(graph_node()),
            required(:positions) => HashMap.t(graph_guid(), R.usize()),
-           required(:roots) => R.vec(GuidKey.t()),
+           required(:roots) => R.vec(Records.guid_key()),
            required(:unresolved) => R.vec(unresolved())
          }
 
@@ -115,7 +119,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   end
 
   # Records without a parent in the index, in GUID order.
-  @spec root_ids(R.ref(SourceIndex.source_index())) :: R.vec(GuidKey.t())
+  @spec root_ids(R.ref(SourceIndex.source_index())) :: R.vec(Records.guid_key())
   defrust root_ids(index) do
     roots =
       for {id, record} <- index.sources.iter(),
@@ -132,7 +136,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   @spec put_root(
           R.ref(SourceIndex.source_index()),
           R.mut_ref(graph()),
-          GuidKey.t(),
+          Records.guid_key(),
           R.option(R.ref(Variables.variables()))
         ) :: R.nif_result(R.unit())
   defrust put_root(index, graph, id, vars) do
@@ -158,7 +162,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   @spec put_interpreted(
           R.ref(SourceIndex.source_index()),
           R.mut_ref(graph()),
-          GuidKey.t(),
+          Records.guid_key(),
           R.option(R.usize()),
           R.ref(Variables.modes()),
           R.option(R.ref(Variables.variables()))
@@ -242,7 +246,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   end
 
   # Layers of an instance expansion, and everything below them, are clones.
-  @spec child_guid(R.ref(graph_guid()), R.bool(), GuidKey.t()) :: graph_guid()
+  @spec child_guid(R.ref(graph_guid()), R.bool(), Records.guid_key()) :: graph_guid()
   defrust child_guid(guid, instance, child) do
     case guid do
       {:clone, clone} ->

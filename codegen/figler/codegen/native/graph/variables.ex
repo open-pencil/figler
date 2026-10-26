@@ -16,6 +16,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     ]
 
   alias Figler.Codegen.Native.Graph.SourceIndex
+  alias Figler.Codegen.Native.Graph.Records
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
@@ -35,48 +36,53 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   # operands. The operator is a Kiwi `ExpressionFunction`.
   @typep operation :: %{required(:operator) => R.u32(), required(:operands) => R.vec(formula())}
   @typep formula ::
-           R.enum(literal: [variable_value()], alias: [GuidKey.t()], operation: [operation()])
+           R.enum(
+             literal: [variable_value()],
+             alias: [Records.guid_key()],
+             operation: [operation()]
+           )
 
   # An operand of a composed color: a literal or a reference; anything else resolves to
   # nothing.
-  @typep color_operand :: R.enum(literal: [variable_value()], alias: [GuidKey.t()], other: [])
+  @typep color_operand ::
+           R.enum(literal: [variable_value()], alias: [Records.guid_key()], other: [])
   @typep composed :: %{required(:color) => color_operand(), required(:opacity) => color_operand()}
 
   @typep stored ::
            R.enum(
              literal: [variable_value()],
-             alias: [GuidKey.t()],
+             alias: [Records.guid_key()],
              formula: [operation()],
              compose_color: [composed()],
              unsupported: []
            )
 
   @typep collection :: %{
-           required(:default_mode) => GuidKey.t(),
-           required(:modes) => R.vec(GuidKey.t())
+           required(:default_mode) => Records.guid_key(),
+           required(:modes) => R.vec(Records.guid_key())
          }
 
   @typep variable :: %{
-           required(:id) => GuidKey.t(),
+           required(:id) => Records.guid_key(),
            required(:type) => variable_type(),
-           required(:collection) => GuidKey.t(),
-           required(:values) => BTreeMap.t(GuidKey.t(), stored())
+           required(:collection) => Records.guid_key(),
+           required(:values) => BTreeMap.t(Records.guid_key(), stored())
          }
 
   # An expression OpenPencil cannot evaluate, by variable and mode.
   @typep unsupported_expression :: %{
-           required(:variable) => GuidKey.t(),
-           required(:mode) => GuidKey.t()
+           required(:variable) => Records.guid_key(),
+           required(:mode) => Records.guid_key()
          }
 
   @typep variables :: %{
-           required(:collections) => HashMap.t(GuidKey.t(), collection()),
-           required(:variables) => HashMap.t(GuidKey.t(), variable()),
-           required(:keys) => HashMap.t(String.t(), HashMap.t(String.t(), GuidKey.t())),
+           required(:collections) => HashMap.t(Records.guid_key(), collection()),
+           required(:variables) => HashMap.t(Records.guid_key(), variable()),
+           required(:keys) => HashMap.t(String.t(), HashMap.t(String.t(), Records.guid_key())),
            required(:diagnostics) => R.vec(unsupported_expression())
          }
 
-  @typep modes :: HashMap.t(GuidKey.t(), GuidKey.t())
+  @typep modes :: HashMap.t(Records.guid_key(), Records.guid_key())
 
   @doc false
   @spec items() :: [term()]
@@ -163,7 +169,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   # Library resources are named by key, and by key and version.
   @spec asset_keys(R.ref(SourceIndex.sources())) ::
-          HashMap.t(String.t(), HashMap.t(String.t(), GuidKey.t()))
+          HashMap.t(String.t(), HashMap.t(String.t(), Records.guid_key()))
   defrust asset_keys(records) do
     keys = HashMap.new()
 
@@ -183,7 +189,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   # The resource a `VariableID` or `VariableSetID` names: by GUID, or by asset key. An
   # unversioned reference to a key with several versions names nothing.
-  @spec reference(R.ref(variables()), R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
+  @spec reference(R.ref(variables()), R.ref(Kiwi.kiwi_record())) :: R.option(Records.guid_key())
   defrust reference(vars, reference) do
     case guid_key(reference.record(Kiwi.VariableId.GUID)) do
       {:some, id} ->
@@ -195,7 +201,8 @@ defmodule Figler.Codegen.Native.Graph.Variables do
     end
   end
 
-  @spec asset_reference(R.ref(variables()), R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
+  @spec asset_reference(R.ref(variables()), R.ref(Kiwi.kiwi_record())) ::
+          R.option(Records.guid_key())
   defrust asset_reference(vars, asset) do
     with {:some, key} <- asset.str(Kiwi.AssetRef.KEY),
          {:some, versions} <- vars.keys.get(key) do
@@ -270,10 +277,10 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   @spec mode_values(
           R.mut_ref(variables()),
           R.ref(Kiwi.kiwi_record()),
-          GuidKey.t(),
-          R.slice(GuidKey.t())
+          Records.guid_key(),
+          R.slice(Records.guid_key())
         ) ::
-          BTreeMap.t(GuidKey.t(), stored())
+          BTreeMap.t(Records.guid_key(), stored())
   defrust mode_values(vars, record, id, modes) do
     values = BTreeMap.new()
 
@@ -500,7 +507,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
   # Resolves a variable in a mode context, following aliases and evaluating formulas. `modes`
   # maps collections to the mode a layer uses; collections it leaves out use their default
   # mode. A variable that cannot resolve to a value of its own type resolves to nothing.
-  @spec resolve_variable(R.ref(variables()), GuidKey.t(), R.ref(modes())) ::
+  @spec resolve_variable(R.ref(variables()), Records.guid_key(), R.ref(modes())) ::
           R.option(variable_value())
   defrust resolve_variable(vars, id, modes) do
     vars.variables.get(ref(id))
@@ -511,7 +518,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
           R.ref(variables()),
           R.ref(variable()),
           R.ref(modes()),
-          R.ref(HashSet.t(GuidKey.t())),
+          R.ref(HashSet.t(Records.guid_key())),
           R.u32()
         ) :: R.option(variable_value())
   defrust resolve_chain(vars, variable, modes, visiting, depth) do
@@ -561,7 +568,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
           R.ref(variables()),
           R.ref(stored()),
           R.ref(modes()),
-          R.ref(HashSet.t(GuidKey.t()))
+          R.ref(HashSet.t(Records.guid_key()))
         ) ::
           R.option(variable_value())
   defrust evaluate(vars, stored, modes, visiting) do
@@ -591,7 +598,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
           R.ref(variables()),
           R.ref(color_operand()),
           R.ref(modes()),
-          R.ref(HashSet.t(GuidKey.t()))
+          R.ref(HashSet.t(Records.guid_key()))
         ) :: R.option(variable_value())
   defrust evaluate_operand(vars, operand, modes, visiting) do
     case operand do
@@ -603,9 +610,9 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   @spec resolve_reference(
           R.ref(variables()),
-          GuidKey.t(),
+          Records.guid_key(),
           R.ref(modes()),
-          R.ref(HashSet.t(GuidKey.t()))
+          R.ref(HashSet.t(Records.guid_key()))
         ) ::
           R.option(variable_value())
   defrust resolve_reference(vars, id, modes, visiting) do
@@ -640,7 +647,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
           R.ref(variables()),
           R.ref(formula()),
           R.ref(modes()),
-          R.ref(HashSet.t(GuidKey.t()))
+          R.ref(HashSet.t(Records.guid_key()))
         ) ::
           R.option(variable_value())
   defrust evaluate_formula(vars, formula, modes, visiting) do
@@ -663,7 +670,7 @@ defmodule Figler.Codegen.Native.Graph.Variables do
           R.ref(variables()),
           R.slice(formula()),
           R.ref(modes()),
-          R.ref(HashSet.t(GuidKey.t()))
+          R.ref(HashSet.t(Records.guid_key()))
         ) :: R.option(R.vec(variable_value()))
   defrust evaluated_operands(vars, operands, modes, visiting) do
     operands

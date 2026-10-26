@@ -9,62 +9,36 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   use RustQ.Meta,
     callable_modules: [Figler.Codegen.Native.Graph.Records, Figler.Codegen.Native.Graph.Prepare]
 
+  alias Figler.Codegen.Native.Graph.Records
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  @typep sources :: HashMap.t(GuidKey.t(), Kiwi.kiwi_record())
-  @typep children :: HashMap.t(GuidKey.t(), R.vec(GuidKey.t()))
+  @typep sources :: HashMap.t(Records.guid_key(), Kiwi.kiwi_record())
+  @typep children :: HashMap.t(Records.guid_key(), R.vec(Records.guid_key()))
   @typep source_index :: %{required(:sources) => sources(), required(:children) => children()}
 
   # A path segment found among a record's static descendants: how many records match, and the
   # match with the direct child holding it when exactly one does.
   @typep static_segment :: %{
            required(:count) => R.usize(),
-           required(:record) => R.option(GuidKey.t()),
-           required(:top) => R.option(GuidKey.t())
+           required(:record) => R.option(Records.guid_key()),
+           required(:top) => R.option(Records.guid_key())
          }
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [
-        :source_index,
-        :live?,
-        :live_records,
-        :duplicate_ids?,
-        :record_ids,
-        :id_set,
-        :sources,
-        :children,
-        :child_pairs,
-        :record_refs,
-        :source,
-        :children_of,
-        :symbol_id,
-        :override_key,
-        :matches?,
-        :find_static_segment,
-        :collect_static,
-        :resolves_in_source_component?,
-        :resolves_from?
-      ])
-  end
+  def items, do: __rustq_items__()
 
   @spec source_index(R.ref(Kiwi.kiwi_record()), R.bool()) :: R.nif_result(source_index())
   defrust source_index(message, styles) do
     live = live_records(message)
 
     if duplicate_ids?(live) do
-      err(badarg())
+      {:error, badarg()}
     else
-      with {:ok, prepared} <- prepare(live.into_iter().cloned().collect(), styles) do
-        ok(
-          struct_literal(SourceIndex,
-            sources: sources(prepared),
-            children: children(prepared)
-          )
-        )
+      with {:ok, prepared} <- prepare(Enum.map(live, fn record -> record.clone() end), styles) do
+        {:ok,
+         struct_literal(SourceIndex, sources: sources(prepared), children: children(prepared))}
       end
     end
   end
@@ -81,38 +55,30 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   @spec duplicate_ids?(R.slice(R.ref(Kiwi.kiwi_record()))) :: R.bool()
   defrust duplicate_ids?(records) do
     ids = record_ids(records)
-    ids.len() != id_set(ref(ids)).len()
+    length(ids) != MapSet.size(MapSet.new(ids))
   end
 
-  @spec record_ids(R.slice(R.ref(Kiwi.kiwi_record()))) :: R.vec(GuidKey.t())
+  @spec record_ids(R.slice(R.ref(Kiwi.kiwi_record()))) :: R.vec(Records.guid_key())
   defrust record_ids(records) do
     for record <- records, {:some, id} <- [record_id(record)], do: id
   end
-
-  @spec id_set(R.slice(GuidKey.t())) :: HashSet.t(GuidKey.t())
-  defrust id_set(ids), do: ids |> iter() |> copied() |> collect()
 
   @spec sources(R.slice(Kiwi.kiwi_record())) :: sources()
   defrust sources(records) do
     for record <- records,
         {:some, id} <- [record_id(record)],
-        into: HashMap.new(),
+        into: %{},
         do: {id, record.clone()}
   end
 
   @spec children(R.slice(Kiwi.kiwi_record())) :: children()
   defrust children(records) do
-    children = HashMap.new()
-
-    for {parent, id} <- child_pairs(records) do
-      children.entry(parent).or_default().push(id)
-    end
-
-    children
+    Enum.group_by(child_pairs(records), fn {parent, _id} -> parent end, fn {_parent, id} -> id end)
   end
 
   # Each parent and child, in the children's saved order.
-  @spec child_pairs(R.slice(Kiwi.kiwi_record())) :: R.vec({GuidKey.t(), GuidKey.t()})
+  @spec child_pairs(R.slice(Kiwi.kiwi_record())) ::
+          R.vec({Records.guid_key(), Records.guid_key()})
   defrust child_pairs(records) do
     ordered = Enum.sort_by(record_refs(records), &position/1)
 
@@ -125,10 +91,10 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   @spec record_refs(R.slice(Kiwi.kiwi_record())) :: R.vec(R.ref(Kiwi.kiwi_record()))
   defrust record_refs(records), do: records |> iter() |> collect()
 
-  @spec source(R.ref(source_index()), GuidKey.t()) :: R.option(R.ref(Kiwi.kiwi_record()))
+  @spec source(R.ref(source_index()), Records.guid_key()) :: R.option(R.ref(Kiwi.kiwi_record()))
   defrust(source(index, id), do: index.sources.get(ref(id)))
 
-  @spec children_of(R.ref(source_index()), GuidKey.t()) :: R.slice(GuidKey.t())
+  @spec children_of(R.ref(source_index()), Records.guid_key()) :: R.slice(Records.guid_key())
   defrust children_of(index, id) do
     case index.children.get(ref(id)) do
       {:some, children} -> children.as_slice()
@@ -137,7 +103,7 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   end
 
   # The component an instance record names.
-  @spec symbol_id(R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
+  @spec symbol_id(R.ref(Kiwi.kiwi_record())) :: R.option(Records.guid_key())
   defrust symbol_id(record) do
     record.record(Kiwi.NodeChange.SYMBOL_DATA).and_then(fn data ->
       guid_key(data.record(Kiwi.SymbolData.SYMBOL_ID))
@@ -145,78 +111,91 @@ defmodule Figler.Codegen.Native.Graph.SourceIndex do
   end
 
   # A stable override key, unless it is the unset GUID layers without one share.
-  @spec override_key(R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
+  @spec override_key(R.ref(Kiwi.kiwi_record())) :: R.option(Records.guid_key())
   defrust override_key(record) do
     guid_key(record.record(Kiwi.NodeChange.OVERRIDE_KEY))
     |> filter(fn key -> deref(key) != {0xFFFFFFFF, 0xFFFFFFFF} end)
   end
 
   # A path segment addresses a record by GUID or by its stable override key.
-  @spec matches?(R.ref(Kiwi.kiwi_record()), GuidKey.t()) :: R.bool()
+  @spec matches?(R.ref(Kiwi.kiwi_record()), Records.guid_key()) :: R.bool()
   defrust matches?(record, guid) do
     record_id(record) == some(guid) or override_key(record) == some(guid)
   end
 
   # Finds a segment among a record's static descendants, through ordinary containers but
   # never into an instance.
-  @spec find_static_segment(R.ref(source_index()), GuidKey.t(), GuidKey.t()) :: static_segment()
+  @spec find_static_segment(R.ref(source_index()), Records.guid_key(), Records.guid_key()) ::
+          static_segment()
   defrust find_static_segment(index, parent_id, guid) do
-    found = Vec.new()
+    found =
+      Enum.reduce(children_of(index, parent_id), [], fn top, found ->
+        collect_static(index, top, top, guid, found)
+      end)
 
-    for top <- children_of(index, parent_id) do
-      collect_static(index, deref(top), deref(top), guid, mut_ref(found))
-    end
+    case found do
+      [{record, top}] ->
+        struct_literal(StaticSegment, count: 1, record: some(record), top: some(top))
 
-    if found.len() == 1 do
-      {record, top} = found[0]
-      struct_literal(StaticSegment, count: 1, record: some(record), top: some(top))
-    else
-      struct_literal(StaticSegment, count: found.len(), record: nil, top: nil)
+      found ->
+        struct_literal(StaticSegment, count: length(found), record: nil, top: nil)
     end
   end
 
   @spec collect_static(
           R.ref(source_index()),
-          GuidKey.t(),
-          GuidKey.t(),
-          GuidKey.t(),
-          R.mut_ref(R.vec({GuidKey.t(), GuidKey.t()}))
-        ) :: R.unit()
+          Records.guid_key(),
+          Records.guid_key(),
+          Records.guid_key(),
+          R.vec({Records.guid_key(), Records.guid_key()})
+        ) :: R.vec({Records.guid_key(), Records.guid_key()})
   defrust collect_static(index, id, top, guid, found) do
     case source(index, id) do
       {:some, record} ->
-        if matches?(record, guid) do
-          found.push({id, top})
-        else
-          if symbol_id(record).is_none() do
-            for child <- children_of(index, id) do
-              collect_static(index, deref(child), top, guid, found)
-            end
-          end
+        cond do
+          matches?(record, guid) ->
+            found ++ [{id, top}]
+
+          symbol_id(record).is_none() ->
+            Enum.reduce(children_of(index, id), found, fn child, found ->
+              collect_static(index, child, top, guid, found)
+            end)
+
+          true ->
+            found
         end
 
       :none ->
-        :ok
+        found
     end
   end
 
   # Whether a path resolves in a component's own source tree, following instance links.
-  @spec resolves_in_source_component?(R.ref(source_index()), GuidKey.t(), R.slice(GuidKey.t())) ::
+  @spec resolves_in_source_component?(
+          R.ref(source_index()),
+          Records.guid_key(),
+          R.slice(Records.guid_key())
+        ) ::
           R.bool()
   defrust resolves_in_source_component?(index, component_id, path) do
     resolves_from?(index, component_id, path, 0)
   end
 
-  @spec resolves_from?(R.ref(source_index()), GuidKey.t(), R.slice(GuidKey.t()), R.usize()) ::
+  @spec resolves_from?(
+          R.ref(source_index()),
+          Records.guid_key(),
+          R.slice(Records.guid_key()),
+          R.usize()
+        ) ::
           R.bool()
   defrust resolves_from?(index, current, path, position) do
-    with {:some, segment} <- path.get(position),
+    with {:some, segment} <- Enum.at(path, position),
          {:some, record} <- source(index, current) do
-      if position == 0 and matches?(record, deref(segment)) do
+      if position == 0 and matches?(record, segment) do
         resolves_from?(index, current, path, position + 1)
       else
-        case find_static_segment(index, current, deref(segment)).record do
-          {:some, _found} when position + 1 == path.len() ->
+        case find_static_segment(index, current, segment).record do
+          {:some, _found} when position + 1 == length(path) ->
             true
 
           {:some, found} ->

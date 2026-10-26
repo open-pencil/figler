@@ -28,6 +28,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   alias Figler.Codegen.Native.Graph.Layer
   alias Figler.Codegen.Native.Graph.Occurrence
   alias Figler.Codegen.Native.Graph.SourceIndex
+  alias Figler.Codegen.Native.Graph.Records
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
@@ -43,18 +44,21 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # missing-component owner names, or the content a slot names.
   @typep diagnostic :: %{
            required(:kind) => diagnostic_kind(),
-           required(:owner) => GuidKey.t(),
-           required(:component) => R.option(GuidKey.t()),
-           required(:path) => R.vec(GuidKey.t()),
+           required(:owner) => Records.guid_key(),
+           required(:component) => R.option(Records.guid_key()),
+           required(:path) => R.vec(Records.guid_key()),
            required(:reason) => R.option(target_reason())
          }
 
-  @typep pending :: %{required(:path) => R.vec(GuidKey.t()), required(:reason) => target_reason()}
+  @typep pending :: %{
+           required(:path) => R.vec(Records.guid_key()),
+           required(:reason) => target_reason()
+         }
 
   @typep state :: %{
-           required(:expanding) => HashSet.t(GuidKey.t()),
+           required(:expanding) => HashSet.t(Records.guid_key()),
            required(:diagnostics) => R.vec(diagnostic()),
-           required(:pending) => HashMap.t(GuidKey.t(), R.vec(pending()))
+           required(:pending) => HashMap.t(Records.guid_key(), R.vec(pending()))
          }
 
   # A record bound from its enclosing component scope.
@@ -62,8 +66,8 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
            required(:source) => Kiwi.kiwi_record(),
            required(:claims) => R.vec(Occurrence.binding_claim()),
            required(:bound) => HashMap.t(R.u32(), R.u32()),
-           required(:superseded) => R.vec(GuidKey.t()),
-           required(:slot_content) => R.option(GuidKey.t())
+           required(:superseded) => R.vec(Records.guid_key()),
+           required(:slot_content) => R.option(Records.guid_key())
          }
 
   @typep group :: %{
@@ -73,9 +77,9 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   # The component an occurrence expands and the layers left for its descendants.
   @typep root :: %{
-           required(:effective) => R.option(GuidKey.t()),
-           required(:replaced) => R.vec(GuidKey.t()),
-           required(:keys) => R.vec(GuidKey.t()),
+           required(:effective) => R.option(Records.guid_key()),
+           required(:replaced) => R.vec(Records.guid_key()),
+           required(:keys) => R.vec(Records.guid_key()),
            required(:groups) => R.vec(group()),
            required(:descendant) => R.vec(Layer.layer())
          }
@@ -143,7 +147,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # Interprets a page, component, or instance record: the occurrence tree and the diagnostics
   # collected while expanding it. Slot content frames are left out of a page's children: they
   # are read through the instance that assigns them.
-  @spec interpret(R.ref(SourceIndex.source_index()), GuidKey.t()) ::
+  @spec interpret(R.ref(SourceIndex.source_index()), Records.guid_key()) ::
           R.nif_result({Occurrence.occurrence(), R.vec(diagnostic())})
   defrust interpret(index, root_id) do
     state =
@@ -176,7 +180,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # expansion: an empty path configures the record itself.
   @spec expand(
           R.ref(SourceIndex.source_index()),
-          GuidKey.t(),
+          Records.guid_key(),
           R.slice(Bindings.binding()),
           R.vec(Layer.layer()),
           R.u32(),
@@ -194,7 +198,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   @spec expand_source(
           R.ref(SourceIndex.source_index()),
-          GuidKey.t(),
+          Records.guid_key(),
           R.ref(Kiwi.kiwi_record()),
           R.slice(Bindings.binding()),
           R.vec(Layer.layer()),
@@ -391,8 +395,8 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   end
 
   # A component and its override key both address the root of an expansion.
-  @spec component_keys(R.ref(SourceIndex.source_index()), R.option(GuidKey.t())) ::
-          R.vec(GuidKey.t())
+  @spec component_keys(R.ref(SourceIndex.source_index()), R.option(Records.guid_key())) ::
+          R.vec(Records.guid_key())
   defrust component_keys(index, guid) do
     case guid do
       {:some, guid} ->
@@ -444,8 +448,12 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   end
 
   # Components an occurrence would have expanded before outer bindings replaced them.
-  @spec replaced_before(R.option(GuidKey.t()), R.option(GuidKey.t()), R.slice(GuidKey.t())) ::
-          R.vec(GuidKey.t())
+  @spec replaced_before(
+          R.option(Records.guid_key()),
+          R.option(Records.guid_key()),
+          R.slice(Records.guid_key())
+        ) ::
+          R.vec(Records.guid_key())
   defrust replaced_before(original, effective, superseded) do
     case effective do
       {:some, effective} ->
@@ -491,7 +499,11 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     end
   end
 
-  @spec swap_root(R.ref(SourceIndex.source_index()), R.mut_ref(root()), R.option(GuidKey.t())) ::
+  @spec swap_root(
+          R.ref(SourceIndex.source_index()),
+          R.mut_ref(root()),
+          R.option(Records.guid_key())
+        ) ::
           R.nif_result(R.unit())
   defrust swap_root(index, root, swap) do
     case {swap, root.effective} do
@@ -583,7 +595,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     end
   end
 
-  @spec cross_boundary(R.ref(Layer.layer()), R.slice(GuidKey.t())) :: Layer.layer()
+  @spec cross_boundary(R.ref(Layer.layer()), R.slice(Records.guid_key())) :: Layer.layer()
   defrust cross_boundary(layer, replaced) do
     if replaced.is_empty() do
       layer.clone()
@@ -595,7 +607,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   @spec expand_children_of(
           R.ref(SourceIndex.source_index()),
-          GuidKey.t(),
+          Records.guid_key(),
           R.slice(Bindings.binding()),
           R.slice(Layer.layer()),
           R.u32(),
@@ -617,10 +629,10 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   # segment.
   @spec route_to_children(
           R.ref(SourceIndex.source_index()),
-          GuidKey.t(),
+          Records.guid_key(),
           R.slice(Layer.layer()),
           R.mut_ref(state())
-        ) :: HashMap.t(GuidKey.t(), R.vec(Layer.layer()))
+        ) :: HashMap.t(Records.guid_key(), R.vec(Layer.layer()))
   defrust route_to_children(index, id, layers, state) do
     routed = HashMap.new()
 
@@ -639,7 +651,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     routed
   end
 
-  @spec routed_layer(R.ref(SourceIndex.source_index()), GuidKey.t(), R.ref(Layer.layer())) ::
+  @spec routed_layer(R.ref(SourceIndex.source_index()), Records.guid_key(), R.ref(Layer.layer())) ::
           Layer.layer()
   defrust routed_layer(index, top, layer) do
     if source(index, top).is_some_and(fn record -> matches?(record, layer.path[0]) end),
@@ -679,7 +691,8 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     end
   end
 
-  @spec report_owner(R.mut_ref(state()), GuidKey.t(), R.option(GuidKey.t())) :: R.unit()
+  @spec report_owner(R.mut_ref(state()), Records.guid_key(), R.option(Records.guid_key())) ::
+          R.unit()
   defrust report_owner(state, id, main_component_id) do
     for pending <- state.pending.remove(ref(id)).unwrap_or_default() do
       state.diagnostics.push(
@@ -696,7 +709,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
 
   @spec create_occurrence(
           R.ref(SourceIndex.source_index()),
-          GuidKey.t(),
+          Records.guid_key(),
           R.ref(Kiwi.kiwi_record()),
           R.ref(Kiwi.kiwi_record()),
           R.ref(root()),
@@ -739,7 +752,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     %{occurrence | default_instance_name: name}
   end
 
-  @spec new_occurrence(GuidKey.t(), Kiwi.kiwi_record(), R.vec(Occurrence.occurrence())) ::
+  @spec new_occurrence(Records.guid_key(), Kiwi.kiwi_record(), R.vec(Occurrence.occurrence())) ::
           Occurrence.occurrence()
   defrust new_occurrence(id, properties, children) do
     struct_literal(Occurrence,
@@ -770,7 +783,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
           R.ref(SourceIndex.source_index()),
           R.ref(Kiwi.kiwi_record()),
           R.option(R.ref(Occurrence.occurrence())),
-          R.option(GuidKey.t()),
+          R.option(Records.guid_key()),
           R.ref(root())
         ) :: Kiwi.kiwi_record()
   defrust effective_properties(index, source, base, original, root) do
@@ -804,7 +817,11 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     put_assignments(index, properties, source, ref(root.groups))
   end
 
-  @spec put_effective_symbol(Kiwi.kiwi_record(), R.option(GuidKey.t()), R.ref(Kiwi.kiwi_record())) ::
+  @spec put_effective_symbol(
+          Kiwi.kiwi_record(),
+          R.option(Records.guid_key()),
+          R.ref(Kiwi.kiwi_record())
+        ) ::
           Kiwi.kiwi_record()
   defrust put_effective_symbol(properties, effective, source) do
     case {effective, source.record(Kiwi.NodeChange.SYMBOL_DATA)} do
@@ -819,7 +836,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     end
   end
 
-  @spec guid_record(GuidKey.t()) :: Kiwi.kiwi_record()
+  @spec guid_record(Records.guid_key()) :: Kiwi.kiwi_record()
   defrust guid_record(guid) do
     {session_id, local_id} = guid
 
@@ -862,7 +879,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec rename_swapped(
           Occurrence.occurrence(),
           R.ref(Occurrence.occurrence()),
-          R.slice(GuidKey.t())
+          R.slice(Records.guid_key())
         ) ::
           Occurrence.occurrence()
   defrust rename_swapped(occurrence, base, replaced) do
@@ -982,7 +999,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec resolve_claim_target(
           R.ref(SourceIndex.source_index()),
           R.ref(Occurrence.occurrence()),
-          R.slice(GuidKey.t()),
+          R.slice(Records.guid_key()),
           R.mut_ref(state()),
           R.mut_ref(Occurrence.segment_tables())
         ) :: R.option(R.vec(R.usize()))
@@ -1004,7 +1021,11 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     end
   end
 
-  @spec unresolved_property(R.ref(Occurrence.occurrence()), R.slice(GuidKey.t()), R.usize()) ::
+  @spec unresolved_property(
+          R.ref(Occurrence.occurrence()),
+          R.slice(Records.guid_key()),
+          R.usize()
+        ) ::
           diagnostic()
   defrust unresolved_property(owner, path, count) do
     struct_literal(Diagnostic,
@@ -1021,14 +1042,14 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
   @spec removed_target?(
           R.ref(SourceIndex.source_index()),
           R.ref(Occurrence.occurrence()),
-          R.slice(GuidKey.t())
+          R.slice(Records.guid_key())
         ) :: R.bool()
   defrust(removed_target?(index, owner, path), do: removed_from?(index, owner, path, 0))
 
   @spec removed_from?(
           R.ref(SourceIndex.source_index()),
           R.ref(Occurrence.occurrence()),
-          R.slice(GuidKey.t()),
+          R.slice(Records.guid_key()),
           R.usize()
         ) :: R.bool()
   defrust removed_from?(index, current, path, position) do
@@ -1095,7 +1116,7 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
     if count == 0, do: :missing_target, else: :ambiguous_target
   end
 
-  @spec node_type(R.ref(SourceIndex.source_index()), GuidKey.t()) :: R.option(R.u32())
+  @spec node_type(R.ref(SourceIndex.source_index()), Records.guid_key()) :: R.option(R.u32())
   defrust node_type(index, id) do
     source(index, id).and_then(fn record -> record.enum_value(Kiwi.NodeChange.TYPE) end)
   end

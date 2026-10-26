@@ -17,6 +17,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
     ]
 
   alias Figler.Codegen.Native.Graph.Occurrence
+  alias Figler.Codegen.Native.Graph.Records
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
@@ -25,11 +26,11 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
            required(:text) => R.option(String.t()),
            required(:guid) => R.option(Kiwi.kiwi_record()),
            required(:has_slot_content) => R.bool(),
-           required(:slot_content) => R.option(GuidKey.t())
+           required(:slot_content) => R.option(Records.guid_key())
          }
 
   @typep binding :: %{
-           required(:id) => GuidKey.t(),
+           required(:id) => Records.guid_key(),
            required(:value) => prop_value(),
            required(:origin) => Occurrence.origin(),
            required(:rank) => R.option(R.u32()),
@@ -120,7 +121,7 @@ defmodule Figler.Codegen.Native.Graph.Bindings do
   end
 
   # The content frame a slot value names, unless it names the component's own content.
-  @spec slot_content(R.ref(Kiwi.kiwi_record())) :: R.option(GuidKey.t())
+  @spec slot_content(R.ref(Kiwi.kiwi_record())) :: R.option(Records.guid_key())
   defrust slot_content(value) do
     value.record(Kiwi.VariableAnyValue.SLOT_CONTENT_ID_VALUE)
     |> and_then(fn slot -> guid_key(slot.record(Kiwi.SlotContentId.GUID)) end)
