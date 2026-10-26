@@ -64,23 +64,17 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   @spec bound(R.ref(Kiwi.kiwi_record()), R.ref(Variables.variables())) ::
           R.vec(variable_binding())
   defrust bound(record, vars) do
-    bindings = Vec.new()
-
-    for entry <- consumption_entries(record) do
-      bind_entry(mut_ref(bindings), ref(entry), vars)
-    end
-
-    bind_paints(mut_ref(bindings), record, Kiwi.NodeChange.FILL_PAINTS, vars)
-    bind_paints(mut_ref(bindings), record, Kiwi.NodeChange.STROKE_PAINTS, vars)
-    bindings
+    consumption_entries(record)
+    |> Enum.reduce([], fn entry, bindings -> bind_entry(bindings, entry, vars) end)
+    |> bind_paints(record, Kiwi.NodeChange.FILL_PAINTS, vars)
+    |> bind_paints(record, Kiwi.NodeChange.STROKE_PAINTS, vars)
   end
 
   @spec bind_entry(
-          R.mut_ref(R.vec(variable_binding())),
+          R.vec(variable_binding()),
           R.ref(Kiwi.kiwi_record()),
           R.ref(Variables.variables())
-        ) ::
-          R.unit()
+        ) :: R.vec(variable_binding())
   defrust bind_entry(bindings, entry, vars) do
     case entry.enum_value(Kiwi.VariableDataMapEntry.VARIABLE_FIELD) do
       {:some, field} when bindable?(field) ->
@@ -100,30 +94,30 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
             data_type = data.and_then(fn data -> data.enum_value(Kiwi.VariableData.DATA_TYPE) end)
 
             if data_type != some(Kiwi.VariableDataType.ALIAS) and
-                 data_type != some(Kiwi.VariableDataType.EXPRESSION) do
-              bindings.retain(fn binding -> binding.target != field_target(field) end)
-            end
+                 data_type != some(Kiwi.VariableDataType.EXPRESSION),
+               do: Enum.reject(bindings, fn binding -> binding.target == field_target(field) end),
+               else: bindings
         end
 
       _ ->
-        :ok
+        bindings
     end
   end
 
+  # A binding replaces the one for its target, or comes last.
   @spec put_binding(
-          R.mut_ref(R.vec(variable_binding())),
+          R.vec(variable_binding()),
           bound_target(),
           R.option(Records.guid_key()),
           R.f64()
-        ) ::
-          R.unit()
+        ) :: R.vec(variable_binding())
   defrust put_binding(bindings, target, variable, multiplier) do
     binding =
       struct_literal(VariableBinding, target: target, variable: variable, multiplier: multiplier)
 
     case Enum.find_index(bindings, fn existing -> existing.target == binding.target end) do
-      {:some, index} -> assign!(bindings[index], binding)
-      :none -> bindings.push(binding)
+      {:some, index} -> List.replace_at(bindings, index, binding)
+      :none -> bindings ++ [binding]
     end
   end
 
@@ -213,14 +207,15 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   end
 
   @spec bind_paints(
-          R.mut_ref(R.vec(variable_binding())),
+          R.vec(variable_binding()),
           R.ref(Kiwi.kiwi_record()),
           R.u32(),
           R.ref(Variables.variables())
-        ) ::
-          R.unit()
+        ) :: R.vec(variable_binding())
   defrust bind_paints(bindings, record, field, vars) do
-    for {paint, index} <- Enum.with_index(record.records(field)) do
+    record.records(field)
+    |> Enum.with_index()
+    |> Enum.reduce(bindings, fn {paint, index}, bindings ->
       reference =
         paint.record(Kiwi.Paint.COLOR_VAR)
         |> and_then(fn color -> color.record(Kiwi.VariableData.VALUE) end)
@@ -228,13 +223,10 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
         |> and_then(fn variable -> reference(vars, variable) end)
 
       case reference do
-        {:some, id} ->
-          put_binding(bindings, paint_target(field, index), some(id), 1.0)
-
-        :none ->
-          :ok
+        {:some, id} -> put_binding(bindings, paint_target(field, index), some(id), 1.0)
+        :none -> bindings
       end
-    end
+    end)
   end
 
   # Writes the values a record's bindings resolve to in `modes` into the record.
@@ -245,9 +237,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
           R.ref(Variables.variables())
         ) :: Kiwi.kiwi_record()
   defrust apply_bindings(record, occurrence, modes, vars) do
-    bound(ref(record), vars)
-    |> iter()
-    |> fold(record, fn record, binding ->
+    Enum.reduce(bound(record, vars), record, fn binding, record ->
       case binding.variable.and_then(fn id -> resolve_variable(vars, id, modes) end) do
         {:some, value} -> apply_binding(record, binding, ref(value), occurrence)
         :none -> record
@@ -282,7 +272,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
       {{:field, Kiwi.VariableField.VISIBLE}, _value} ->
         case truthy(value) do
           {:some, visible}
-          when not occurrence.overridden.contains(ref(Kiwi.NodeChange.VISIBLE)) ->
+          when not MapSet.member?(occurrence.overridden, Kiwi.NodeChange.VISIBLE) ->
             record.put_bool(Kiwi.NodeChange.VISIBLE, visible)
 
           _ ->
@@ -290,7 +280,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
         end
 
       {{:field, field}, {:float, number}} ->
-        apply_number(record, field, deref(number), binding.multiplier, occurrence)
+        apply_number(record, field, number, binding.multiplier, occurrence)
 
       _ ->
         record
@@ -302,16 +292,15 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
   @spec apply_paint(Kiwi.kiwi_record(), R.u32(), R.usize(), R.ref(Variables.color())) ::
           Kiwi.kiwi_record()
   defrust apply_paint(record, field, index, color) do
-    paints = record.records(field) |> into_iter() |> cloned() |> collect()
+    paints = Enum.map(record.records(field), fn paint -> paint.clone() end)
 
-    if index < paints.len() do
+    if index < length(paints) do
       paint =
         paints[index]
         |> put_record(Kiwi.Paint.COLOR, color_record(color))
         |> put_float(Kiwi.Paint.OPACITY, cast(color.a, R.f32()))
 
-      assign!(paints[index], paint)
-      record.put_records(field, paints)
+      record.put_records(field, List.replace_at(paints, index, paint))
     else
       record
     end
@@ -396,7 +385,7 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
     case record.record(Kiwi.NodeChange.SIZE) do
       {:some, size}
       when occurrence.derived_size.is_none() and
-             not occurrence.overridden.contains(ref(Kiwi.NodeChange.SIZE)) ->
+             not MapSet.member?(occurrence.overridden, Kiwi.NodeChange.SIZE) ->
         record.put_record(Kiwi.NodeChange.SIZE, size.put_float(axis, cast(value, R.f32())))
 
       _ ->

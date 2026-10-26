@@ -21120,24 +21120,25 @@ pub mod graph {
         }
     }
     fn bound(record: &KiwiRecord, vars: &Variables) -> Vec<VariableBinding> {
-        let mut bindings = Vec::new();
-        for entry in consumption_entries(record) {
-            bind_entry(&mut bindings, &entry, vars);
-        }
-        bind_paints(&mut bindings, record, kiwi_records::NodeChange::FILL_PAINTS, vars);
         bind_paints(
-            &mut bindings,
+            bind_paints(
+                consumption_entries(record)
+                    .into_iter()
+                    .fold(vec![], |bindings, entry| bind_entry(bindings, &entry, vars)),
+                record,
+                kiwi_records::NodeChange::FILL_PAINTS,
+                vars,
+            ),
             record,
             kiwi_records::NodeChange::STROKE_PAINTS,
             vars,
-        );
-        bindings
+        )
     }
     fn bind_entry(
-        bindings: &mut Vec<VariableBinding>,
+        bindings: Vec<VariableBinding>,
         entry: &KiwiRecord,
         vars: &Variables,
-    ) {
+    ) -> Vec<VariableBinding> {
         match entry.enum_value(kiwi_records::VariableDataMapEntry::VARIABLE_FIELD) {
             Some(field) if bindable(field) => {
                 let data = entry
@@ -21149,7 +21150,7 @@ pub mod graph {
                             field_target(field),
                             reference(vars, &variable),
                             multiplier,
-                        );
+                        )
                     }
                     _ => {
                         let data_type = data
@@ -21161,20 +21162,24 @@ pub mod graph {
                                 != Some(kiwi_records::VariableDataType::EXPRESSION)
                         {
                             bindings
-                                .retain(|binding| binding.target != field_target(field));
+                                .into_iter()
+                                .filter(|binding| !(binding.target == field_target(field)))
+                                .collect::<Vec<VariableBinding>>()
+                        } else {
+                            bindings
                         }
                     }
-                };
+                }
             }
-            _ => {}
-        };
+            _ => bindings,
+        }
     }
     fn put_binding(
-        bindings: &mut Vec<VariableBinding>,
+        bindings: Vec<VariableBinding>,
         target: BoundTarget,
         variable: Option<GuidKey>,
         multiplier: f64,
-    ) {
+    ) -> Vec<VariableBinding> {
         let binding = VariableBinding {
             target,
             variable,
@@ -21182,12 +21187,21 @@ pub mod graph {
         };
         match bindings.iter().position(|existing| existing.target == binding.target) {
             Some(index) => {
-                bindings[index] = binding;
+                let rustq_item = binding;
+                {
+                    let mut rustq_updated = bindings;
+                    if let Some(rustq_slot) = rustq_updated.get_mut(index) {
+                        *rustq_slot = rustq_item;
+                    }
+                    rustq_updated
+                }
             }
             None => {
-                bindings.push(binding);
+                let mut rustq_updated = bindings;
+                rustq_updated.push(binding);
+                rustq_updated
             }
-        };
+        }
     }
     fn linear(data: &KiwiRecord, depth: u32) -> Option<Linear> {
         match data.record(kiwi_records::VariableData::VALUE) {
@@ -21274,21 +21288,41 @@ pub mod graph {
             )
     }
     fn bind_paints(
-        bindings: &mut Vec<VariableBinding>,
+        bindings: Vec<VariableBinding>,
         record: &KiwiRecord,
         field: u32,
         vars: &Variables,
-    ) {
-        for (index, paint) in record.records(field).into_iter().enumerate() {
-            let reference = paint
-                .record(kiwi_records::Paint::COLOR_VAR)
-                .and_then(|color| color.record(kiwi_records::VariableData::VALUE))
-                .and_then(|value| value.record(kiwi_records::VariableAnyValue::ALIAS))
-                .and_then(|variable| reference(vars, variable));
-            if let Some(id) = reference {
-                put_binding(bindings, paint_target(field, index), Some(id), 1.0);
-            }
-        }
+    ) -> Vec<VariableBinding> {
+        record
+            .records(field)
+            .into_iter()
+            .enumerate()
+            .map(|(index, item)| (item, index))
+            .fold(
+                bindings,
+                |bindings, (paint, index)| {
+                    let reference = paint
+                        .record(kiwi_records::Paint::COLOR_VAR)
+                        .and_then(|color| {
+                            color.record(kiwi_records::VariableData::VALUE)
+                        })
+                        .and_then(|value| {
+                            value.record(kiwi_records::VariableAnyValue::ALIAS)
+                        })
+                        .and_then(|variable| reference(vars, variable));
+                    match reference {
+                        Some(id) => {
+                            put_binding(
+                                bindings,
+                                paint_target(field, index),
+                                Some(id),
+                                1.0,
+                            )
+                        }
+                        None => bindings,
+                    }
+                },
+            )
     }
     fn apply_bindings(
         record: KiwiRecord,
@@ -21297,14 +21331,14 @@ pub mod graph {
         vars: &Variables,
     ) -> KiwiRecord {
         bound(&record, vars)
-            .iter()
+            .into_iter()
             .fold(
                 record,
                 |record, binding| match binding
                     .variable
                     .and_then(|id| resolve_variable(vars, id, modes))
                 {
-                    Some(value) => apply_binding(record, binding, &value, occurrence),
+                    Some(value) => apply_binding(record, &binding, &value, occurrence),
                     None => record,
                 },
             )
@@ -21360,17 +21394,25 @@ pub mod graph {
         index: usize,
         color: &Color,
     ) -> KiwiRecord {
-        let mut paints = record
-            .records(field)
-            .into_iter()
-            .cloned()
-            .collect::<Vec<KiwiRecord>>();
+        let paints = record.records(field).into_iter().cloned().collect::<Vec<_>>();
         if index < paints.len() {
             let paint = paints[index]
                 .put_record(kiwi_records::Paint::COLOR, color_record(color))
                 .put_float(kiwi_records::Paint::OPACITY, color.a as f32);
-            paints[index] = paint;
-            record.put_records(field, paints)
+            record
+                .put_records(
+                    field,
+                    {
+                        let rustq_item = paint;
+                        {
+                            let mut rustq_updated = paints.clone();
+                            if let Some(rustq_slot) = rustq_updated.get_mut(index) {
+                                *rustq_slot = rustq_item;
+                            }
+                            rustq_updated
+                        }
+                    },
+                )
         } else {
             record
         }
