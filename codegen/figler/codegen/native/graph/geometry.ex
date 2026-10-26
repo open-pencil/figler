@@ -19,20 +19,20 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
 
   @spec visual_lengths() :: R.slice(R.u32(), R.lifetime(:static))
   defrust visual_lengths() do
-    ref([
+    [
       Kiwi.NodeChange.STROKE_WEIGHT,
       Kiwi.NodeChange.CORNER_RADIUS,
       Kiwi.NodeChange.RECTANGLE_TOP_LEFT_CORNER_RADIUS,
       Kiwi.NodeChange.RECTANGLE_TOP_RIGHT_CORNER_RADIUS,
       Kiwi.NodeChange.RECTANGLE_BOTTOM_LEFT_CORNER_RADIUS,
       Kiwi.NodeChange.RECTANGLE_BOTTOM_RIGHT_CORNER_RADIUS
-    ])
+    ]
   end
 
   # Stack padding and spacing, which uniform scale treats as lengths.
   @spec layout_distances() :: R.slice(R.u32(), R.lifetime(:static))
   defrust layout_distances() do
-    ref([
+    [
       Kiwi.NodeChange.STACK_PADDING,
       Kiwi.NodeChange.STACK_SPACING,
       Kiwi.NodeChange.STACK_COUNTER_SPACING,
@@ -40,14 +40,14 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
       Kiwi.NodeChange.STACK_VERTICAL_PADDING,
       Kiwi.NodeChange.STACK_PADDING_RIGHT,
       Kiwi.NodeChange.STACK_PADDING_BOTTOM
-    ])
+    ]
   end
 
   # Every field scaling touches. An instance record declares these in placed space, so after
   # its expansion is scaled the record's own values are restored.
   @spec scaled_fields() :: R.slice(R.u32(), R.lifetime(:static))
   defrust scaled_fields() do
-    ref([
+    [
       Kiwi.NodeChange.STACK_PADDING,
       Kiwi.NodeChange.STACK_SPACING,
       Kiwi.NodeChange.STACK_COUNTER_SPACING,
@@ -70,13 +70,13 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
       Kiwi.NodeChange.EFFECTS,
       Kiwi.NodeChange.SIZE,
       Kiwi.NodeChange.TRANSFORM
-    ])
+    ]
   end
 
   # The fields a saved derived entry may carry.
   @spec derived_fields() :: R.slice(R.u32(), R.lifetime(:static))
   defrust derived_fields() do
-    ref([
+    [
       Kiwi.NodeChange.DERIVED_TEXT_DATA,
       Kiwi.NodeChange.FONT_SIZE,
       Kiwi.NodeChange.LINE_HEIGHT,
@@ -86,7 +86,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
       Kiwi.NodeChange.FILL_GEOMETRY,
       Kiwi.NodeChange.STROKE_GEOMETRY,
       Kiwi.NodeChange.VECTOR_DATA
-    ])
+    ]
   end
 
   @spec uniform_scale(R.ref(Kiwi.kiwi_record())) :: R.f64()
@@ -122,7 +122,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
 
   @spec scale_occurrence(Occurrence.occurrence(), R.f64()) :: Occurrence.occurrence()
   defrust scale_occurrence(occurrence, factor) do
-    properties = scale_properties(ref(occurrence.properties), factor)
+    properties = scale_properties(occurrence.properties, factor)
     derived_size = occurrence.derived_size.as_ref().map(fn size -> scale_vector(size, factor) end)
     layout_scale = occurrence.layout_scale * factor
 
@@ -150,7 +150,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     |> map_records(Kiwi.NodeChange.EFFECTS, fn effect -> scale_effect(effect, factor) end)
     |> map_record(Kiwi.NodeChange.SIZE, fn size -> scale_vector(size, factor) end)
     |> map_record(Kiwi.NodeChange.TRANSFORM, fn transform ->
-      scale_numbers(transform, ref([Kiwi.Matrix.M02, Kiwi.Matrix.M12]), factor)
+      scale_numbers(transform, [Kiwi.Matrix.M02, Kiwi.Matrix.M12], factor)
     end)
   end
 
@@ -158,14 +158,14 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   defrust scale_effect(effect, factor) do
     effect
     |> map_record(Kiwi.Effect.OFFSET, fn offset -> scale_vector(offset, factor) end)
-    |> scale_numbers(ref([Kiwi.Effect.RADIUS, Kiwi.Effect.SPREAD]), factor)
+    |> scale_numbers([Kiwi.Effect.RADIUS, Kiwi.Effect.SPREAD], factor)
   end
 
   # Scales positional text data, not font identity or normalized glyph outlines.
   @spec scale_text_layout(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust scale_text_layout(properties, factor) do
     properties
-    |> scale_numbers(ref([Kiwi.NodeChange.FONT_SIZE]), factor)
+    |> scale_numbers([Kiwi.NodeChange.FONT_SIZE], factor)
     |> scale_pixel_value(Kiwi.NodeChange.LINE_HEIGHT, factor)
     |> scale_pixel_value(Kiwi.NodeChange.LETTER_SPACING, factor)
     |> map_record(Kiwi.NodeChange.TEXT_DATA, fn text ->
@@ -182,7 +182,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   defrust scale_derived_text(derived, factor) do
     derived
     |> map_record(Kiwi.DerivedTextData.LAYOUT_SIZE, fn size -> scale_vector(size, factor) end)
-    |> scale_numbers(ref([Kiwi.DerivedTextData.TRUNCATED_HEIGHT]), factor)
+    |> scale_numbers([Kiwi.DerivedTextData.TRUNCATED_HEIGHT], factor)
     |> map_records(Kiwi.DerivedTextData.GLYPHS, fn glyph -> scale_glyph(glyph, factor) end)
     |> map_records(Kiwi.DerivedTextData.BASELINES, fn baseline ->
       scale_baseline(baseline, factor)
@@ -193,7 +193,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   defrust scale_glyph(glyph, factor) do
     glyph
     |> map_record(Kiwi.Glyph.POSITION, fn position -> scale_vector(position, factor) end)
-    |> scale_numbers(ref([Kiwi.Glyph.FONT_SIZE]), factor)
+    |> scale_numbers([Kiwi.Glyph.FONT_SIZE], factor)
   end
 
   @spec scale_baseline(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
@@ -201,12 +201,12 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
     baseline
     |> map_record(Kiwi.Baseline.POSITION, fn position -> scale_vector(position, factor) end)
     |> scale_numbers(
-      ref([
+      [
         Kiwi.Baseline.WIDTH,
         Kiwi.Baseline.LINE_HEIGHT,
         Kiwi.Baseline.LINE_ASCENT,
         Kiwi.Baseline.LINE_Y
-      ]),
+      ],
       factor
     )
   end
@@ -216,7 +216,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   defrust scale_pixel_value(properties, field, factor) do
     properties.map_record(field, fn metric ->
       if metric.enum_value(Kiwi.Number.UNITS) == some(Kiwi.NumberUnits.PIXELS),
-        do: scale_numbers(metric, ref([Kiwi.Number.VALUE]), factor),
+        do: scale_numbers(metric, [Kiwi.Number.VALUE], factor),
         else: metric.clone()
     end)
   end
@@ -236,7 +236,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
 
   @spec scale_vector(R.ref(Kiwi.kiwi_record()), R.f64()) :: Kiwi.kiwi_record()
   defrust(scale_vector(vector, factor),
-    do: scale_numbers(vector, ref([Kiwi.Vector.X, Kiwi.Vector.Y]), factor)
+    do: scale_numbers(vector, [Kiwi.Vector.X, Kiwi.Vector.Y], factor)
   )
 
   @spec scale_floats(Kiwi.kiwi_record(), R.u32(), R.f64()) :: Kiwi.kiwi_record()
@@ -327,7 +327,7 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
         :none -> KiwiRecord.new(Kiwi.Definitions.VECTOR)
       end
 
-    {width, height} = vector_size(ref(size))
+    {width, height} = vector_size(size)
     {before_width, before_height} = before_size
     {after_width, after_height} = after_size
 

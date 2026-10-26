@@ -1,5 +1,8 @@
 defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
-  @moduledoc false
+  @moduledoc """
+  Macros writing the scene record readers whose shape follows the projection: the record type,
+  and the optional XPath attributes a record has, in projection order.
+  """
 
   alias Figler.Scene.Projection
   alias Figler.Scene.Projection.Native, as: ProjectionNative
@@ -15,6 +18,10 @@ defmodule Figler.Codegen.Native.SupportFunction.OptionalRecordAttrs do
     end
   end
 
+  @doc """
+  Defines `scene_node_record_optional_attr/2`, an optional attribute present on a record by
+  position, and `scene_node_record_optional_attr_count/1`, how many it has.
+  """
   defmacro defrust_functions do
     attrs = optional_xpath_attrs()
     present = Enum.map(attrs, &present/1)
@@ -187,7 +194,6 @@ defmodule Figler.Codegen.Native.SupportFunction do
       :graph_focus_push_guid_ref,
       :graph_focus_extend_symbol_refs,
       :graph_focus_extend_component_prop_assignments,
-      :graph_focus_extend_component_prop_assignments_remaining,
       :graph_focus_extend_component_prop_value
     ])
   end
@@ -295,6 +301,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
     {:ok, {some(family), some(style), some(postscript)}}
   end
 
+  @doc "Pushes each optional projection field a query asks for onto `keys` and `values`."
   defmacro push_optional_scene_query_fields do
     fields = Projection.field_names() -- Projection.required_field_names()
 
@@ -305,6 +312,7 @@ defmodule Figler.Codegen.Native.SupportFunction do
     end
   end
 
+  @doc "A `SceneQueryNode` built from `node`, with every projection field."
   defmacro scene_query_node_struct_literal do
     fields =
       [
@@ -327,14 +335,10 @@ defmodule Figler.Codegen.Native.SupportFunction do
   @spec scene_node_record_attr(R.ref(scene_node_record()), R.usize()) ::
           R.option(R.path(:RecordAttribute))
   defrust scene_node_record_attr(record, index) do
-    if index == 0 do
-      some({"guid", record.guid.to_string()})
-    else
-      if index == 1 do
-        some({"type", record.node_type.to_string()})
-      else
-        scene_node_record_optional_attr(record, index - 2)
-      end
+    case index do
+      0 -> some({"guid", record.guid.to_string()})
+      1 -> some({"type", record.node_type.to_string()})
+      _ -> scene_node_record_optional_attr(record, index - 2)
     end
   end
 
@@ -603,23 +607,13 @@ defmodule Figler.Codegen.Native.SupportFunction do
           R.mut_ref(R.option(R.vec(R.path(:GraphFocusGuid))))
         ) :: R.nif_result(R.unit())
   defrust graph_focus_extend_component_prop_assignments(decoder, refs) do
-    remaining = decoder.read_var_uint()
-    graph_focus_extend_component_prop_assignments_remaining(decoder, refs, remaining)
-  end
+    count = decoder.read_var_uint()
 
-  @spec graph_focus_extend_component_prop_assignments_remaining(
-          R.mut_ref(R.path(:Decoder, R.lifetime(:_))),
-          R.mut_ref(R.option(R.vec(R.path(:GraphFocusGuid)))),
-          R.u32()
-        ) :: R.nif_result(R.unit())
-  defrust graph_focus_extend_component_prop_assignments_remaining(decoder, refs, remaining) do
-    if remaining == 0 do
-      :ok
-    else
-      next = graph_focus_read_component_prop_assignment(decoder)
-      graph_focus_extend_refs(refs, next)
-      graph_focus_extend_component_prop_assignments_remaining(decoder, refs, remaining - 1)
+    for _assignment <- 1..count//1 do
+      graph_focus_extend_refs(refs, graph_focus_read_component_prop_assignment(decoder))
     end
+
+    :ok
   end
 
   @spec graph_focus_extend_component_prop_value(

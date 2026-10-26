@@ -14228,25 +14228,14 @@ fn graph_focus_extend_component_prop_assignments(
     decoder: &mut Decoder<'_>,
     refs: &mut Option<Vec<GraphFocusGuid>>,
 ) -> NifResult<()> {
-    let remaining = decoder.read_var_uint()?;
-    graph_focus_extend_component_prop_assignments_remaining(decoder, refs, remaining)
-}
-fn graph_focus_extend_component_prop_assignments_remaining(
-    decoder: &mut Decoder<'_>,
-    refs: &mut Option<Vec<GraphFocusGuid>>,
-    remaining: u32,
-) -> NifResult<()> {
-    if remaining == 0 {
-        Ok(())
-    } else {
-        let next = graph_focus_read_component_prop_assignment(decoder)?;
-        graph_focus_extend_refs(refs, next);
-        graph_focus_extend_component_prop_assignments_remaining(
-            decoder,
+    let count = decoder.read_var_uint();
+    for _assignment in 1..=count? {
+        graph_focus_extend_refs(
             refs,
-            remaining - 1,
-        )
+            graph_focus_read_component_prop_assignment(decoder)?,
+        );
     }
+    Ok(())
 }
 fn graph_focus_extend_component_prop_value(
     decoder: &mut Decoder<'_>,
@@ -15730,12 +15719,10 @@ mod scene_xpath_runtime {
         record: &SceneNodeRecord,
         index: usize,
     ) -> Option<RecordAttribute> {
-        if index == 0 {
-            Some(("guid", record.guid.to_string()))
-        } else if index == 1 {
-            Some(("type", record.node_type.to_string()))
-        } else {
-            scene_node_record_optional_attr(record, index - 2)
+        match index {
+            0 => Some(("guid", record.guid.to_string())),
+            1 => Some(("type", record.node_type.to_string())),
+            _ => scene_node_record_optional_attr(record, index - 2),
         }
     }
     fn scene_node_record_attr_count(record: &SceneNodeRecord) -> usize {
