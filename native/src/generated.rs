@@ -20316,51 +20316,84 @@ pub mod graph {
     fn new_variables(records: &Sources) -> Variables {
         let collections = records
             .iter()
-            .filter(|(_id, record)| {
-                record.enum_value(kiwi_records::NodeChange::TYPE)
-                    == Some(kiwi_records::NodeType::VARIABLE_SET)
-            })
-            .filter_map(|(id, record)| {
-                collection(record).map(|collection| (*id, collection))
-            })
-            .collect::<HashMap<GuidKey, Collection>>();
-        let mut vars = Variables {
-            collections,
-            variables: HashMap::new(),
-            keys: asset_keys(records),
-            diagnostics: Vec::new(),
-        };
-        let mut ids = records
-            .iter()
+            .map(|(key, value)| (*key, value))
             .filter_map(|item| match item {
                 (
                     id,
                     record,
                 ) if record.enum_value(kiwi_records::NodeChange::TYPE)
-                    == Some(kiwi_records::NodeType::VARIABLE) => Some((id, record)),
+                    == Some(kiwi_records::NodeType::VARIABLE_SET) => Some((id, record)),
                 _ => None,
             })
-            .map(|(id, _)| *id)
-            .collect::<Vec<_>>();
-        ids.sort();
-        for id in ids {
-            put_variable(&mut vars, &records[&&id]);
+            .map(|(id, record)| (collection(record), (id, record)))
+            .filter_map(|item| match item {
+                (Some(collection), (id, record)) => Some((collection, id, record)),
+                _ => None,
+            })
+            .map(|(collection, id, _)| (id, collection))
+            .collect::<HashMap<GuidKey, Collection>>();
+        let vars = Variables {
+            collections,
+            variables: HashMap::new(),
+            keys: asset_keys(records),
+            diagnostics: vec![],
+        };
+        {
+            let mut rustq_updated = records
+                .iter()
+                .map(|(key, value)| (*key, value))
+                .filter_map(|item| match item {
+                    (
+                        id,
+                        record,
+                    ) if record.enum_value(kiwi_records::NodeChange::TYPE)
+                        == Some(kiwi_records::NodeType::VARIABLE) => Some((id, record)),
+                    _ => None,
+                })
+                .map(|(id, _)| id)
+                .collect::<Vec<_>>();
+            rustq_updated.sort();
+            rustq_updated
         }
-        vars
+            .into_iter()
+            .fold(vars, |vars, id| put_variable(vars, &records[&id]))
     }
     fn asset_keys(records: &Sources) -> HashMap<String, HashMap<String, GuidKey>> {
-        let mut keys: HashMap<String, HashMap<String, GuidKey>> = HashMap::new();
-        for (id, record) in records.iter() {
-            if let Some(key) = record.str(kiwi_records::NodeChange::KEY) {
-                let version = record
-                    .str(kiwi_records::NodeChange::VERSION)
-                    .unwrap_or("");
-                keys.entry(key.to_string())
-                    .or_default()
-                    .insert(version.to_string(), *id);
-            }
-        }
-        keys
+        records
+            .iter()
+            .map(|(key, value)| (*key, value))
+            .map(|(id, record)| (
+                record.str(kiwi_records::NodeChange::KEY),
+                (id, record),
+            ))
+            .filter_map(|item| match item {
+                (Some(key), (id, record)) => Some((key, id, record)),
+                _ => None,
+            })
+            .map(|(key, id, record)| (id, record, key))
+            .fold(
+                HashMap::new(),
+                |keys, (id, record, key)| {
+                    let version = record
+                        .str(kiwi_records::NodeChange::VERSION)
+                        .unwrap_or("")
+                        .to_string();
+                    {
+                        let mut rustq_updated = keys;
+                        let rustq_key = key.to_string();
+                        let rustq_value = match rustq_updated.remove(&rustq_key) {
+                            Some(versions) => {
+                                let mut rustq_updated = versions;
+                                rustq_updated.insert(version, id);
+                                rustq_updated
+                            }
+                            None => HashMap::from([(version, id)]),
+                        };
+                        rustq_updated.insert(rustq_key, rustq_value);
+                        rustq_updated
+                    }
+                },
+            )
     }
     fn reference(vars: &Variables, reference: &KiwiRecord) -> Option<GuidKey> {
         match guid_key(reference.record(kiwi_records::VariableId::GUID)) {
@@ -20379,12 +20412,12 @@ pub mod graph {
                     Some(versions) => {
                         match asset.str(kiwi_records::AssetRef::VERSION) {
                             Some(version) if !version.is_empty() => {
-                                versions.get(version).copied()
+                                versions.get(version).cloned()
                             }
                             _ => {
-                                match (versions.get(""), versions.len()) {
-                                    (Some(id), _count) => Some(*id),
-                                    (None, 1) => versions.values().copied().next(),
+                                match (versions.get("").cloned(), versions.len() as i64) {
+                                    (Some(id), _count) => Some(id),
+                                    (None, 1) => versions.values().cloned().next(),
                                     _ => None,
                                 }
                             }
@@ -20407,14 +20440,14 @@ pub mod graph {
             })
             .map(|(id, _)| id)
             .collect::<Vec<GuidKey>>();
-        match modes.first() {
-            Some(default) => {
+        match modes.as_slice() {
+            [default, _rest @ ..] => {
                 Some(Collection {
                     default_mode: *default,
-                    modes: modes.clone(),
+                    modes,
                 })
             }
-            None => None,
+            [] => None,
         }
     }
     fn variable_type(record: &KiwiRecord) -> Option<VariableType> {
@@ -20434,77 +20467,109 @@ pub mod graph {
             _ => None,
         }
     }
-    fn put_variable(vars: &mut Variables, record: &KiwiRecord) {
+    fn put_variable(vars: Variables, record: &KiwiRecord) -> Variables {
         let collection = record
             .record(kiwi_records::NodeChange::VARIABLE_SET_ID)
-            .and_then(|set| reference(vars, set))
+            .and_then(|set| reference(&vars, set))
             .or_else(|| parent_id(record));
-        if let Some(id) = record_id(record) {
-            if let Some(r#type) = variable_type(record) {
-                if let Some(collection) = collection {
-                    if let Some(modes) = vars
-                        .collections
-                        .get(&collection)
-                        .map(|found| found.modes.clone())
-                    {
-                        let values = mode_values(vars, record, id, &modes);
-                        if !values.is_empty() {
-                            vars.variables
-                                .insert(
-                                    id,
-                                    Variable {
-                                        id,
-                                        r#type,
-                                        collection,
-                                        values,
-                                    },
-                                );
+        match record_id(record) {
+            Some(id) => {
+                match variable_type(record) {
+                    Some(r#type) => {
+                        match collection {
+                            Some(collection) => {
+                                match vars.collections.get(&collection) {
+                                    Some(found) => {
+                                        let (values, diagnostics) = mode_values(
+                                            &vars,
+                                            record,
+                                            id,
+                                            &found.modes,
+                                        );
+                                        let vars = Variables {
+                                            diagnostics: {
+                                                let mut rustq_updated = vars.diagnostics;
+                                                rustq_updated.extend(diagnostics);
+                                                rustq_updated
+                                            },
+                                            ..vars
+                                        };
+                                        if values.is_empty() {
+                                            vars
+                                        } else {
+                                            let variable = Variable {
+                                                id,
+                                                r#type,
+                                                collection,
+                                                values,
+                                            };
+                                            Variables {
+                                                variables: {
+                                                    let mut rustq_updated = vars.variables;
+                                                    rustq_updated.insert(id, variable);
+                                                    rustq_updated
+                                                },
+                                                ..vars
+                                            }
+                                        }
+                                    }
+                                    _ => vars,
+                                }
+                            }
+                            _ => vars,
                         }
                     }
+                    _ => vars,
                 }
             }
+            _ => vars,
         }
     }
     fn mode_values(
-        vars: &mut Variables,
+        vars: &Variables,
         record: &KiwiRecord,
         id: GuidKey,
         modes: &[GuidKey],
-    ) -> BTreeMap<GuidKey, Stored> {
-        let mut values: BTreeMap<GuidKey, Stored> = BTreeMap::new();
+    ) -> (BTreeMap<GuidKey, Stored>, Vec<UnsupportedExpression>) {
         let entries = match record.record(kiwi_records::NodeChange::VARIABLE_DATA_VALUES)
         {
             Some(data_values) => {
                 data_values.records(kiwi_records::VariableDataValues::ENTRIES)
             }
-            None => Vec::new(),
+            None => vec![],
         };
-        for entry in entries {
-            match guid_key(
-                entry.record(kiwi_records::VariableDataValuesEntry::MODE_ID),
-            ) {
-                Some(mode) if modes.contains(&mode) => {
-                    let stored = stored_value(
-                        vars,
-                        entry
-                            .record(
-                                kiwi_records::VariableDataValuesEntry::VARIABLE_DATA,
-                            ),
-                        0,
-                    );
-                    if let Stored::Unsupported = stored {
-                        vars.diagnostics
-                            .push(UnsupportedExpression {
-                                variable: id,
-                                mode,
-                            });
-                    }
-                    values.insert(mode, stored);
-                }
-                _ => {}
-            };
-        }
-        values
+        let stored = entries
+            .into_iter()
+            .map(|entry| (
+                guid_key(entry.record(kiwi_records::VariableDataValuesEntry::MODE_ID)),
+                entry,
+            ))
+            .filter_map(|item| match item {
+                (Some(mode), entry) if modes.contains(&mode) => Some((mode, entry)),
+                _ => None,
+            })
+            .map(|(mode, entry)| (
+                mode,
+                stored_value(
+                    vars,
+                    entry.record(kiwi_records::VariableDataValuesEntry::VARIABLE_DATA),
+                    0,
+                ),
+            ))
+            .collect::<Vec<(GuidKey, Stored)>>();
+        let diagnostics = stored
+            .iter()
+            .map(|(element1, element2)| (*element1, element2))
+            .filter_map(|item| match item {
+                (mode, Stored::Unsupported) => Some(mode),
+                _ => None,
+            })
+            .map(|mode| UnsupportedExpression {
+                variable: id,
+                mode,
+            })
+            .collect::<Vec<UnsupportedExpression>>();
+        (stored.into_iter().collect(), diagnostics)
     }
     fn stored_value(vars: &Variables, data: Option<&KiwiRecord>, depth: u32) -> Stored {
         match data {
@@ -20604,9 +20669,9 @@ pub mod graph {
                     .enum_value(kiwi_records::Expression::EXPRESSION_FUNCTION)
                 {
                     Some(kiwi_records::ExpressionFunction::COMPOSE_COLOR) => {
-                        compose_color(vars, &&arguments, depth)
+                        compose_color(vars, &arguments, depth)
                     }
-                    Some(function) => formula(vars, function, &&arguments, depth),
+                    Some(function) => formula(vars, function, &arguments, depth),
                     None => Stored::Unsupported,
                 }
             }
@@ -20617,8 +20682,8 @@ pub mod graph {
         match arguments {
             [color, opacity] => {
                 match (
-                    color_operand(stored_value(vars, Some(*color), depth + 1)),
-                    color_operand(stored_value(vars, Some(*opacity), depth + 1)),
+                    color_operand(stored_value(vars, Some(color), depth + 1)),
+                    color_operand(stored_value(vars, Some(opacity), depth + 1)),
                 ) {
                     (Some(color), Some(opacity)) => {
                         Stored::ComposeColor(Composed { color, opacity })
@@ -20643,7 +20708,7 @@ pub mod graph {
         arguments: &[&KiwiRecord],
         depth: u32,
     ) -> Stored {
-        let supported = &[
+        if [
             kiwi_records::ExpressionFunction::ADDITION,
             kiwi_records::ExpressionFunction::SUBTRACTION,
             kiwi_records::ExpressionFunction::MULTIPLY,
@@ -20661,8 +20726,9 @@ pub mod graph {
             kiwi_records::ExpressionFunction::STRINGIFY,
             kiwi_records::ExpressionFunction::IS_TRUTHY,
             kiwi_records::ExpressionFunction::TERNARY,
-        ];
-        if supported.contains(&function) {
+        ]
+            .contains(&function)
+        {
             match formula_operands(vars, arguments, depth) {
                 Some(operands) => {
                     Stored::Formula(Operation {
@@ -20684,7 +20750,7 @@ pub mod graph {
         arguments
             .iter()
             .map(|argument| formula_operand(
-                stored_value(vars, Some(*argument), depth + 1),
+                stored_value(vars, Some(argument), depth + 1),
             ))
             .collect::<Option<Vec<Formula>>>()
     }
@@ -20721,8 +20787,11 @@ pub mod graph {
         if depth >= 64 {
             None
         } else {
-            let mut visited = visiting.clone();
-            visited.insert(variable.id);
+            let visited = {
+                let mut rustq_updated = visiting.clone();
+                rustq_updated.insert(variable.id);
+                rustq_updated
+            };
             match value_in_mode(vars, variable, modes) {
                 Some(Stored::Alias(next)) => {
                     if visiting.contains(next) {
@@ -20902,10 +20971,10 @@ pub mod graph {
     fn unary(operator: u32, operand: &VariableValue) -> Option<VariableValue> {
         match (operator, operand) {
             (kiwi_records::ExpressionFunction::NEGATE, VariableValue::Float(number)) => {
-                Some(VariableValue::Float(-*number))
+                Some(VariableValue::Float(-number))
             }
             (kiwi_records::ExpressionFunction::NOT, VariableValue::Boolean(flag)) => {
-                Some(VariableValue::Boolean(!*flag))
+                Some(VariableValue::Boolean(!flag))
             }
             (kiwi_records::ExpressionFunction::STRINGIFY, _operand) => {
                 text(operand).map(|text| VariableValue::String(text))
@@ -21014,41 +21083,14 @@ pub mod graph {
         }
     }
     fn concatenated(a: &VariableValue, b: &VariableValue) -> Option<VariableValue> {
-        match (value_type(a), value_type(b)) {
-            (VariableType::String, VariableType::String) => {
-                Some(
-                    VariableValue::String(
-                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
-                    ),
-                )
-            }
-            (VariableType::String, VariableType::Float) => {
-                Some(
-                    VariableValue::String(
-                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
-                    ),
-                )
-            }
-            (VariableType::Float, VariableType::String) => {
-                Some(
-                    VariableValue::String(
-                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
-                    ),
-                )
-            }
-            (VariableType::String, VariableType::Boolean) => {
-                Some(
-                    VariableValue::String(
-                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
-                    ),
-                )
-            }
-            (VariableType::Boolean, VariableType::String) => {
-                Some(
-                    VariableValue::String(
-                        text(a).unwrap_or_default() + &text(b).unwrap_or_default(),
-                    ),
-                )
+        match (
+            text(a),
+            text(b),
+            value_type(a) == VariableType::String
+                || value_type(b) == VariableType::String,
+        ) {
+            (Some(a), Some(b), true) => {
+                Some(VariableValue::String(format!("{}{}", a, b)))
             }
             _ => None,
         }
@@ -21056,7 +21098,7 @@ pub mod graph {
     fn text(value: &VariableValue) -> Option<String> {
         match value {
             VariableValue::String(text) => Some(text.clone()),
-            VariableValue::Boolean(flag) => Some(flag.to_string()),
+            VariableValue::Boolean(flag) => Some(format!("{}", flag)),
             VariableValue::Float(number) => Some(number_text(*number)),
             VariableValue::Color(_color) => None,
         }
@@ -21089,8 +21131,7 @@ pub mod graph {
             VariableValue::String(text) => {
                 let word = text.trim().to_lowercase();
                 Some(
-                    !text.is_empty()
-                        && !(&["false", "no", "off"]).contains(&word.as_str()),
+                    !text.is_empty() && !["false", "no", "off"].contains(&word.as_str()),
                 )
             }
             VariableValue::Color(_color) => None,
