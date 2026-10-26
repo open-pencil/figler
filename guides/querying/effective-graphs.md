@@ -4,6 +4,12 @@ A scene index shows records as they are stored in the file. An effective graph a
 
 Use a graph when your analysis depends on component inheritance, populated instance children, swaps, property assignments, overrides, variables, or layout-derived values.
 
+Figler resolves instances the way OpenPencil's reader does. Every use of a component is expanded into its own occurrences, so an override on one instance never reaches another use of the same component:
+
+- swaps and component property assignments are routed to the instance they configure before it expands;
+- symbol overrides are applied by the instance that declares them, inner instances before outer ones, and an override keeps a field unless a strictly outer instance assigned it;
+- uniform instance scale, freeform resize constraints, and the sizes, transforms, and text layout Figma saved for each layer are applied last.
+
 ## Build a focused graph
 
 Resolve one subtree whenever you know the root:
@@ -39,7 +45,7 @@ Scene.name_contains(graph, "Button")
 Scene.text_contains(graph, "Continue")
 ```
 
-These helpers include generated instance clones and their effective values.
+These helpers include generated instance clones and their effective values. Clone GUIDs look like `"clone:12:34/5:6"`: the outermost instance followed by the source layers on the path to the clone.
 
 XPath queries on a graph still run against its reusable source index. Use helper functions, `Scene.node/2`, and `Scene.children/2` when generated clones must be included.
 
@@ -60,12 +66,13 @@ explanation = Scene.Graph.explain(graph, "12:34")
 The result includes:
 
 - the effective node;
-- its projected source node when available;
+- its projected source node;
 - source and source GUID information;
-- applied resolver operations;
-- unresolved diagnostics;
+- the override claims applied to it and the component properties it binds;
 - instance metadata;
-- child GUIDs and active resolver stages.
+- child GUIDs.
+
+`Scene.Graph.record/2` returns a node's full effective record: the sparse `NodeChange` map with every override applied.
 
 Inspect instance-specific information directly:
 
@@ -84,12 +91,20 @@ subtree_changes = Scene.Graph.diff(graph, root: "12:34")
 
 Only nodes whose effective values differ from their projected source are returned.
 
-Review anything the resolver could not apply:
+Review overrides that could not be resolved:
 
 ```elixir
 unresolved = Scene.Graph.unresolved(graph)
 first_ten = Scene.Graph.unresolved(graph, limit: 10)
 ```
+
+Figma keeps override records after the layer they address is deleted, so real files often carry some. Each diagnostic names the instance that declared the override, its main component, and the layer path:
+
+```elixir
+{:unresolved_property, {7, 95}, {7, 94}, [{7, 93}], :missing_target}
+```
+
+Overrides that address layers of a component an outer swap replaced are stale and dropped without a diagnostic.
 
 ## Control variable and style resolution
 
@@ -102,7 +117,9 @@ graph =
   )
 ```
 
-Variable modes are `false`, `:known`, and `:preserve`. Style modes are `false`, `:refs`, and `:known`. Defaults favor known variable values while leaving style resolution disabled.
+With `:known`, the defaults, each layer's variable bindings resolve in the modes it and its ancestors set, falling back to each collection's default mode: bound numbers, paint colors, text, and visibility are written into the layer's values, and layers take the paints, effects, grids, and text fields of the shared styles they reference. `false` (or `:preserve` and `:refs`) keeps the values the file saved.
+
+A text binding wins over an instance's literal text override, as Figma renders it. Visibility an instance overrides keeps its own value.
 
 ## Profile a graph build
 
@@ -110,9 +127,8 @@ Variable modes are `false`, `:known`, and `:preserve`. Style modes are `false`, 
 profile = Figler.Scene.Graph.profile(fig, root: "12:34")
 
 profile.total_ms
-profile.initial_ms
-profile.stages
+profile.phases
 profile.graph
 ```
 
-Use profiling before changing stage selection. Most applications should keep the standard resolver pipeline and reduce work with `root:` or `focus:` rather than manually skipping semantic stages.
+`phases` times decoding, indexing, and interpretation. Reduce work with `root:` or `focus:`.

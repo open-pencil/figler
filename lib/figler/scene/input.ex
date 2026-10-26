@@ -10,30 +10,60 @@ defmodule Figler.Scene.Input do
 
   alias Figler.Container
   alias Figler.Error
+  alias Figler.Native.SceneNifs
   alias Figler.Scene.Graph
   alias Figler.Scene.Index
+
+  @typedoc """
+  A raw `Message` binary with the binary Kiwi schema it was written with.
+
+  The schema is empty when the input carried none, as for a raw `Message`.
+  Native decoders use it to skip fields Figler's compiled schema does not know.
+  """
+  @type source :: Figler.Scene.source()
 
   @doc """
   Extracts the raw Figma Kiwi `Message` binary from any supported scene input.
   """
   @spec payload!(binary()) :: binary()
-  def payload!(binary) when is_binary(binary),
-    do: Error.protect(:extract_payload, fn -> do_payload!(binary) end)
+  def payload!(binary) when is_binary(binary), do: binary |> source!() |> elem(0)
 
-  defp do_payload!(<<"PK", _rest::binary>> = zip_binary) do
+  @doc """
+  Extracts the raw `Message` binary and its embedded schema from any supported
+  scene input.
+  """
+  @spec source!(binary()) :: source()
+  def source!(binary) when is_binary(binary),
+    do: Error.protect(:extract_payload, fn -> do_source!(binary) end)
+
+  @doc """
+  Normalizes a payload binary or source into a source.
+  """
+  @spec to_source(binary() | source()) :: source()
+  def to_source({payload, schema} = source) when is_binary(payload) and is_binary(schema),
+    do: source
+
+  def to_source(payload) when is_binary(payload), do: {payload, <<>>}
+
+  defp do_source!(<<"PK", _rest::binary>> = zip_binary) do
     zip_binary
     |> unzip_canvas!()
-    |> do_payload!()
+    |> do_source!()
   end
 
-  defp do_payload!(<<"fig-kiwi", _rest::binary>> = binary), do: Container.data(binary)
-  defp do_payload!(binary), do: binary
+  defp do_source!(<<"fig-kiwi", _rest::binary>> = binary), do: Container.source(binary)
+  defp do_source!(binary), do: {binary, <<>>}
 
   @doc """
   Returns a native scene index resource for a binary, graph, index, or resource.
   """
   @spec resource(binary() | Graph.t() | Index.t() | reference()) :: reference()
   def resource(binary) when is_binary(binary), do: binary |> Figler.Scene.index() |> resource()
+
+  def resource(%Graph{resource: nil, source: {payload, _schema} = source})
+      when is_binary(payload),
+      do: SceneNifs.build_index(source)
+
   def resource(%Graph{resource: nil, source: source}) when is_binary(source), do: resource(source)
   def resource(%Graph{resource: resource}), do: resource
   def resource(%Index{resource: resource}), do: resource

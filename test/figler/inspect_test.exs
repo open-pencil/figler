@@ -65,13 +65,11 @@ defmodule Figler.InspectTest do
     assert inspect(summary) == "#Figler.Scene.Summary<nodes=10 roots=1 parented=9 types=1>"
 
     graph = %Graph{
-      resource: make_ref(),
+      resource: nil,
       mode: :projected,
-      stages: [:populate_instances, :symbol_overrides],
-      stats: %{resolver: :projected_index}
+      nodes: %{{0, 1} => %Figler.Scene.Node{guid: "0:1", node_type: "canvas"}}
     }
 
-    assert inspect(graph) ==
-             "#Figler.Scene.Graph<mode=projected stages=2 resolver=projected_index>"
+    assert inspect(graph) == "#Figler.Scene.Graph<mode=projected nodes=1 unresolved=0>"
   end
 end

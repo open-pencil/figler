@@ -3,35 +3,20 @@ defmodule Figler.Scene.Graph.DiffTest do
 
   alias Figler.Scene.Graph
 
-  import Figler.Test.GraphBuilder
+  @fixture "test/fixtures/openpencil/variable-override-precedence.fig"
 
-  test "diff reports effective changes in a graph subtree" do
-    graph =
-      [
-        component({1, 1}, name: "Button"),
-        text({1, 2}, {1, 1}, "Default"),
-        instance({2, 1}, {1, 1}, symbol_overrides: [symbol_override([{1, 2}], %{text: "Submit"})])
-      ]
-      |> resolve(stages: [:populate_instances, :symbol_overrides])
-
-    assert [
-             %{
-               guid: "clone:2:1/1:2",
-               changed: [%{field: :text, source: "Default", resolved: "Submit"}]
-             }
-           ] =
-             Graph.diff(graph, root: "2:1")
+  setup_all do
+    {:ok, graph: @fixture |> File.read!() |> Figler.Scene.graph(resolve_variables: false)}
   end
 
-  test "diff returns empty list when effective nodes match sources" do
-    graph =
-      [
-        component({1, 1}, name: "Button"),
-        text({1, 2}, {1, 1}, "Default"),
-        instance({2, 1}, {1, 1})
-      ]
-      |> resolve(stages: [:populate_instances])
+  test "reports fields an instance's overrides changed in its subtree", %{graph: graph} do
+    assert [%{guid: "clone:9:1472/9:1466/9:1462", changed: changed}] =
+             graph |> Graph.diff(root: "9:1472") |> Enum.filter(&(&1.guid =~ "9:1462"))
 
-    assert Graph.diff(graph, root: "2:1") == []
+    assert %{field: :text, resolved: "Different"} = Enum.find(changed, &(&1.field == :text))
+  end
+
+  test "returns an empty list for an untouched component", %{graph: graph} do
+    assert Graph.diff(graph, root: "9:1461") == []
   end
 end

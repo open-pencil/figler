@@ -21,4 +21,5 @@ defmodule Figler.Schema.ExpressionFunction do
   enum_value(:negate, 17)
   enum_value(:is_truthy, 18)
   enum_value(:keyframe, 19)
+  enum_value(:compose_color, 20)
 end

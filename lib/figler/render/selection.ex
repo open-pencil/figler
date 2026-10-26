@@ -28,7 +28,7 @@ defmodule Figler.Render.Selection do
     parsed = GUID.parse(value)
 
     cond do
-      parsed && Map.has_key?(graph.nodes, parsed) ->
+      parsed && Graph.node_at(graph, parsed) != nil ->
         {:ok, parsed}
 
       is_binary(value) ->
@@ -43,7 +43,7 @@ defmodule Figler.Render.Selection do
     Enum.find_value(pages, {:error, :render_root_not_found}, fn page ->
       guid = GUID.parse(page.guid)
 
-      case Map.get(graph.nodes, guid) do
+      case Graph.node_at(graph, guid) do
         %Node{name: ^name} -> {:ok, guid}
         _node -> false
       end

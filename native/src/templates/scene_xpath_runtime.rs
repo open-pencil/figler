@@ -29,6 +29,9 @@ mod scene_xpath_runtime {
     }
 
     __rq_scene_node_record!();
+
+    /// A record attribute XPath reads: its name and its value as text.
+    type RecordAttribute = (&'static str, String);
     #[derive(Clone, Debug)]
     struct SceneIndex {
         nodes: Vec<SceneNodeRecord>,
@@ -81,7 +84,7 @@ mod scene_xpath_runtime {
     __rq_scene_query_atom_statics!();
 
     impl SceneNodeRecord {
-        fn attr(&self, index: usize) -> Option<(&'static str, String)> {
+        fn attr(&self, index: usize) -> Option<RecordAttribute> {
             scene_node_record_attr(self, index)
         }
         fn attr_count(&self) -> usize {
@@ -508,12 +511,7 @@ mod scene_xpath_runtime {
                 0 => break,
                 1 => text = Some(decoder.read_string_value()?),
                 __rq_scene_text_data_skip_arms => unreachable!(),
-                field => {
-                    return Err(Error::Term(Box::new(format!(
-                        "unknown field {} while decoding scene text data",
-                        field
-                    ))));
-                }
+                field => kiwi_unknown_field(decoder, "TextData", field)?,
             }
         }
         Ok(text)
@@ -525,12 +523,7 @@ mod scene_xpath_runtime {
                 0 => break,
                 1 => guid = Some(read_guid_value(decoder)?.to_string()),
                 __rq_scene_style_id_skip_arms => unreachable!(),
-                field => {
-                    return Err(Error::Term(Box::new(format!(
-                        "unknown field {} while decoding scene style id",
-                        field
-                    ))));
-                }
+                field => kiwi_unknown_field(decoder, "StyleId", field)?,
             }
         }
         Ok(guid)
@@ -540,8 +533,9 @@ mod scene_xpath_runtime {
     }
     pub fn build_scene_index_value(
         bytes: Binary<'_>,
+        schema: Option<&KiwiRuntimeSchema>,
     ) -> NifResult<ResourceArc<SceneIndexResource>> {
-        let mut decoder = Decoder::new(bytes.as_slice());
+        let mut decoder = Decoder::with_schema(bytes.as_slice(), schema);
         let mut nodes = Vec::new();
         decode_scene_index_message_from_decoder(&mut decoder, &mut nodes)?;
         decoder.finish()?;
@@ -550,8 +544,9 @@ mod scene_xpath_runtime {
 
     pub fn build_scene_index_with_summary_value(
         bytes: Binary<'_>,
+        schema: Option<&KiwiRuntimeSchema>,
     ) -> NifResult<(ResourceArc<SceneIndexResource>, SceneSummary)> {
-        let mut decoder = Decoder::new(bytes.as_slice());
+        let mut decoder = Decoder::with_schema(bytes.as_slice(), schema);
         let mut nodes = Vec::new();
         decode_scene_index_message_from_decoder(&mut decoder, &mut nodes)?;
         decoder.finish()?;
@@ -587,19 +582,21 @@ mod scene_xpath_runtime {
     pub fn query_scene_xpath_value<'a>(
         env: Env<'a>,
         bytes: Binary<'a>,
+        schema: Option<&KiwiRuntimeSchema>,
         xpath: String,
     ) -> NifResult<Term<'a>> {
-        let resource = build_scene_index_value(bytes)?;
+        let resource = build_scene_index_value(bytes, schema)?;
         query_scene_index_value(env, resource, xpath)
     }
 
     pub fn query_scene_xpath_fields_value<'a>(
         env: Env<'a>,
         bytes: Binary<'a>,
+        schema: Option<&KiwiRuntimeSchema>,
         xpath: String,
         fields: Vec<String>,
     ) -> NifResult<Term<'a>> {
-        let resource = build_scene_index_value(bytes)?;
+        let resource = build_scene_index_value(bytes, schema)?;
         query_scene_index_fields_value(env, resource, xpath, fields)
     }
 

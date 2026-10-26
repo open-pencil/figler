@@ -25,24 +25,27 @@ defmodule Figler.Render.VectorNetwork.Region do
   @moduledoc "A filled editable-vector region composed from ordered segment loops."
 
   @enforce_keys [:winding_rule, :loops]
-  defstruct [:winding_rule, :loops]
+  defstruct [:winding_rule, :loops, style_id: 0]
 
   @type t :: %__MODULE__{
           winding_rule: :even_odd | :winding,
-          loops: [[non_neg_integer()]]
+          loops: [[non_neg_integer()]],
+          style_id: non_neg_integer()
         }
 end
 
 defmodule Figler.Render.VectorNetwork.Ref do
   @moduledoc "A normalized reference to an editable-vector blob and its source coordinate size."
 
+  alias Figler.Render.Paint
   alias Figler.Render.Vector
 
-  defstruct [:blob_index, :normalized_size]
+  defstruct [:blob_index, :normalized_size, style_fills: %{}]
 
   @type t :: %__MODULE__{
           blob_index: non_neg_integer() | nil,
-          normalized_size: Vector.t() | nil
+          normalized_size: Vector.t() | nil,
+          style_fills: %{optional(non_neg_integer()) => [Paint.t()]}
         }
 
   @doc false
@@ -59,8 +62,16 @@ defmodule Figler.Render.VectorNetwork.Ref do
   def from_sparse(value) when is_map(value) do
     %__MODULE__{
       blob_index: Map.get(value, :vector_network_blob),
-      normalized_size: Vector.from_sparse(Map.get(value, :normalized_size))
+      normalized_size: Vector.from_sparse(Map.get(value, :normalized_size)),
+      style_fills: style_fills(Map.get(value, :style_override_table) || [])
     }
+  end
+
+  # Fills a style override gives the paths and regions naming its style ID.
+  defp style_fills(overrides) do
+    for %{style_id: style_id, fill_paints: [_ | _] = paints} <- overrides,
+        into: %{},
+        do: {style_id, Enum.map(paints, &Paint.from_sparse/1)}
   end
 end
 
@@ -152,7 +163,13 @@ defmodule Figler.Render.VectorNetwork do
          values
        ) do
     with {:ok, {loops, rest}} <- loops(rest, loop_count, []) do
-      region = %Region{winding_rule: winding_rule(winding), loops: loops}
+      # The low bit is the winding rule; the rest is the region's style ID, which names its fill.
+      region = %Region{
+        winding_rule: winding_rule(Bitwise.band(winding, 1)),
+        style_id: Bitwise.bsr(winding, 1),
+        loops: loops
+      }
+
       regions(rest, remaining - 1, [region | values])
     end
   end
@@ -270,5 +287,5 @@ defmodule Figler.Render.VectorNetwork do
 
   defp finite?(value), do: is_float(value)
   defp winding_rule(0), do: :even_odd
-  defp winding_rule(_value), do: :winding
+  defp winding_rule(1), do: :winding
 end

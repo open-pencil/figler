@@ -1,10 +1,29 @@
 __rq_render_projection_field_constants!();
 
+fn render_nil<'a>(env: Env<'a>) -> Term<'a> {
+    Atom::from_str(env, "nil").unwrap().encode(env)
+}
+
+fn render_guid<'a>(env: Env<'a>, decoder: &mut Decoder<'_>) -> NifResult<Term<'a>> {
+    let session_id = decoder.read_var_uint()?;
+    let local_id = decoder.read_var_uint()?;
+    Ok((session_id, local_id).encode(env))
+}
+
+fn render_repeated_terms<'a>(
+    env: Env<'a>,
+    decoder: &mut Decoder<'_>,
+    decode: KiwiDecodeFn,
+) -> NifResult<Term<'a>> {
+    let values = decoder.read_repeated(|decoder| decode(env, decoder))?;
+    Ok(values.encode(env))
+}
+
 fn render_vector_data_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let nil = graph_seed_nil(env);
+    let nil = render_nil(env);
     let mut blob_index = nil;
     let mut normalized_size = nil;
 
@@ -23,7 +42,7 @@ fn render_vector_data_from_decoder<'a>(
                     skip_node_change_from_decoder(decoder)?;
                 }
             }
-            _field => return Err(rustler::Error::BadArg),
+            field => kiwi_unknown_field(decoder, "VectorData", field)?,
         }
     }
 
@@ -37,7 +56,7 @@ fn render_projection_node_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Term<'a>> {
-    let nil = graph_seed_nil(env);
+    let nil = render_nil(env);
     let empty = Vec::<Term<'a>>::new().encode(env);
     let mut guid = nil;
     let mut node_type = nil;
@@ -89,7 +108,7 @@ fn render_projection_node_from_decoder<'a>(
     loop {
         match decoder.read_var_uint()? {
             0 => break,
-            RENDER_FIELD_GUID => guid = graph_seed_guid(env, decoder)?,
+            RENDER_FIELD_GUID => guid = render_guid(env, decoder)?,
             RENDER_FIELD_NODE_TYPE => {
                 node_type = scene_node_type_name(decoder.read_var_uint()?).encode(env)
             }
@@ -120,7 +139,7 @@ fn render_projection_node_from_decoder<'a>(
                 text_underline_offset = decode_sparse_number_from_decoder(env, decoder)?
             }
             RENDER_FIELD_TEXT_DECORATION_FILL_PAINTS => {
-                text_decoration_fill_paints = graph_seed_repeated_terms(
+                text_decoration_fill_paints = render_repeated_terms(
                     env,
                     decoder,
                     decode_sparse_paint_from_decoder,
@@ -151,21 +170,21 @@ fn render_projection_node_from_decoder<'a>(
                 mask_type = decode_sparse_mask_type_from_decoder(env, decoder)?
             }
             RENDER_FIELD_EFFECTS => {
-                effects = graph_seed_repeated_terms(
+                effects = render_repeated_terms(
                     env,
                     decoder,
                     decode_sparse_effect_from_decoder,
                 )?
             }
             RENDER_FIELD_FILL_PAINTS => {
-                fill_paints = graph_seed_repeated_terms(
+                fill_paints = render_repeated_terms(
                     env,
                     decoder,
                     decode_sparse_paint_from_decoder,
                 )?
             }
             RENDER_FIELD_STROKE_PAINTS => {
-                stroke_paints = graph_seed_repeated_terms(
+                stroke_paints = render_repeated_terms(
                     env,
                     decoder,
                     decode_sparse_paint_from_decoder,
@@ -194,14 +213,14 @@ fn render_projection_node_from_decoder<'a>(
                 dash_pattern = values.encode(env);
             }
             RENDER_FIELD_FILL_GEOMETRY => {
-                fill_geometry = graph_seed_repeated_terms(
+                fill_geometry = render_repeated_terms(
                     env,
                     decoder,
                     decode_sparse_path_from_decoder,
                 )?
             }
             RENDER_FIELD_STROKE_GEOMETRY => {
-                stroke_geometry = graph_seed_repeated_terms(
+                stroke_geometry = render_repeated_terms(
                     env,
                     decoder,
                     decode_sparse_path_from_decoder,
@@ -251,7 +270,7 @@ fn document_page_from_decoder<'a>(
     env: Env<'a>,
     decoder: &mut Decoder<'_>,
 ) -> NifResult<Option<Term<'a>>> {
-    let nil = graph_seed_nil(env);
+    let nil = render_nil(env);
     let mut guid = nil;
     let mut node_type = None;
     let mut name = nil;
@@ -259,7 +278,7 @@ fn document_page_from_decoder<'a>(
     loop {
         match decoder.read_var_uint()? {
             0 => break,
-            RENDER_FIELD_GUID => guid = graph_seed_guid(env, decoder)?,
+            RENDER_FIELD_GUID => guid = render_guid(env, decoder)?,
             RENDER_FIELD_NODE_TYPE => node_type = Some(decoder.read_var_uint()?),
             RENDER_FIELD_NAME => name = decoder.read_string(env)?,
             field => skip_fig_node_change_field(decoder, field)?,
@@ -292,7 +311,7 @@ fn document_metadata_from_decoder<'a>(
                 }
             }
             DOCUMENT_FIELD_BLOBS => {
-                blobs = graph_seed_repeated_terms(env, decoder, decode_sparse_blob_from_decoder)?
+                blobs = render_repeated_terms(env, decoder, decode_sparse_blob_from_decoder)?
             }
             field => skip_fig_message_field(decoder, field)?,
         }
@@ -307,6 +326,7 @@ fn document_metadata_from_decoder<'a>(
 fn render_projection_nodes_from_slices<'a>(
     env: Env<'a>,
     bytes: &[u8],
+    schema: Option<&KiwiRuntimeSchema>,
     metas: &[GraphFocusMeta],
     wanted: Option<&std::collections::HashSet<GraphFocusGuid>>,
 ) -> NifResult<Term<'a>> {
@@ -319,7 +339,7 @@ fn render_projection_nodes_from_slices<'a>(
         };
 
         if keep {
-            let mut decoder = Decoder::new(&bytes[meta.byte_start..meta.byte_end]);
+            let mut decoder = Decoder::with_schema(&bytes[meta.byte_start..meta.byte_end], schema);
             records.push(render_projection_node_from_decoder(env, &mut decoder)?);
             decoder.finish()?;
         }

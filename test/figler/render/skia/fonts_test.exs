@@ -11,7 +11,8 @@ defmodule Figler.Render.Skia.FontsTest do
     node = text_node("__Figler Missing Font__", <<0x10FFFF::utf8>>)
     guid = node.guid
 
-    assert {:ok, result} = Fonts.resolve([node], [])
+    # Some systems ship a font covering every code point, such as macOS's LastResort.
+    assert {:ok, result} = Fonts.resolve([node], system_font_fallback: false)
     assert %{^guid => [warning]} = result.warnings
     assert warning.code == :font_unavailable
     assert warning.requested.family == "__Figler Missing Font__"

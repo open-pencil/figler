@@ -102,4 +102,116 @@ defmodule FiglerTest do
               context: %{reason: :invalid_message}
             }} = Figler.encode(document)
   end
+
+  describe "OpenPencil compatibility" do
+    alias Figler.Schema.{Color, GUID, Message, NodeChange, Paint, Vector}
+
+    test "minimal Message bytes match OpenPencil TypeScript codec" do
+      message = %Message{type: :node_changes, session_id: 12, node_changes: []}
+
+      assert Figler.encode_message(message) == <<1, 1, 2, 12, 4, 0, 0>>
+    end
+
+    test "Vector bytes match OpenPencil TypeScript codec" do
+      assert KiwiCodec.encode(%Vector{x: 1.5, y: -2.25}) == <<127, 0, 0, 128, 128, 1, 0, 32>>
+    end
+
+    test "GUID bytes match OpenPencil TypeScript codec" do
+      assert KiwiCodec.encode(%GUID{session_id: 12, local_id: 34}) == <<12, 34>>
+    end
+
+    test "Paint bytes match OpenPencil TypeScript codec" do
+      paint = %Paint{
+        type: :solid,
+        color: %Color{r: 1.0, g: 0.5, b: 0.25, a: 1.0},
+        opacity: 0.75,
+        visible: true
+      }
+
+      assert KiwiCodec.encode(paint) ==
+               <<1, 0, 2, 127, 0, 0, 0, 126, 0, 0, 0, 125, 0, 0, 0, 127, 0, 0, 0, 3, 126, 0, 0,
+                 128, 4, 1, 0>>
+    end
+
+    test "NodeChange bytes match OpenPencil TypeScript codec" do
+      node_change = %NodeChange{
+        guid: %GUID{session_id: 12, local_id: 34},
+        type: :rectangle,
+        name: "Rect 1",
+        size: %Vector{x: 100.0, y: 50.0},
+        fill_paints: [
+          %Paint{type: :solid, color: %Color{r: 1.0, g: 0.0, b: 0.0, a: 1.0}, visible: true}
+        ]
+      }
+
+      assert KiwiCodec.encode(node_change) ==
+               <<1, 12, 34, 4, 10, 5, 82, 101, 99, 116, 32, 49, 0, 11, 133, 0, 0, 144, 132, 0, 0,
+                 144, 38, 1, 1, 0, 2, 127, 0, 0, 0, 0, 0, 127, 0, 0, 0, 4, 1, 0, 0>>
+    end
+
+    test "Message with NodeChange bytes match OpenPencil TypeScript codec" do
+      message = %Message{
+        type: :node_changes,
+        session_id: 12,
+        node_changes: [
+          %NodeChange{
+            guid: %GUID{session_id: 12, local_id: 34},
+            type: :rectangle,
+            name: "Rect 1",
+            size: %Vector{x: 100.0, y: 50.0}
+          }
+        ]
+      }
+
+      assert Figler.encode_message(message) ==
+               <<1, 1, 2, 12, 4, 1, 1, 12, 34, 4, 10, 5, 82, 101, 99, 116, 32, 49, 0, 11, 133, 0,
+                 0, 144, 132, 0, 0, 144, 0, 0>>
+    end
+  end
+
+  test "decodes generated primitive structs through Elixir codec" do
+    guid = struct(Figler.Schema.GUID, session_id: 12, local_id: 34)
+    vector = struct(Figler.Schema.Vector, x: 100.0, y: 50.0)
+
+    parent_index = struct(Figler.Schema.ParentIndex, guid: guid, position: "!")
+    image = struct(Figler.Schema.Image, hash: <<1, 2, 3>>, name: "Preview", data_blob: 7)
+    partial_image = struct(Figler.Schema.Image, name: "Preview")
+
+    assert KiwiCodec.decode(KiwiCodec.encode(guid), Figler.Schema.GUID) == guid
+    assert KiwiCodec.decode(KiwiCodec.encode(vector), Figler.Schema.Vector) == vector
+
+    assert KiwiCodec.decode(KiwiCodec.encode(parent_index), Figler.Schema.ParentIndex) ==
+             parent_index
+
+    node_change =
+      struct(Figler.Schema.NodeChange,
+        guid: guid,
+        phase: :created,
+        parent_index: parent_index,
+        type: :rectangle,
+        name: "Rect 1",
+        size: vector
+      )
+
+    message =
+      struct(Figler.Schema.Message,
+        type: :node_changes,
+        session_id: 12,
+        node_changes: [node_change]
+      )
+
+    partial_message = struct(Figler.Schema.Message, session_id: 12)
+    unknown_enum_message = struct(Figler.Schema.Message, type: 999)
+
+    assert KiwiCodec.decode(KiwiCodec.encode(image), Figler.Schema.Image) == image
+    assert KiwiCodec.decode(KiwiCodec.encode(partial_image), Figler.Schema.Image) == partial_image
+
+    assert KiwiCodec.decode(KiwiCodec.encode(node_change), Figler.Schema.NodeChange) ==
+             node_change
+
+    assert Figler.decode_message(KiwiCodec.encode(message)) == message
+    assert Figler.decode_message(KiwiCodec.encode(partial_message)) == partial_message
+
+    assert Figler.decode_message(KiwiCodec.encode(unknown_enum_message)) == unknown_enum_message
+  end
 end

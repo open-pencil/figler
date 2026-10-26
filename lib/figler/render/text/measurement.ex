@@ -19,6 +19,9 @@ defmodule Figler.Render.Text.Measurement do
   @spec pixels(t() | nil, number() | nil, kind()) :: float() | nil
   def pixels(nil, _font_size, _kind), do: nil
 
+  # Figma writes an auto line height as 100 percent: each line takes its font's own height.
+  def pixels(%__MODULE__{value: 100.0, units: :percent}, _font_size, :line_height), do: nil
+
   def pixels(%__MODULE__{value: value, units: :pixels}, _font_size, _kind), do: value
 
   def pixels(%__MODULE__{value: value, units: :percent}, font_size, _kind)

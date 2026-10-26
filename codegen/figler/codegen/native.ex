@@ -6,6 +6,7 @@ defmodule Figler.Codegen.Native do
 
   alias Figler.Codegen.Native.SupportFunction
   alias Figler.Codegen.Native.Focus
+  alias Figler.Codegen.Native.Graph
   alias Figler.Codegen.Native.Scene
   alias KiwiCodec.RustlerGenerator.Skip
   alias KiwiCodec.Schema
@@ -19,6 +20,18 @@ defmodule Figler.Codegen.Native do
 
     [
       graph_focus_helpers: SupportFunction.focus_helper_items(),
+      graph_records: Graph.Records.items(),
+      graph_prepare: Graph.Prepare.items(),
+      graph_source_index: Graph.SourceIndex.items(),
+      graph_occurrence: Graph.Occurrence.items(),
+      graph_claims: Graph.Claims.items(),
+      graph_bindings: Graph.Bindings.items(),
+      graph_layer: Graph.Layer.items(),
+      graph_geometry: Graph.Geometry.items(),
+      graph_interpreter: Graph.Interpreter.items(),
+      graph_variables: Graph.Variables.items(),
+      graph_variable_bindings: Graph.VariableBindings.items(),
+      graph_materialize: Graph.Materialize.items(),
       node_type_name_arms: node_type_name_arms(definition_map),
       graph_focus_decoders:
         Focus.render(definition_map, &Skip.message_arm/2, &Scene.render_template/2)
@@ -26,28 +39,25 @@ defmodule Figler.Codegen.Native do
   end
 
   def source(%Schema{} = schema) do
-    {graph_seed_record, splices} =
+    {render_projection_record, splices} =
       schema
       |> render_splices()
-      |> Keyword.pop!(:graph_seed_record)
-
-    {render_projection_record, splices} = Keyword.pop!(splices, :render_projection_record)
+      |> Keyword.pop!(:render_projection_record)
 
     RustQ.render!(
       """
       __rq_include!("templates/scene_types.rs");
       __rq_graph_focus_helpers!();
       __rq_graph_focus_decoders!();
-      __rq_include!("templates/graph_seed_decoders.rs");
       __rq_include!("templates/render_projection_decoders.rs");
       __rq_include!("templates/scene_xpath_runtime.rs");
       __rq_include!("templates/scene_summary_decoders.rs");
+      __rq_include!("templates/graph.rs");
       __rq_include!("templates/scene_nifs.rs");
       """,
       "native/src/generated.scene.rs",
       include_dir: "native/src",
       bind: [
-        graph_seed_record: {:expr, Rust.render(graph_seed_record)},
         render_projection_record: {:expr, Rust.render(render_projection_record)}
       ],
       splice: splices

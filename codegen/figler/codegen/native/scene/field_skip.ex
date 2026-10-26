@@ -17,13 +17,12 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
     Request for one compact scene skip-field decoder invocation.
     """
 
-    @enforce_keys [:definition, :function, :error_name]
-    defstruct [:definition, :function, :error_name]
+    @enforce_keys [:definition, :function]
+    defstruct [:definition, :function]
 
     @type t :: %__MODULE__{
             definition: String.t(),
-            function: atom(),
-            error_name: String.t()
+            function: atom()
           }
   end
 
@@ -44,11 +43,7 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
   end
 
   @spec decoder(map(), Decoder.t()) :: RustQ.Rust.Fragment.t()
-  def decoder(definition_map, %Decoder{
-        definition: definition,
-        function: function,
-        error_name: error
-      }) do
+  def decoder(definition_map, %Decoder{definition: definition, function: function}) do
     fields =
       definition_map
       |> Map.fetch!(definition)
@@ -60,7 +55,7 @@ defmodule Figler.Codegen.Native.Scene.FieldSkip do
       fn: function,
       decoder: :decoder,
       field: :field,
-      definition: error,
+      definition: definition,
       skip_fields: Enum.map(fields, &field_row/1)
     )
   end

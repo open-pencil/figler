@@ -145,10 +145,10 @@ defimpl Inspect, for: Figler.Scene.Graph do
     Algebra.concat([
       "#Figler.Scene.Graph<mode=",
       to_string(graph.mode),
-      " stages=",
-      to_string(length(graph.stages)),
-      " resolver=",
-      to_string(Map.get(graph.stats, :resolver, :unknown)),
+      " nodes=",
+      to_string(Figler.Scene.Graph.node_count(graph)),
+      " unresolved=",
+      to_string(length(Figler.Scene.Graph.unresolved(graph))),
       ">"
     ])
   end

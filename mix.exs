@@ -28,7 +28,7 @@ defmodule Figler.MixProject do
     [extra_applications: [:logger]]
   end
 
-  defp elixirc_paths(:test), do: ["lib", "codegen"]
+  defp elixirc_paths(:test), do: ["lib", "codegen", "test/support"]
   defp elixirc_paths(_env), do: ["lib"]
 
   defp aliases do
@@ -41,6 +41,7 @@ defmodule Figler.MixProject do
         "rust.fmt --check",
         "rust.check",
         "rust.clippy",
+        "rust.test",
         "test",
         "credo --strict",
         "dialyzer --plt",
@@ -53,7 +54,8 @@ defmodule Figler.MixProject do
       "native.gen.check": "rustq.gen --check",
       "rust.fmt": &rust_fmt/1,
       "rust.check": &rust_check/1,
-      "rust.clippy": &rust_clippy/1
+      "rust.clippy": &rust_clippy/1,
+      "rust.test": &rust_test/1
     ]
   end
 
@@ -139,6 +141,10 @@ defmodule Figler.MixProject do
     rust_cmd(["check", "--manifest-path", "native/Cargo.toml"])
   end
 
+  defp rust_test(_args) do
+    rust_cmd(["test", "--manifest-path", "native/Cargo.toml", "--lib"])
+  end
+
   defp rust_clippy(_args) do
     rust_cmd([
       "clippy",
@@ -175,12 +181,19 @@ defmodule Figler.MixProject do
     ]
   end
 
+  # KIWI_CODEC_PATH and RUSTQ_PATH point at local checkouts, to try changes to them here.
   defp kiwi_codec_dep do
-    {:kiwi_codec, "~> 0.3.1"}
+    case System.get_env("KIWI_CODEC_PATH") do
+      nil -> {:kiwi_codec, "~> 0.7.0"}
+      path -> {:kiwi_codec, path: path, override: true}
+    end
   end
 
   defp rustq_dep do
-    {:rustq, "~> 1.0.0-rc.3", only: [:dev, :test], runtime: false}
+    case System.get_env("RUSTQ_PATH") do
+      nil -> {:rustq, "~> 1.0.0-rc.20", only: [:dev, :test], runtime: false}
+      path -> {:rustq, path: path, only: [:dev, :test], runtime: false, override: true}
+    end
   end
 
   defp json_codec_dep do
@@ -277,7 +290,7 @@ defmodule Figler.MixProject do
       "Scene graph": [~r/^Figler\.Scene\.Graph(\.Options)?$/],
       "Scene graph diagnostics": [~r/^Figler\.Scene\.Graph\.(Oracle|Profile)(\.|$)/],
       "Scene graph internals": [
-        ~r/^Figler\.Scene\.Graph\.(Build|Component|Diff|GUID|Nodes|Patch|Provenance|Seed|Symbol)(\.|$)/
+        ~r/^Figler\.Scene\.Graph\.(Diff|GUID|Materialize|Occurrence|OpenPencilOracle|Variables)(\.|$)/
       ],
       Documents: [Figler.Document, Figler.Document.Page],
       "Scene queries": [~r/^Figler\.Scene(\.|$)/],

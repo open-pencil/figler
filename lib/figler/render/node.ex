@@ -116,8 +116,8 @@ defmodule Figler.Render.Node do
   def clipping_container_type?(type), do: type in @clipping_container_types
 
   @doc false
-  @spec from_effective(SceneNode.t(), GUID.figma_guid(), SourceNode.t() | nil) :: t()
-  def from_effective(%SceneNode{} = graph_node, source_guid, source) do
+  @spec from_effective(SceneNode.t(), GUID.figma_guid(), SourceNode.t() | nil, map()) :: t()
+  def from_effective(%SceneNode{} = graph_node, source_guid, source, record \\ %{}) do
     node_type = normalize_node_type(graph_node.node_type)
     {text_source, source_attrs} = source |> source_attrs(graph_node) |> Map.pop(:text_data)
     {vector_network, source_attrs} = Map.pop(source_attrs, :vector_data)
@@ -125,7 +125,13 @@ defmodule Figler.Render.Node do
     {stroke_attrs, source_attrs} = Map.split(source_attrs, Stroke.source_fields())
     {shape_attrs, source_attrs} = Map.split(source_attrs, Shape.source_fields())
     {corner_attrs, source_attrs} = Map.split(source_attrs, CornerRadii.source_fields())
-    text_node = graph_node |> Map.from_struct() |> Map.merge(text_attrs)
+    # Saved glyphs come only from the effective record: an override that reshapes the text
+    # drops them there, and the source's would draw the old text.
+    text_node =
+      graph_node
+      |> Map.from_struct()
+      |> Map.merge(text_attrs)
+      |> Map.put(:derived_text_data, Map.get(record, :derived_text_data))
 
     attrs =
       graph_node

@@ -15,12 +15,11 @@ defmodule Figler.Codegen.Native.Scene do
   alias Figler.Codegen.Native.Scene.FieldSkip
   alias Figler.Codegen.Native.Scene.Record
   alias Figler.Codegen.Native.Scene.SkipFieldHelpers
-  alias Figler.Native.Entrypoints
   alias Figler.Render.Projection, as: RenderSourceProjection
-  alias Figler.Scene.Graph.Seed.Projection, as: SeedProjection
   alias Figler.Scene.Projection
   alias KiwiCodec.RustlerGenerator.Skip
   alias RustQ.Rust.AST.Builder, as: A
+  alias RustQ.Rust.Identifier
   alias RustQ.Rustler.Nif
 
   def render(definition_map) do
@@ -29,14 +28,12 @@ defmodule Figler.Codegen.Native.Scene do
       scene_message_skip_field_decoder:
         FieldSkip.decoder(definition_map, %FieldSkip.Decoder{
           definition: "Message",
-          function: :skip_fig_message_field,
-          error_name: "scene summary"
+          function: :skip_fig_message_field
         }),
       scene_node_skip_field_decoder:
         FieldSkip.decoder(definition_map, %FieldSkip.Decoder{
           definition: "NodeChange",
-          function: :skip_fig_node_change_field,
-          error_name: "scene node"
+          function: :skip_fig_node_change_field
         }),
       scene_text_data_skip_arms:
         definition_map
@@ -54,8 +51,6 @@ defmodule Figler.Codegen.Native.Scene do
       scene_query_node: [Record.query_node_struct()],
       scene_node_record: [Record.scene_node_record_struct()],
       scene_record_build_fields: Record.record_build_fields(),
-      graph_seed_record: Record.seed_record_expr(),
-      graph_seed_stage_flags: graph_seed_stage_flags(),
       render_projection_field_constants: RenderProjection.field_constants(definition_map),
       render_projection_record:
         RenderSourceProjection.field_names() |> Enum.map(&A.var/1) |> A.vec(),
@@ -68,27 +63,33 @@ defmodule Figler.Codegen.Native.Scene do
     ]
   end
 
+  @nif_template "native/src/templates/scene_nifs.rs"
+
   def scene_nif_wrappers do
-    Nif.wrappers_from_source(
-      "native/src/templates/scene_nifs.rs",
-      Entrypoints.template_nifs(),
-      schedule: :dirty_cpu,
-      vis: :pub
-    )
+    Nif.wrappers_from_source(@nif_template, template_nifs(), schedule: :dirty_cpu, vis: :pub)
   end
+
+  @doc """
+  The NIFs the template implements: every public `name_impl` function becomes
+  NIF `name`, its signature read from the source.
+  """
+  @spec template_nifs() :: [{atom(), keyword()}]
+  def template_nifs do
+    for %RustQ.Syn.Function{name: name, visibility: :public} <-
+          RustQ.Syn.parse!(File.read!(@nif_template)).items,
+        String.ends_with?(name, "_impl"),
+        do: {name |> String.trim_trailing("_impl") |> Identifier.atom!(), []}
+  end
+
+  @doc "Metadata for the template NIFs, for generating their Elixir stubs."
+  @spec template_nif_functions() :: [{atom(), RustQ.Syn.Function.t()}]
+  def template_nif_functions, do: Nif.functions_from_source(@nif_template, template_nifs())
 
   def render_template(template, bindings) do
     path = Path.join(["native", "src", "templates", template])
     {splices, bindings} = Keyword.pop(bindings, :splice, [])
 
     RustQ.render!(File.read!(path), path, bind: bindings, splice: splices)
-  end
-
-  defp graph_seed_stage_flags do
-    Enum.map(SeedProjection.native_stage_flags(), fn {stage, flag} ->
-      name = stage |> Atom.to_string() |> String.upcase() |> then(&"GRAPH_SEED_STAGE_#{&1}")
-      A.const(name, :u8, A.lit(flag))
-    end)
   end
 
   defp scene_optional_fields, do: Enum.map(Record.optional_fields(), & &1.name)

@@ -2,13 +2,12 @@ defmodule Mix.Tasks.Figler.Profile.Graph do
   @moduledoc """
   Profiles effective graph construction.
 
-      mix figler.profile.graph --fixture path/to/file.fig --root 3740:112537 --until stack_layout
+      mix figler.profile.graph --fixture path/to/file.fig --root 3740:112537
 
   Environment fallbacks:
 
     * `FIGLER_PROFILE_FIXTURE`
     * `FIGLER_PROFILE_ROOTS` - comma-separated roots
-    * `FIGLER_PROFILE_UNTIL`
   """
 
   use Mix.Task
@@ -16,22 +15,10 @@ defmodule Mix.Tasks.Figler.Profile.Graph do
   alias Figler.Scene
   alias Figler.Scene.Graph
   alias Figler.Scene.Graph.Profile.FinalGraphStats
-  alias Figler.Scene.Graph.Profile.GraphStats
-  alias Figler.Scene.Graph.Profile.Stage
+  alias Figler.Scene.Graph.Profile.Phase
   alias Figler.Scene.Graph.Profile.Summary
 
   @shortdoc "Profiles Figler effective graph construction"
-
-  @stage_atoms %{
-    "populate_instances" => :populate_instances,
-    "symbol_overrides" => :symbol_overrides,
-    "sync_overrides" => :sync_overrides,
-    "component_props" => :component_props,
-    "sync_component_props" => :sync_component_props,
-    "derived_symbol_data" => :derived_symbol_data,
-    "stack_layout" => :stack_layout,
-    "variables" => :variables
-  }
 
   @impl Mix.Task
   def run(args) do
@@ -39,29 +26,26 @@ defmodule Mix.Tasks.Figler.Profile.Graph do
 
     {opts, _argv, _invalid} =
       OptionParser.parse(args,
-        strict: [fixture: :string, root: :keep, roots: :string, until: :string, output: :string],
-        aliases: [f: :fixture, r: :root, u: :until, o: :output]
+        strict: [fixture: :string, root: :keep, roots: :string, output: :string],
+        aliases: [f: :fixture, r: :root, o: :output]
       )
 
     fixture = option(opts, :fixture, "FIGLER_PROFILE_FIXTURE") || raise_fixture!()
     roots = roots(opts)
-    until_stage = option(opts, :until, "FIGLER_PROFILE_UNTIL") || "stack_layout"
 
     {payload_us, payload} =
-      :timer.tc(fn -> fixture |> File.read!() |> Scene.payload!() end)
+      :timer.tc(fn -> fixture |> File.read!() |> Scene.source!() end)
 
-    profile_opts = [root: roots, until: stage_atom(until_stage)]
+    profile_opts = if roots == [], do: [], else: [root: roots]
     profile = Graph.profile(payload, profile_opts)
 
     summary = %Summary{
       fixture: fixture,
       roots: roots,
-      until: until_stage,
       payload_ms: ms(payload_us),
-      initial_ms: profile.initial_ms,
       total_ms: profile.total_ms,
       final_graph: final_graph_stats(profile.graph),
-      stages: Enum.map(profile.stages, &stage_summary/1)
+      phases: Enum.map(profile.phases, &struct!(Phase, &1))
     }
 
     json = summary |> JSONCodec.dump() |> Jason.encode!(pretty: true)
@@ -102,19 +86,6 @@ defmodule Mix.Tasks.Figler.Profile.Graph do
     |> Graph.stats()
     |> Map.take([:node_count, :clone_count, :unresolved_count, :applied_count])
     |> FinalGraphStats.from_map!()
-  end
-
-  defp stage_summary(stage) do
-    %Stage{
-      stage: stage.stage,
-      ms: stage.ms,
-      graph: GraphStats.from_map!(stage.graph)
-    }
-  end
-
-  defp stage_atom(stage) do
-    stage = String.trim(stage)
-    Map.get(@stage_atoms, stage) || raise ArgumentError, "unknown graph stage #{inspect(stage)}"
   end
 
   defp ms(us), do: us / 1_000

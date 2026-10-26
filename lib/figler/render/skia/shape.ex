@@ -6,16 +6,19 @@ defmodule Figler.Render.Skia.Shape do
   alias Figler.Render.Node
   alias Figler.Render.Shape, as: PrimitiveShape
   alias Figler.Render.Shape.Arc
+  alias Figler.Render.Shape.Outline
   alias Figler.Render.Shape.Polygon
   alias Figler.Render.Shape.Star
   alias Figler.Render.Skia.Paint
   alias Figler.Render.Stroke
+  alias Figler.Render.Text.Glyphs
 
   @rectangular_types [:frame, :instance, :rectangle, :rounded_rectangle, :section, :symbol]
   @primitive_path_types [:regular_polygon, :star]
   @stroke_alignment_types @rectangular_types ++
                             @primitive_path_types ++ [:boolean_operation, :ellipse, :vector]
-  @effect_shape_types @stroke_alignment_types ++ [:text]
+  @text_types [:text, :text_path]
+  @effect_shape_types @stroke_alignment_types ++ @text_types
   @supported_types @effect_shape_types ++ [:line]
 
   @spec supported_type?(Figler.Schema.NodeType.t() | :unknown) :: boolean()
@@ -23,6 +26,13 @@ defmodule Figler.Render.Skia.Shape do
 
   @doc false
   @spec issues(Node.t()) :: [map()]
+  # Polygon and star outlines draw corner smoothing exactly.
+  def issues(%Node{node_type: type, shape: shape, corners: %CornerRadii{} = corners})
+      when type in @primitive_path_types do
+    PrimitiveShape.issues(shape) ++
+      Enum.reject(CornerRadii.warnings(corners), &(&1.code == :corner_smoothing_approximated))
+  end
+
   def issues(%Node{shape: shape, corners: %CornerRadii{} = corners}) do
     PrimitiveShape.issues(shape) ++ CornerRadii.warnings(corners)
   end
@@ -37,8 +47,65 @@ defmodule Figler.Render.Skia.Shape do
   end
 
   @spec draw_node(Skia.Document.t(), Node.t(), map()) :: Skia.Document.t()
-  def draw_node(document, node, assets) do
-    document = Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))
+  # Path text draws its stroke outlines first, under the glyphs they surround.
+  def draw_node(document, %Node{node_type: :text_path} = node, assets),
+    do:
+      document
+      |> draw_strokes(node, assets)
+      |> draw_fills(node, assets)
+      |> draw_emoji(node, assets)
+
+  def draw_node(document, node, assets),
+    do:
+      document
+      |> draw_fills(node, assets)
+      |> draw_emoji(node, assets)
+      |> draw_strokes(node, assets)
+
+  # Emoji are drawn once, apart from the fills that paint the other glyphs.
+  defp draw_emoji(document, node, %{text_emoji: emoji}) when is_map_key(emoji, node.guid) do
+    Enum.reduce(emoji[node.guid], document, fn {text, opts}, drawn ->
+      Skia.text(drawn, text, opts)
+    end)
+  end
+
+  defp draw_emoji(document, _node, _assets), do: document
+
+  # A vector whose paths have fills of their own draws each path in them, and the rest in its
+  # own fills.
+  defp draw_fills(document, %Node{node_type: :vector} = node, assets) do
+    paths = geometry_paths(assets, node, :fill)
+
+    if Enum.any?(paths, & &1.fills),
+      do: Enum.reduce(paths, document, &draw_path_fills(&2, node, &1, assets)),
+      else: Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))
+  end
+
+  defp draw_fills(document, node, assets),
+    do: Enum.reduce(node.fill_paints || [], document, &draw_fill(&2, node, &1, assets))
+
+  defp draw_path_fills(document, node, geometry, assets) do
+    Enum.reduce(geometry.fills || node.fill_paints || [], document, fn paint, drawn ->
+      draw_path_fill(drawn, node, geometry, paint, assets)
+    end)
+  end
+
+  defp draw_path_fill(document, node, geometry, paint, assets) do
+    case Paint.resolve(paint, node.size, assets.images) do
+      {:ok, resolved} ->
+        path_opts = [fill: resolved.paint, fill_rule: geometry.fill_rule]
+        draw = &Skia.path(&1, geometry.path, path_opts)
+
+        if is_number(resolved.opacity) and resolved.opacity < 1,
+          do: Skia.layer(document, [opacity: resolved.opacity], draw),
+          else: draw.(document)
+
+      {:error, _reason} ->
+        document
+    end
+  end
+
+  defp draw_strokes(document, node, assets) do
     stroke = node.stroke || %Stroke{}
     Enum.reduce(node.stroke_paints || [], document, &draw_stroke(&2, node, &1, stroke, assets))
   end
@@ -54,7 +121,7 @@ defmodule Figler.Render.Skia.Shape do
   @spec stroke_alignment_supported?(Node.t(), map()) :: boolean()
   def stroke_alignment_supported?(%Node{node_type: type} = node, assets)
       when type in [:vector, :boolean_operation],
-      do: alignment_silhouette_paths(assets, node) != []
+      do: baked_stroke?(node, assets) or alignment_silhouette_paths(assets, node) != []
 
   def stroke_alignment_supported?(node, _assets), do: stroke_alignment_supported?(node)
 
@@ -176,6 +243,16 @@ defmodule Figler.Render.Skia.Shape do
     end)
   end
 
+  def draw_silhouette(document, %Node{node_type: type} = node, assets, opts, _effect_opts)
+      when type in @text_types and is_map_key(assets.text_glyphs, node.guid) do
+    path_opts = [
+      fill: Keyword.get(opts, :fill, :white),
+      blend_mode: Keyword.get(opts, :blend_mode, :src_over)
+    ]
+
+    draw_saved_text(document, node, assets, path_opts, false)
+  end
+
   def draw_silhouette(
         document,
         %Node{node_type: :text, text: text, size: size} = node,
@@ -276,7 +353,67 @@ defmodule Figler.Render.Skia.Shape do
   defp draw_resolved(document, node, kind, opts, _resolved, assets),
     do: draw_shape(document, node, kind, opts, assets)
 
-  defp draw_resolved_stroke(document, node, opts, resolved, assets, stroke)
+  # Figma saves a vector's stroke as an outline already offset for its alignment, which is
+  # painted like a fill; only a centred stroke of an unfilled vector follows its network.
+  defp draw_resolved_stroke(
+         document,
+         %Node{node_type: type} = node,
+         opts,
+         resolved,
+         assets,
+         stroke
+       )
+       when type in [:vector, :boolean_operation] and is_map_key(assets.geometries, node.guid) do
+    case Map.get(assets.geometries[node.guid], :stroke, []) do
+      [_ | _] = outlines ->
+        if network_centerline?(node, stroke),
+          do: draw_resolved(document, node, :stroke, opts, resolved, assets),
+          else: draw_stroke_outlines(document, node, outlines, opts, resolved, assets, stroke)
+
+      [] ->
+        draw_unbaked_stroke(document, node, opts, resolved, assets, stroke)
+    end
+  end
+
+  defp draw_resolved_stroke(document, node, opts, resolved, assets, stroke),
+    do: draw_unbaked_stroke(document, node, opts, resolved, assets, stroke)
+
+  # A saved stroke outline is already offset for its alignment.
+  defp baked_stroke?(node, assets),
+    do: match?(%{stroke: [_ | _]}, Map.get(assets.geometries, node.guid))
+
+  defp network_centerline?(node, stroke) do
+    stroke.align in [nil, :center] and node.corner_radius in [nil, 0, 0.0] and
+      not is_nil(node.vector_network) and
+      not Enum.any?(node.fill_paints || [], &(&1.visible != false))
+  end
+
+  defp draw_stroke_outlines(document, node, outlines, opts, resolved, assets, stroke) do
+    paint_opts = [fill: Keyword.fetch!(opts, :stroke)]
+
+    draw = fn canvas ->
+      Enum.reduce(outlines, canvas, fn geometry, drawn ->
+        Skia.path(drawn, geometry.path, Keyword.put(paint_opts, :fill_rule, geometry.fill_rule))
+      end)
+    end
+
+    draw =
+      if stroke.align == :inside,
+        do: fn canvas -> Skia.group(canvas, [], &draw.(clip_to_fill(&1, node, assets))) end,
+        else: draw
+
+    if is_number(resolved.opacity) and resolved.opacity < 1,
+      do: Skia.layer(document, [opacity: resolved.opacity], draw),
+      else: draw.(document)
+  end
+
+  defp clip_to_fill(document, node, assets) do
+    assets
+    |> geometry_paths(node, :fill)
+    |> Enum.reduce(document, &Skia.clip_path(&2, &1.path))
+  end
+
+  defp draw_unbaked_stroke(document, node, opts, resolved, assets, stroke)
        when stroke.align in [:inside, :outside] do
     if stroke_alignment_supported?(node, assets) do
       draw_aligned_stroke(document, node, opts, resolved, assets, stroke)
@@ -285,7 +422,7 @@ defmodule Figler.Render.Skia.Shape do
     end
   end
 
-  defp draw_resolved_stroke(document, node, opts, resolved, assets, _stroke),
+  defp draw_unbaked_stroke(document, node, opts, resolved, assets, _stroke),
     do: draw_resolved(document, node, :stroke, opts, resolved, assets)
 
   defp draw_aligned_stroke(document, node, opts, resolved, assets, stroke) do
@@ -353,6 +490,24 @@ defmodule Figler.Render.Skia.Shape do
       )
 
     Skia.line(document, line_opts)
+  end
+
+  defp draw_shape(document, %Node{node_type: type} = node, :fill, opts, assets)
+       when type in @text_types and is_map_key(assets.text_glyphs, node.guid),
+       do: draw_saved_text(document, node, assets, [fill: Keyword.fetch!(opts, :fill)], true)
+
+  # Path text keeps its stroke as saved outline geometry, painted like a fill. Its vector data
+  # is the path it follows, not an outline to paint.
+  defp draw_shape(document, %Node{node_type: :text_path} = node, :stroke, opts, assets) do
+    assets.geometries
+    |> Map.get(node.guid, %{})
+    |> Map.get(:stroke, [])
+    |> Enum.reduce(document, fn geometry, rendered ->
+      Skia.path(rendered, geometry.path,
+        fill: Keyword.fetch!(opts, :stroke),
+        fill_rule: geometry.fill_rule
+      )
+    end)
   end
 
   defp draw_shape(
@@ -497,43 +652,47 @@ defmodule Figler.Render.Skia.Shape do
     end
   end
 
-  defp primitive_path(%Node{shape: shape, size: size}, inset)
+  defp primitive_path(%Node{shape: shape, size: size} = node, inset)
        when is_map(size) and is_number(inset) do
     if PrimitiveShape.valid?(shape) do
-      shape_path(shape, size, inset)
+      shape_path(shape, size, inset, node_corners(node))
     end
   end
 
   defp primitive_path(_node, _inset), do: nil
 
-  defp shape_path(%Polygon{point_count: count}, size, inset),
-    do: polygon_path(size, inset, count, 1.0)
+  defp shape_path(%Polygon{point_count: count}, size, inset, corners),
+    do: polygon_path(size, inset, count, 1.0, corners)
 
-  defp shape_path(%Star{point_count: count, inner_scale: scale}, size, inset),
-    do: polygon_path(size, inset, count * 2, scale)
+  defp shape_path(%Star{point_count: count, inner_scale: scale}, size, inset, corners),
+    do: polygon_path(size, inset, count * 2, scale, corners)
 
-  defp shape_path(%Arc{} = arc, size, inset), do: arc_path(size, inset, arc)
+  defp shape_path(%Arc{} = arc, size, inset, _corners), do: arc_path(size, inset, arc)
 
-  defp polygon_path(size, inset, total_points, inner_scale) do
+  defp polygon_path(size, inset, total_points, inner_scale, corners) do
     {x, y, width, height} = inset_rect(size, inset)
-    center_x = x + width / 2
-    center_y = y + height / 2
-    radius_x = width / 2
-    radius_y = height / 2
 
-    0..(total_points - 1)
-    |> Enum.reduce(Skia.Path.new(), fn index, path ->
-      angle = -:math.pi() / 2 + 2 * :math.pi() * index / total_points
-      radius = if total_points > 0 and rem(index, 2) == 1, do: inner_scale, else: 1.0
-      point_x = center_x + radius_x * radius * :math.cos(angle)
-      point_y = center_y + radius_y * radius * :math.sin(angle)
+    vertices =
+      for index <- 0..(total_points - 1) do
+        angle = -:math.pi() / 2 + 2 * :math.pi() * index / total_points
+        radius = if rem(index, 2) == 1, do: inner_scale, else: 1.0
 
-      if index == 0,
-        do: Skia.Path.move_to(path, point_x, point_y),
-        else: Skia.Path.line_to(path, point_x, point_y)
-    end)
-    |> Skia.Path.close()
+        {x + width / 2 * (1 + radius * :math.cos(angle)),
+         y + height / 2 * (1 + radius * :math.sin(angle))}
+      end
+
+    vertices
+    |> Outline.polygon(corners.top_left || 0.0, corners.smoothing || 0.0)
+    |> Enum.reduce(Skia.Path.new(), &outline_command/2)
   end
+
+  defp outline_command({:move_to, x, y}, path), do: Skia.Path.move_to(path, x, y)
+  defp outline_command({:line_to, x, y}, path), do: Skia.Path.line_to(path, x, y)
+
+  defp outline_command({:cubic_to, x1, y1, x2, y2, x, y}, path),
+    do: Skia.Path.cubic_to(path, x1, y1, x2, y2, x, y)
+
+  defp outline_command(:close, path), do: Skia.Path.close(path)
 
   defp arc_path(size, inset, arc) do
     {x, y, width, height} = inset_rect(size, inset)
@@ -632,6 +791,77 @@ defmodule Figler.Render.Skia.Shape do
 
     Skia.TextSpan.new(span.content, span_opts)
   end
+
+  # Saved glyph outlines, each run of them in its style run's colours when it has its own.
+  defp draw_saved_text(document, node, assets, path_opts, run_fills?) do
+    document =
+      Enum.reduce(assets.text_glyphs[node.guid], document, fn {run, path}, drawn ->
+        node
+        |> glyph_fills(run, assets, path_opts, run_fills?)
+        |> Enum.reduce(drawn, &Skia.path(&2, path, Keyword.put(path_opts, :fill, &1)))
+      end)
+
+    node.text
+    |> Glyphs.decorations()
+    |> Enum.reduce(document, &draw_decoration(&2, &1, node, assets, path_opts, run_fills?))
+  end
+
+  defp glyph_fills(node, run, assets, _path_opts, true) when not is_nil(run),
+    do: run.fill_paints |> Enum.map(&solid_fill(&1, node, assets)) |> Enum.reject(&is_nil/1)
+
+  defp glyph_fills(_node, _run, _assets, path_opts, _run_fills?),
+    do: [Keyword.fetch!(path_opts, :fill)]
+
+  defp solid_fill(%{visible: false}, _node, _assets), do: nil
+
+  defp solid_fill(%{type: :solid} = paint, node, assets) do
+    {:ok, resolved} = Paint.resolve(paint, node.size, assets.images)
+    resolved.paint
+  end
+
+  defp solid_fill(_paint, _node, _assets), do: nil
+
+  defp draw_decoration(document, decoration, node, assets, path_opts, run_fills?) do
+    own =
+      if run_fills?,
+        do: Enum.find_value(decoration.fill_paints, &solid_fill(&1, node, assets))
+
+    opts = if own, do: Keyword.put(path_opts, :fill, own), else: path_opts
+    draw_decoration_rect(document, decoration.style, decoration.rect, opts)
+  end
+
+  # Dots one thickness wide, two apart, as Figma draws a dotted underline.
+  defp draw_decoration_rect(document, :dotted, {x, y, width, height}, opts) when height > 0 do
+    count = floor((width - height) / (height * 2)) + 1
+
+    Enum.reduce(0..(count - 1)//1, document, fn index, drawn ->
+      oval = [x: x + index * height * 2, y: y, width: height, height: height]
+      Skia.oval(drawn, Keyword.merge(oval, opts))
+    end)
+  end
+
+  # A cosine through the rect's middle, starting in a trough.
+  defp draw_decoration_rect(document, :wavy, {x, y, width, height}, opts) do
+    amplitude = height / 2
+    period = height * 3.5
+    middle = y + amplitude
+    step = max(0.25, period / 32)
+    wave_y = fn at -> middle + amplitude * :math.cos((at - x) / period * :math.pi() * 2) end
+
+    path =
+      Stream.iterate(x + step, &(&1 + step))
+      |> Enum.take_while(&(&1 < x + width))
+      |> Enum.concat([x + width])
+      |> Enum.reduce(Skia.Path.move_to(Skia.Path.new(), x, middle + amplitude), fn at, wave ->
+        Skia.Path.line_to(wave, at, wave_y.(at))
+      end)
+
+    {fill, opts} = Keyword.pop!(opts, :fill)
+    Skia.path(document, path, Keyword.merge(opts, stroke: fill, stroke_width: height * 2 / 3))
+  end
+
+  defp draw_decoration_rect(document, _style, {x, y, width, height}, opts),
+    do: Skia.rect(document, Keyword.merge([x: x, y: y, width: width, height: height], opts))
 
   defp text_size(%Node{text: text}), do: text.font.size || 14
 
@@ -743,10 +973,15 @@ defmodule Figler.Render.Skia.Shape do
   end
 
   defp geometry_paths(assets, %{vector_network: reference} = node, kind)
-       when not is_nil(reference) do
-    assets.vector_geometries
-    |> Map.get(node.guid, %{})
-    |> Map.get(kind, [])
+       when not is_nil(reference) and is_map_key(assets.vector_geometries, node.guid),
+       do: Map.get(assets.vector_geometries[node.guid], kind, [])
+
+  # Without a network or a saved stroke outline, a stroke follows the saved fill outline.
+  defp geometry_paths(assets, node, :stroke) do
+    case Map.get(assets.geometries, node.guid, %{}) do
+      %{stroke: [_ | _] = outlines} -> outlines
+      geometries -> Map.get(geometries, :fill, [])
+    end
   end
 
   defp geometry_paths(assets, node, kind) do

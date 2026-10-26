@@ -76,18 +76,19 @@ defmodule Figler.Render do
 
   defp prepare_document(document, opts) do
     graph_opts = Keyword.get(opts, :graph, [])
-    graph = Graph.build(document.payload, graph_opts)
+    graph = Graph.build({document.payload, document.schema}, graph_opts)
 
     with {:ok, root} <- Selection.root(graph, document.pages, opts) do
       source_nodes =
-        document.payload
+        {document.payload, document.schema}
         |> CodecNifs.decode_render_source_nodes([projection_root(graph, root) |> GUID.format()])
         |> Map.new(fn record ->
           source = SourceNode.from_native(record)
           {source.guid, source}
         end)
 
-      render_nodes = effective_render_nodes(graph, source_nodes)
+      fields = Graph.to_map(graph, only: [:nodes, :records, :children, :provenance])
+      render_nodes = effective_render_nodes(fields, source_nodes)
 
       {:ok,
        %RenderScene{
@@ -95,30 +96,36 @@ defmodule Figler.Render do
          payload: document.payload,
          graph: graph,
          root: root,
-         children: graph.children,
+         children: fields.children,
          source_nodes: source_nodes,
          render_nodes: render_nodes
        }}
     end
   end
 
-  defp effective_render_nodes(graph, source_nodes) do
-    Map.new(graph.nodes, fn {guid, node} ->
+  # Render fields come from the source record, with the occurrence's effective
+  # record applied over them.
+  defp effective_render_nodes(fields, source_nodes) do
+    Map.new(fields.nodes, fn {guid, node} ->
       source_guid =
-        graph.provenance
-        |> Map.get(guid, %{})
-        |> Map.get(:source_guid, guid)
+        case Map.get(fields.provenance, guid) do
+          nil -> guid
+          provenance -> provenance.source_guid
+        end
 
-      source = Map.get(source_nodes, source_guid)
-      {guid, RenderNode.from_effective(node, source_guid, source)}
+      record = Map.get(fields.records, guid, %{})
+
+      source =
+        case Map.get(source_nodes, source_guid) do
+          nil -> nil
+          source -> SourceNode.apply_overrides(source, record)
+        end
+
+      {guid, RenderNode.from_effective(node, source_guid, source, record)}
     end)
   end
 
-  defp projection_root(graph, root) do
-    graph.provenance
-    |> Map.get(root, %{})
-    |> Map.get(:source_guid, root)
-  end
+  defp projection_root(graph, root), do: Graph.provenance(graph, root).source_guid
 
   defp render_selected(scene, opts) do
     if Code.ensure_loaded?(Skia),

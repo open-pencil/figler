@@ -1,11 +1,12 @@
 defmodule Figler.Render.Skia.Assets do
   @moduledoc false
-  @compile {:no_warn_undefined, [Skia.Image]}
+  @compile {:no_warn_undefined, [Skia.Font, Skia.Image, Skia.Path, Skia.Typeface]}
 
   alias Figler.Render.Geometry
   alias Figler.Render.Skia.Fonts
   alias Figler.Render.Skia.Paint
   alias Figler.Render.Skia.VectorNetwork, as: SkiaVectorNetwork
+  alias Figler.Render.Text.Glyphs
   alias Figler.Render.VectorNetwork
 
   defstruct images: %{},
@@ -15,6 +16,8 @@ defmodule Figler.Render.Skia.Assets do
             vector_geometries: %{},
             vector_networks: %{},
             vector_network_errors: %{},
+            text_glyphs: %{},
+            text_emoji: %{},
             fonts: %{},
             font_spans: %{},
             font_warnings: %{}
@@ -27,6 +30,8 @@ defmodule Figler.Render.Skia.Assets do
           vector_geometries: map(),
           vector_networks: %{optional(tuple()) => VectorNetwork.t()},
           vector_network_errors: %{optional(tuple()) => term()},
+          text_glyphs: %{optional(tuple()) => [{Figler.Render.Text.Run.t() | nil, Skia.Path.t()}]},
+          text_emoji: %{optional(tuple()) => [{String.t(), keyword()}]},
           fonts: %{optional(tuple()) => Figler.Render.Skia.Fonts.Resolved.t()},
           font_spans: %{optional(tuple()) => [Figler.Render.Skia.Fonts.Span.t()]},
           font_warnings: %{optional(tuple()) => [map()]}
@@ -36,13 +41,17 @@ defmodule Figler.Render.Skia.Assets do
   def load(scene, root_guids, opts) do
     nodes = selected_nodes(scene, root_guids)
 
-    with {:ok, font_assets} <- Fonts.resolve(nodes, opts) do
-      assets =
-        scene
-        |> load_image_assets(nodes)
-        |> load_geometry_assets(nodes, scene.document.blobs)
-        |> load_vector_network_assets(nodes, scene.document.blobs)
+    assets =
+      scene
+      |> load_image_assets(nodes)
+      |> load_geometry_assets(nodes, scene.document.blobs)
+      |> load_vector_network_assets(nodes, scene.document.blobs)
+      |> load_text_glyph_assets(nodes, scene.document.blobs)
 
+    # Text drawn from its saved glyphs needs no font.
+    laid_out = Enum.reject(nodes, &Map.has_key?(assets.text_glyphs, &1.guid))
+
+    with {:ok, font_assets} <- Fonts.resolve(laid_out, opts) do
       {:ok,
        %{
          assets
@@ -146,18 +155,114 @@ defmodule Figler.Render.Skia.Assets do
 
   defp load_vector_network_asset(assets, node, blobs) do
     reference = node.vector_network
+    baked = assets.geometries |> Map.get(node.guid, %{}) |> Map.get(:fill, [])
 
     with index when is_integer(index) <- reference.blob_index,
          blob when is_binary(blob) <- Enum.at(blobs, index),
          {:ok, network} <- VectorNetwork.decode(blob, reference.normalized_size, node.size),
          {:ok, paths} <- SkiaVectorNetwork.paths(network) do
+      fill = vector_fill_paths(node, baked, network.regions, paths.fill)
+
       assets
       |> put_in([Access.key(:vector_networks), node.guid], network)
-      |> put_in([Access.key(:vector_geometries), node.guid], paths)
+      |> put_in([Access.key(:vector_geometries), node.guid], %{paths | fill: fill})
     else
       nil -> put_vector_network_error(assets, node.guid, :missing_vector_network_blob)
       {:error, reason} -> put_vector_network_error(assets, node.guid, reason)
     end
+  end
+
+  # Figma's saved fill outlines are drawn over the network's own, each in its style's fills; the
+  # network's regions give them their winding rules, which the outlines do not keep reliably.
+  defp vector_fill_paths(node, [], regions, network_paths) do
+    regions
+    |> Enum.zip(network_paths)
+    |> Enum.map(fn {region, path} -> with_style_fills(path, node, region.style_id) end)
+    |> case do
+      [] -> network_paths
+      paths -> paths
+    end
+  end
+
+  defp vector_fill_paths(node, baked, regions, _network_paths) do
+    baked
+    |> Enum.zip(node.fill_geometry)
+    |> Enum.map(fn {path, reference} -> with_style_fills(path, node, reference.style_id) end)
+    |> align_winding_rules(regions)
+  end
+
+  defp with_style_fills(path, node, style_id),
+    do: %{path | fills: Map.get(node.vector_network.style_fills, style_id)}
+
+  defp align_winding_rules(paths, regions) when length(paths) == length(regions) do
+    Enum.zip_with(paths, regions, &%{&1 | fill_rule: &2.winding_rule})
+  end
+
+  defp align_winding_rules([path], [%{winding_rule: rule} | _] = regions) do
+    if Enum.all?(regions, &(&1.winding_rule == rule)),
+      do: [%{path | fill_rule: rule}],
+      else: [path]
+  end
+
+  defp align_winding_rules(paths, _regions), do: paths
+
+  defp load_text_glyph_assets(assets, nodes, blobs) do
+    blobs = List.to_tuple(blobs)
+
+    Enum.reduce(nodes, assets, fn
+      %{text: %{} = text} = node, loaded ->
+        with true <- Glyphs.drawable?(text, node.fill_paints || []),
+             {:ok, paths} <- glyph_paths(text, blobs) do
+          loaded
+          |> put_in([Access.key(:text_glyphs), node.guid], paths)
+          |> put_in([Access.key(:text_emoji), node.guid], emoji_texts(text))
+        else
+          _laid_out -> loaded
+        end
+
+      _node, loaded ->
+        loaded
+    end)
+  end
+
+  # One path per run of glyphs painted alike. A glyph whose outline is missing leaves the text
+  # to be laid out instead, as drawing it would leave a gap.
+  defp glyph_paths(text, blobs) do
+    text
+    |> Glyphs.placements()
+    |> Enum.reduce_while({:ok, []}, fn {run, placed}, {:ok, paths} ->
+      case glyph_path(placed, blobs) do
+        {:ok, path} -> {:cont, {:ok, [{run, path} | paths]}}
+        error -> {:halt, error}
+      end
+    end)
+    |> then(fn
+      {:ok, paths} -> {:ok, Enum.reverse(paths)}
+      error -> error
+    end)
+  end
+
+  # Figma draws an emoji glyph as an image over its placeholder square; the system's emoji font,
+  # set on the glyph's baseline, stands in for the image.
+  defp emoji_texts(text) do
+    for %{emoji: emoji, x: x, baseline: baseline, size: size} <- Glyphs.emoji(text),
+        {:ok, typeface} <- [Skia.Typeface.match_character(emoji)],
+        font = Skia.Font.new(typeface, size: size),
+        {:ok, %{ascent: ascent}} <- [Skia.Font.metrics(font)] do
+      {emoji, [x: x, y: baseline + ascent, width: size * 4, font: font, size: size]}
+    end
+  end
+
+  defp glyph_path(placed, blobs) do
+    Enum.reduce_while(placed, {:ok, Skia.Path.new()}, fn {glyph, matrix}, {:ok, path} ->
+      with true <- glyph.commands_blob < tuple_size(blobs),
+           {:ok, path} <- Geometry.append(path, elem(blobs, glyph.commands_blob), matrix) do
+        {:cont, {:ok, path}}
+      else
+        false -> {:halt, {:error, :missing_glyph_blob}}
+        error -> {:halt, error}
+      end
+    end)
   end
 
   defp put_vector_network_error(assets, guid, reason),

@@ -25,6 +25,6 @@ GitHub CI uses the shared `elixir-vibe/actions/.github/workflows/elixir-rustler-
 - Keep Rusty-Elixir functional: use recursion, pattern matching, and accumulator-style helper APIs for repeated/counting behavior instead of introducing imperative loop/break/continue generator snippets.
 - Treat loop/break/continue as RustQ-internal IR or last-resort Rust implementation details, not the normal Figler generator style.
 - Prefer templates under `native/src/templates/` plus `RustQ.Rust` fragments over ad-hoc multiline Rust string interpolation.
-- Keep Figma semantics in Elixir under `Figler.Scene.Graph`: instance population, overrides, component props, swaps, stack/layout, variables/styles, provenance, and unresolved diagnostics.
+- Figma semantics live in Rusty-Elixir under `codegen/figler/codegen/native/graph/`: instance population, overrides, component props, swaps, layout, variables/styles, provenance, and unresolved diagnostics. They run natively over `kiwi_codec` records, and `Figler.Scene.Graph` reads the resulting graph through its native resource. Port OpenPencil reader changes there, and check them against the OpenPencil fixtures with `Figler.Native.Module.graph_interpret/3`.
 - Do not add one-off native parsers for `.fig`, ZIP, or Kiwi containers in Figler. Reusable parsing/container speedups belong upstream in `kiwi_codec` or another shared package.
 - Keep large real `.fig` oracle fixtures outside git. Use `mix figler.oracles --dir /path/to/oracle-fixtures` or `FIGLER_EXTERNAL_ORACLE_DIR` for external oracle runs.

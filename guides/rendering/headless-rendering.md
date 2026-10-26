@@ -129,7 +129,7 @@ Figler.Render.render(document,
 )
 ```
 
-The selected render root already scopes graph construction. Most callers should keep the default resolver stages.
+The selected render root already scopes graph construction.
 
 ## Error results
 

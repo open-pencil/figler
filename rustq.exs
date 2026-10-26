@@ -1,81 +1,50 @@
-unless Code.ensure_loaded?(Figler.Mix.KiwiCodegen),
-  do: Code.require_file("lib/mix/figler/kiwi_codegen.ex")
-
-Figler.Mix.KiwiCodegen.load!()
-
 use RustQ.Config
 
 alias RustQ.Rustler.Nif
 
-unless Code.ensure_loaded?(Figler.Render.Projection) do
-  Code.require_file("lib/figler/render/projection.ex")
-end
+# The generators and the projections they read, in dependency order. `rustq.gen` does not
+# compile the project first, since this file regenerates some of its sources.
+for {module, file} <- [
+      {Figler.Render.Projection, "lib/figler/render/projection.ex"},
+      {Figler.Scene.Projection, "lib/figler/scene/projection.ex"},
+      {Figler.Scene.Projection.Native, "codegen/figler/scene/projection/native.ex"},
+      {Figler.Codegen.Native.AtomCache, "codegen/figler/codegen/native/atom_cache.ex"},
+      {Figler.Codegen.Native.Scene.Record, "codegen/figler/codegen/native/scene/record.ex"},
+      {Figler.Codegen.Native.SupportFunction,
+       "codegen/figler/codegen/native/support_function.ex"},
+      {Figler.Codegen.Native.RenderProjection,
+       "codegen/figler/codegen/native/render_projection.ex"},
+      {Figler.Codegen.Native.Focus.Decode, "codegen/figler/codegen/native/focus/decode.ex"},
+      {Figler.Codegen.Native.Focus, "codegen/figler/codegen/native/focus.ex"},
+      {Figler.Codegen.Native.Scene.FieldSkip,
+       "codegen/figler/codegen/native/scene/field_skip.ex"},
+      {Figler.Codegen.Native.Scene.SkipFieldHelpers,
+       "codegen/figler/codegen/native/scene/skip_field_helpers.ex"},
+      {Figler.Codegen.Native.Scene.Decode, "codegen/figler/codegen/native/scene/decode.ex"},
+      {Figler.Codegen.Native.Scene, "codegen/figler/codegen/native/scene.ex"},
+      {Figler.Codegen.Native.Graph.Records, "codegen/figler/codegen/native/graph/records.ex"},
+      {Figler.Codegen.Native.Graph.Prepare, "codegen/figler/codegen/native/graph/prepare.ex"},
+      {Figler.Codegen.Native.Graph.SourceIndex,
+       "codegen/figler/codegen/native/graph/source_index.ex"},
+      {Figler.Codegen.Native.Graph.Occurrence,
+       "codegen/figler/codegen/native/graph/occurrence.ex"},
+      {Figler.Codegen.Native.Graph.Claims, "codegen/figler/codegen/native/graph/claims.ex"},
+      {Figler.Codegen.Native.Graph.Bindings, "codegen/figler/codegen/native/graph/bindings.ex"},
+      {Figler.Codegen.Native.Graph.Layer, "codegen/figler/codegen/native/graph/layer.ex"},
+      {Figler.Codegen.Native.Graph.Geometry, "codegen/figler/codegen/native/graph/geometry.ex"},
+      {Figler.Codegen.Native.Graph.Variables, "codegen/figler/codegen/native/graph/variables.ex"},
+      {Figler.Codegen.Native.Graph.VariableBindings,
+       "codegen/figler/codegen/native/graph/variable_bindings.ex"},
+      {Figler.Codegen.Native.Graph.Interpreter,
+       "codegen/figler/codegen/native/graph/interpreter.ex"},
+      {Figler.Codegen.Native.Graph.Materialize,
+       "codegen/figler/codegen/native/graph/materialize.ex"},
+      {Figler.Codegen.Native, "codegen/figler/codegen/native.ex"}
+    ],
+    not Code.ensure_loaded?(module),
+    do: Code.require_file(file)
 
-unless Code.ensure_loaded?(Figler.Scene.Projection) do
-  Code.require_file("lib/figler/scene/projection.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Scene.Projection.Native) do
-  Code.require_file("codegen/figler/scene/projection/native.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Scene.Graph.Seed.Projection) do
-  Code.require_file("lib/figler/scene/graph/seed/projection.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Native.Entrypoints) do
-  Code.require_file("lib/figler/native/entrypoints.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.AtomCache) do
-  Code.require_file("codegen/figler/codegen/native/atom_cache.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.SupportFunction) do
-  Code.require_file("codegen/figler/codegen/native/support_function.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.RenderProjection) do
-  Code.require_file("codegen/figler/codegen/native/render_projection.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.Focus.Decode) do
-  Code.require_file("codegen/figler/codegen/native/focus/decode.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.Focus) do
-  Code.require_file("codegen/figler/codegen/native/focus.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.FieldSkip) do
-  Code.require_file("codegen/figler/codegen/native/scene/field_skip.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.SkipFieldHelpers) do
-  Code.require_file("codegen/figler/codegen/native/scene/skip_field_helpers.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.Decode) do
-  Code.require_file("codegen/figler/codegen/native/scene/decode.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.Scene.Record) do
-  Code.require_file("codegen/figler/codegen/native/scene/record.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native.Scene) do
-  Code.require_file("codegen/figler/codegen/native/scene.ex")
-end
-
-unless Code.ensure_loaded?(Figler.Codegen.Native) do
-  Code.require_file("codegen/figler/codegen/native.ex")
-end
-
-template_nif_functions =
-  Nif.functions_from_source(
-    "native/src/templates/scene_nifs.rs",
-    Figler.Native.Entrypoints.template_nifs()
-  )
+template_nif_functions = Figler.Codegen.Native.Scene.template_nif_functions()
 
 navigation_nif_functions = Figler.Codegen.Native.SupportFunction.scene_navigation_nif_items()
 
@@ -89,9 +58,8 @@ generate "native", "native/src/generated.rs" do
     KiwiCodec.RustlerGenerator.source(schema,
       entrypoints: [],
       definitions: ["Message"],
-      features: [:sparse, :skip],
-      sparse_messages: :descriptor,
-      decoder_sources: ["native/src/runtime.rs"],
+      features: [:sparse, :skip, :records],
+      unknown_fields: :runtime_schema,
       module_prefix: "Figler.Schema"
     ),
     Figler.Codegen.Native.source(schema)

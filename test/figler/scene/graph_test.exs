@@ -1,63 +1,25 @@
 defmodule Figler.Scene.GraphTest do
   use ExUnit.Case, async: true
 
-  alias Figler.Error
-  alias Figler.Native.CodecNifs
   alias Figler.Scene
   alias Figler.Scene.Graph
-  alias Figler.Scene.Graph.Build
-  alias Figler.Scene.Graph.Seed.Node, as: SeedNode
   alias Figler.Scene.Node
 
-  import Figler.Test.GraphBuilder
   import Figler.Test.SceneFixture
 
-  test "graph public APIs expose projected effective scene data" do
-    graph = Scene.graph(message_payload(), until: :component_props, skip: [:sync_overrides])
+  @instances "test/fixtures/openpencil/variable-override-precedence.fig"
 
-    assert %Graph{
-             mode: :projected,
-             stages: [:populate_instances, :symbol_overrides, :component_props],
-             stats: %{
-               node_count: 2,
-               resolver: :elixir,
-               resolved_stages: [:component_props, :symbol_overrides, :populate_instances]
-             }
-           } = graph
+  setup_all do
+    # Instance expansion on its own: variable bindings would replace these texts.
+    {:ok, instances: @instances |> File.read!() |> Scene.graph(resolve_variables: false)}
+  end
 
-    assert [document_seed, canvas_seed] = Graph.seed_nodes(graph)
+  test "graph public APIs expose effective scene data" do
+    graph = Scene.graph(message_payload())
 
-    assert %SeedNode{guid: {0, 0}, node_type: "document", name: "Document", source: nil} =
-             document_seed
-
-    assert %SeedNode{
-             guid: {0, 1},
-             node_type: "canvas",
-             name: "Page 1",
-             parent_guid: {0, 0},
-             position: "!",
-             size: %{x: 100.0, y: 50.0},
-             visible: true,
-             locked: false,
-             text: "Hello world",
-             font_family: "Inter",
-             font_style: "Regular",
-             font_postscript: "Inter-Regular",
-             text_style_guid: "0:2",
-             symbol_overrides: [],
-             component_prop_assignments: []
-           } = canvas_seed
-
-    assert canvas_seed.transform == %{
-             m00: 1.0,
-             m01: 0.0,
-             m02: 10.0,
-             m10: 0.0,
-             m11: 1.0,
-             m12: 20.0
-           }
-
-    assert canvas_seed.source == nil
+    assert %Graph{mode: :interpreted} = graph
+    assert Graph.unresolved(graph) == []
+    assert Graph.stats(graph).node_count == 2
 
     assert Scene.query(graph, "//canvas") == [scene_canvas()]
     assert Scene.pages(graph) == [scene_canvas()]
@@ -68,27 +30,17 @@ defmodule Figler.Scene.GraphTest do
              %Node{guid: "0:1", node_type: "canvas", name: "Page 1"}
            ]
 
-    assert Graph.stats(graph).root_count == 1
-
     explanation = Graph.explain(graph, "0:1")
 
-    assert Map.take(explanation, [
-             :guid,
-             :node,
-             :source,
-             :source_guid,
-             :applied,
-             :unresolved,
-             :stages
-           ]) == %{
-             guid: "0:1",
-             node: scene_canvas(),
-             source: :projected_index,
-             source_guid: "0:1",
-             applied: [],
-             unresolved: [],
-             stages: [:populate_instances, :symbol_overrides, :component_props]
-           }
+    assert Map.take(explanation, [:guid, :node, :source, :source_guid, :applied, :unresolved]) ==
+             %{
+               guid: "0:1",
+               node: scene_canvas(),
+               source: :projected_index,
+               source_guid: "0:1",
+               applied: [],
+               unresolved: []
+             }
 
     assert explanation.source_node == scene_canvas()
     assert explanation.parent_guid == "0:0"
@@ -106,181 +58,106 @@ defmodule Figler.Scene.GraphTest do
            }
   end
 
-  test "native graph seed records match sparse seed decoding" do
-    payload = message_payload()
-
-    sparse_seeds =
-      payload
-      |> CodecNifs.decode_sparse_message()
-      |> SeedNode.from_message()
-
-    native_records = CodecNifs.decode_graph_seed_records(payload)
-    assert Enum.all?(native_records, &is_tuple/1)
-
-    assert SeedNode.from_native_records(native_records) == sparse_seeds
-  end
-
-  test "native graph seed projection follows selected resolver stages" do
-    payload = resolver_metadata_payload()
-
-    [full] = payload |> CodecNifs.decode_graph_seed_records() |> SeedNode.from_native_records()
-
-    [minimal] =
-      payload
-      |> CodecNifs.decode_graph_seed_records([:populate_instances])
-      |> SeedNode.from_native_records()
-
-    [overrides] =
-      payload
-      |> CodecNifs.decode_graph_seed_records([:symbol_overrides])
-      |> SeedNode.from_native_records()
-
-    [derived] =
-      payload
-      |> CodecNifs.decode_graph_seed_records([:derived_symbol_data])
-      |> SeedNode.from_native_records()
-
-    [stack] =
-      payload
-      |> CodecNifs.decode_graph_seed_records([:stack_layout])
-      |> SeedNode.from_native_records()
-
-    assert minimal.symbol_id == full.symbol_id
-    assert minimal.symbol_overrides == []
-    assert minimal.derived_symbol_data == []
-    assert minimal.stack_mode == nil
-    assert minimal.native_clone_seed
-
-    assert overrides.symbol_overrides == full.symbol_overrides
-    assert overrides.derived_symbol_data == []
-    assert overrides.stack_mode == nil
-
-    assert derived.symbol_overrides == []
-    assert derived.derived_symbol_data == full.derived_symbol_data
-    assert derived.stack_mode == nil
-
-    assert stack.symbol_overrides == []
-    assert stack.derived_symbol_data == []
-    assert stack.stack_mode == :horizontal
-    assert stack.stack_spacing == 8.0
-  end
-
-  test "builds identical initial indexes directly from native records" do
-    records = CodecNifs.decode_graph_seed_records(message_payload())
-    resource = make_ref()
-
-    from_records = Build.from_native_records(records, resource: resource)
-    from_seeds = Build.from_seed(SeedNode.from_native_records(records), resource: resource)
-
-    assert from_records == from_seeds
-  end
-
-  test "rejects cyclic parents and treats missing parents as roots" do
-    cycle = [
-      node({1, 1}, :frame, parent_guid: {1, 2}),
-      node({1, 2}, :frame, parent_guid: {1, 1})
-    ]
-
-    error =
-      assert_raise Error, "invalid Figma document during graph", fn ->
-        resolve(cycle, stages: [])
-      end
-
-    assert error.code == :invalid_document
-    assert error.operation == :graph
-    assert error.context.reason == :cyclic_parent_reference
-    assert error.context.guid in ["1:1", "1:2"]
-
-    graph = resolve([node({2, 1}, :frame, parent_guid: {9, 9})], stages: [])
-    assert graph.roots == [{2, 1}]
-    assert graph.children == %{{9, 9} => [{2, 1}]}
-  end
-
-  test "profiles graph construction" do
-    assert %{graph: %Graph{} = graph, initial_ms: initial_ms, total_ms: total_ms, stages: stages} =
-             Graph.profile(message_payload(), until: :populate_instances)
-
-    assert graph.stages == [:populate_instances]
-    assert graph.projection_stages == [:populate_instances]
-
-    assert_raise Error, "graph is missing required projected data during graph", fn ->
-      Graph.build(graph, only: :symbol_overrides)
+  test "rejects resolver stage options, which instance interpretation replaced" do
+    for opts <- [[until: :component_props], [stages: [:variables]], [only: :variables]] do
+      error = assert_raise Figler.Error, fn -> Scene.graph(message_payload(), opts) end
+      assert error.code == :invalid_options
     end
+  end
 
-    assert Graph.stats(graph) ==
-             message_payload() |> Graph.build(until: :populate_instances) |> Graph.stats()
+  test "builds a projected graph from an index, leaving instances unexpanded" do
+    graph = Scene.graph(Scene.index(message_payload()))
 
-    assert is_number(initial_ms)
+    assert %Graph{mode: :projected} = graph
+    assert Scene.node(graph, "0:1") == scene_canvas()
+    assert Graph.root_guids(graph) == [{0, 0}]
+  end
+
+  test "profiles graph construction by phase" do
+    assert %{graph: %Graph{} = graph, total_ms: total_ms, phases: phases} =
+             Graph.profile(message_payload())
+
+    assert Enum.map(phases, & &1.phase) == [:decode, :index, :interpret]
+    assert Enum.all?(phases, &is_number(&1.ms))
     assert is_number(total_ms)
-    assert [%{stage: :populate_instances, graph: %{node_count: 2}}] = stages
+    assert Graph.stats(graph) == message_payload() |> Graph.build() |> Graph.stats()
   end
 
-  test "returns instance metadata and provenance for source instances" do
-    graph =
-      [component({1, 1}, name: "Button"), instance({2, 1}, {1, 1})]
-      |> resolve(stages: [:populate_instances])
+  test "expands every instance into its own occurrences", %{instances: graph} do
+    texts =
+      for guid <- ["clone:9:1469/9:1466/9:1462", "clone:9:1472/9:1466/9:1462"],
+          do: Scene.node(graph, guid).text
 
+    assert texts == ["Learn more", "Different"]
+
+    # The component keeps its own name; instance names never leak into it.
+    assert Scene.node(graph, "9:1468").name == "_alert"
+    assert Scene.node(graph, "9:1472").name == "different-literal"
+  end
+
+  test "returns instance metadata and provenance for source instances", %{instances: graph} do
     assert %{
-             guid: "2:1",
-             component_guid: "1:1",
-             component: %Node{name: "Button"},
-             provenance: %{source: :projected_index, source_guid: {2, 1}}
-           } = Graph.instance(graph, "2:1")
+             guid: "9:1472",
+             component_guid: "9:1468",
+             component: %Node{name: "_alert"},
+             provenance: %{source: :source, source_guid: {9, 1472}}
+           } = Graph.instance(graph, "9:1472")
   end
 
-  test "returns clone provenance for nested instance clones" do
-    graph =
-      [
-        component({1, 1}, name: "Wrapper"),
-        instance({1, 2}, {3, 1}, parent_guid: {1, 1}),
-        instance({2, 1}, {1, 1}),
-        component({3, 1}, name: "Leaf")
-      ]
-      |> resolve(stages: [:populate_instances])
-
+  test "returns clone provenance for nested instance clones", %{instances: graph} do
     assert %{
-             guid: "clone:2:1/1:2",
-             component_guid: "3:1",
-             component: %Node{name: "Leaf"},
-             provenance: %{source: :instance_clone, source_guid: {1, 2}, instance_guid: {2, 1}}
-           } = Graph.instance(graph, "clone:2:1/1:2")
+             guid: "clone:9:1472/9:1466",
+             component_guid: "9:1464",
+             component: %Node{name: "_button-small"},
+             provenance: %{
+               source: :instance_clone,
+               source_guid: {9, 1466},
+               instance_guid: {9, 1472}
+             }
+           } = Graph.instance(graph, "clone:9:1472/9:1466")
+
+    assert %{"9:1462" => _source} =
+             Map.new([Graph.source_node(graph, "clone:9:1472/9:1466/9:1462")], &{&1.guid, &1})
   end
 
-  test "returns nil for non-instance nodes" do
-    graph = [component({1, 1}, name: "Button")] |> resolve(stages: [])
-
-    assert Graph.instance(graph, "1:1") == nil
+  test "keeps each node's effective record", %{instances: graph} do
+    assert %{type: :text, text_data: %{characters: "Different"}} =
+             Graph.record(graph, "clone:9:1472/9:1466/9:1462")
   end
 
-  defp resolver_metadata_payload do
-    target_guid = struct(Figler.Schema.GUID, session_id: 1, local_id: 2)
+  test "fetches nodes and records by GUID", %{instances: graph} do
+    guid = "clone:9:1472/9:1466/9:1462"
 
-    node =
-      struct(Figler.Schema.NodeChange,
-        guid: struct(Figler.Schema.GUID, session_id: 2, local_id: 1),
-        type: :instance,
-        stack_mode: :horizontal,
-        stack_spacing: 8.0,
-        symbol_data:
-          struct(Figler.Schema.SymbolData,
-            symbol_id: struct(Figler.Schema.GUID, session_id: 1, local_id: 1),
-            symbol_overrides: [
-              struct(Figler.Schema.NodeChange,
-                guid_path: struct(Figler.Schema.GUIDPath, guids: [target_guid]),
-                visible: false
-              )
-            ]
-          ),
-        derived_symbol_data: [
-          struct(Figler.Schema.NodeChange,
-            guid_path: struct(Figler.Schema.GUIDPath, guids: [target_guid]),
-            size: struct(Figler.Schema.Vector, x: 10.0, y: 20.0)
-          )
-        ]
-      )
+    assert {:ok, %Node{guid: ^guid, text: "Different"}} = Graph.fetch(graph, guid)
+    assert Graph.fetch(graph, "123:456") == :error
+    assert %Node{guid: ^guid} = Graph.fetch!(graph, guid)
+    assert_raise KeyError, fn -> Graph.fetch!(graph, "123:456") end
 
-    Figler.Schema.Message
-    |> struct(type: :node_changes, session_id: 0, node_changes: [node])
-    |> KiwiCodec.encode()
+    assert %{type: :text, text_data: %{characters: "Different"}} =
+             record = Graph.record(graph, guid, fields: [:type, :text_data])
+
+    assert record |> Map.keys() |> Enum.sort() == [:__kiwi_module__, :text_data, :type]
+
+    assert %Figler.Schema.NodeChange{text_data: %Figler.Schema.TextData{characters: "Different"}} =
+             Graph.record(graph, guid, as: :struct)
+
+    assert %{^guid => %{name: _name}} =
+             Graph.records(graph, [guid, "123:456"], fields: [:name])
+
+    assert map_size(Graph.records(graph, [guid, "123:456"])) == 1
+  end
+
+  test "materializes named parts and enumerates nodes", %{instances: graph} do
+    assert %{roots: roots, children: children} = Graph.to_map(graph, only: [:roots, :children])
+    assert roots == Graph.root_guids(graph)
+    assert children[hd(roots)] == Graph.child_guids(graph, hd(roots))
+    assert_raise ArgumentError, fn -> Graph.to_map(graph, only: [:everything]) end
+
+    assert Enum.count(graph) == Graph.stats(graph).node_count
+    assert "clone:9:1472/9:1466/9:1462" in Enum.map(graph, & &1.guid)
+  end
+
+  test "returns nil for non-instance nodes", %{instances: graph} do
+    assert Graph.instance(graph, "9:1468") == nil
   end
 end

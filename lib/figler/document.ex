@@ -24,6 +24,7 @@ defmodule Figler.Document do
     :canvas_path,
     :payload,
     :message,
+    schema: <<>>,
     entries: %{},
     images: %{},
     blobs: [],
@@ -37,6 +38,7 @@ defmodule Figler.Document do
           canvas: binary() | nil,
           canvas_path: String.t() | nil,
           payload: binary(),
+          schema: binary(),
           message: Figler.Schema.Message.t() | nil,
           entries: %{optional(String.t()) => binary()},
           images: %{optional(String.t()) => binary()},
@@ -64,24 +66,27 @@ defmodule Figler.Document do
   defp do_open!(<<"PK", _rest::binary>> = archive) do
     entries = unzip!(archive)
     {canvas_path, canvas} = canvas!(entries)
-    build(:archive, canvas, Figler.Container.data(canvas), entries, canvas_path)
+    build(:archive, canvas, Figler.Container.source(canvas), entries, canvas_path)
   end
 
   defp do_open!(<<"fig-kiwi", _rest::binary>> = canvas) do
-    build(:container, canvas, Figler.Container.data(canvas), %{})
+    build(:container, canvas, Figler.Container.source(canvas), %{})
   end
 
-  defp do_open!(payload), do: build(:payload, nil, payload, %{})
+  defp do_open!(payload), do: build(:payload, nil, {payload, <<>>}, %{})
 
-  defp build(source, canvas, payload, entries, canvas_path \\ nil) do
+  defp build(source, canvas, {payload, schema}, entries, canvas_path \\ nil) do
     {pages, blobs} =
-      Error.protect(:open_document, fn -> CodecNifs.decode_document_metadata(payload) end)
+      Error.protect(:open_document, fn ->
+        CodecNifs.decode_document_metadata({payload, schema})
+      end)
 
     %__MODULE__{
       source: source,
       canvas: canvas,
       canvas_path: canvas_path,
       payload: payload,
+      schema: schema,
       message: nil,
       entries: entries,
       images: archive_images(entries),

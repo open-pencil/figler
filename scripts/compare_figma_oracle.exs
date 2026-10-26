@@ -32,7 +32,7 @@ entry = %Figler.Scene.Graph.Oracle.Entry{
   ignore_null_size: ignore_null_size?
 }
 
-fixture_payload = fixture |> File.read!() |> Figler.Scene.payload!()
+fixture_payload = fixture |> File.read!() |> Figler.Scene.source!()
 result = Figler.Scene.Graph.Oracle.run(fixture_payload, File.cwd!(), entry)
 
 summary = %{

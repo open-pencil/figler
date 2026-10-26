@@ -2,6 +2,71 @@
 
 ## Unreleased
 
+### Changed
+
+- **Breaking:** effective graphs resolve instances with a port of OpenPencil's
+  occurrence-scoped reader. Every use of a component is expanded into its own
+  occurrences; swaps and property assignments are routed to the instance they
+  configure; overrides apply inner instances first, and an override keeps a
+  field unless a strictly outer instance assigned it; uniform scale, placed
+  constraints, slots, and saved derived data are applied. On OpenPencil's
+  fixture files the resolved trees match OpenPencil's reader exactly.
+- **Breaking:** the effective graph is built natively and kept in a native
+  resource. Its fields are no longer public: read nodes with `fetch/2` and
+  `fetch!/2`, records with `record/3` and `records/3` (`fields:` and
+  `as: :struct`), enumerate the graph's nodes with `Enum`, and materialize
+  named parts with `to_map/2` (`only:` is required). Building a whole
+  document's graph no longer creates an Elixir map per node and record.
+- Unresolved diagnostics include
+  `{:unsupported_variable_expression, variable, mode}` for variable expressions
+  OpenPencil cannot evaluate.
+- The native `graph_interpret/3` returns one record's interpreted occurrence
+  tree and diagnostics, for inspecting the interpreter.
+- **Breaking:** the resolver stage options (`:stages`, `:only`, `:until`,
+  `:skip`) and the graph's `seed_nodes/2` function are removed.
+  `Figler.Scene.Graph.profile/2` reports `:decode`, `:index`, and `:interpret`
+  phases instead of stages.
+- **Breaking:** unresolved diagnostics are now
+  `{:unresolved_property | :unresolved_assignment, owner, main_component, path, reason}`,
+  `{:missing_component, owner, component}`, and
+  `{:missing_slot_content, slot, content}`.
+- Building a graph from a `%Figler.Scene.Index{}` produces a projected graph
+  with instances left unexpanded, since an index carries no override data.
+- Effective graphs resolve variables as OpenPencil does: collections and modes,
+  aliases, formulas, and composed colors, each layer resolving in the modes it
+  and its ancestors set. Bound numbers, paint colors, text, and visibility are
+  written into each layer's effective record; a text binding wins over an
+  instance's literal override, matching what Figma renders.
+- Shared fill, stroke, effect, grid, and text styles are applied to the layers
+  that reference them. `resolve_styles` now defaults to `:known`; pass `false`
+  to keep the values the file saved.
+- Depend on kiwi_codec 0.5.0 from Hex, and on RustQ 1.0.0-rc.15 for code
+  generation. kiwi_codec's Rustler generator now compiles as part of the
+  dependency, so Figler no longer compiles its sources itself.
+
+### Fixed
+
+- Overrides on one instance no longer leak into the shared component or other
+  instances of it.
+- Read files saved by current Figma releases. Their embedded schema adds message
+  fields Figler's vendored schema lacks, and every decoder used to reject them
+  as an invalid document. Native and Elixir decoders now skip such fields using
+  the schema embedded in the file.
+
+### Added
+
+- `Figler.Scene.source!/1` returns a payload together with its embedded schema;
+  native entrypoints, `Figler.Scene.graph/2`, and `Figler.decode_message/1`
+  accept it.
+- `Figler.Scene.Graph.record/2` returns a node's effective `NodeChange` record.
+- The `figler.openpencil` task's `--scene` flag compares resolved paints, text,
+  and layout values against OpenPencil's materialized scene graph.
+- The vendored schema adds `ExpressionFunction.COMPOSE_COLOR` and the
+  `PasteAssetType` style values.
+- The `figler.openpencil` mix task and `Figler.Scene.Graph.OpenPencilOracle`
+  diff effective graphs against OpenPencil's occurrence interpreter, run from
+  an OpenPencil checkout through `scripts/openpencil_oracle.ts`.
+
 ## 0.1.0-beta.1 - 2026-07-22
 
 ### Added

@@ -51,23 +51,33 @@ defmodule Figler.Render.Skia.PaintTest do
     assert {:ok, %{paint: %Skia.Shader.ImageShader{} = rotated_shader}} =
              Paint.resolve(scaled_and_rotated, %{x: 20.0, y: 10.0}, images)
 
-    assert_in_delta elem(rotated_shader.matrix, 0), 0.0, 1.0e-12
-    assert_in_delta elem(rotated_shader.matrix, 1), -2.0, 1.0e-12
-    assert_in_delta elem(rotated_shader.matrix, 2), 15.0, 1.0e-12
-    assert_in_delta elem(rotated_shader.matrix, 3), 2.0, 1.0e-12
-    assert_in_delta elem(rotated_shader.matrix, 4), 0.0, 1.0e-12
-    assert_in_delta elem(rotated_shader.matrix, 5), -5.0, 1.0e-12
+    # The 2x1 image turned a quarter, its 1x2 bounds at the origin, then tiled at twice its size.
+    [a, b, c, d, e, f] = Tuple.to_list(rotated_shader.matrix)
+    assert_in_delta a, 0.0, 1.0e-12
+    assert_in_delta b, -2.0, 1.0e-12
+    assert_in_delta c, 2.0, 1.0e-12
+    assert_in_delta d, 2.0, 1.0e-12
+    assert_in_delta e, 0.0, 1.0e-12
+    assert_in_delta f, 0.0, 1.0e-12
 
     transformed_tile =
       base
       |> Map.put(:image_scale_mode, :tile)
       |> Map.put(:scale, 2.0)
-      |> Map.put(:transform, %{m00: 1.0, m01: 0.0, m02: 0.0, m10: 0.0, m11: 1.0, m12: 0.0})
+      |> Map.put(:transform, %{m00: 0.5, m01: 0.0, m02: 0.0, m10: 0.0, m11: 0.5, m12: 0.0})
 
     assert {:ok, %{paint: %Skia.Shader.ImageShader{} = transformed_tile_shader}} =
              Paint.resolve(transformed_tile, %{x: 20.0, y: 10.0}, images)
 
-    assert transformed_tile_shader.matrix == {20.0, 0, 0, 0, 20.0, 0}
+    assert transformed_tile_shader.matrix == {2.0, 0.0, 0.0, 0.0, 2.0, 0.0}
+
+    fitted = Map.put(base, :image_scale_mode, :fit)
+
+    assert {:ok, %{paint: %Skia.Shader.ImageShader{} = fitted_shader}} =
+             Paint.resolve(fitted, %{x: 20.0, y: 20.0}, images)
+
+    assert fitted_shader.tile_x == :decal
+    assert fitted_shader.matrix == {10.0, 0.0, 0.0, 0.0, 10.0, 5.0}
 
     cropped =
       base
@@ -107,7 +117,7 @@ defmodule Figler.Render.Skia.PaintTest do
     assert edge_blue > edge_red
   end
 
-  test "rejects malformed image transformations" do
+  test "rejects malformed image rotations and tiles unscaled images at their size" do
     {:ok, png} = Skia.canvas(2, 1) |> Skia.clear(:white) |> Skia.to_png()
     {:ok, image} = Skia.Image.decode(png)
     images = %{"cafe" => image}
@@ -119,7 +129,7 @@ defmodule Figler.Render.Skia.PaintTest do
       image_scale_mode: :tile
     }
 
-    assert {:error, :invalid_image_scale} =
+    assert {:ok, %{paint: %{matrix: {1.0, +0.0, +0.0, +0.0, 1.0, +0.0}}}} =
              Paint.resolve(Map.put(base, :scale, 0), %{x: 2, y: 1}, images)
 
     assert {:error, :invalid_image_rotation} =
