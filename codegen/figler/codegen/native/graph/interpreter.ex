@@ -91,58 +91,9 @@ defmodule Figler.Codegen.Native.Graph.Interpreter do
            required(:dangling) => R.bool()
          }
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [
-        :interpret,
-        :drop_slot_content,
-        :expand,
-        :expand_source,
-        :expand_subtree,
-        :root_claim?,
-        :bind_record,
-        :collect_binding,
-        :bound_node_field,
-        :assigned_visibility,
-        :assigned_visible?,
-        :component_keys,
-        :resolve_root,
-        :replaced_before,
-        :route_root_layer,
-        :swap_root,
-        :scoped_bindings,
-        :expand_base,
-        :root_layers,
-        :cross_boundary,
-        :expand_children_of,
-        :route_to_children,
-        :routed_layer,
-        :unresolved_structural,
-        :stale_layer?,
-        :report_owner,
-        :create_occurrence,
-        :effective_properties,
-        :put_effective_symbol,
-        :guid_record,
-        :put_assignments,
-        :missing_slot_content?,
-        :rename_swapped,
-        :default_instance_name,
-        :finish_occurrence,
-        :put_instance_size,
-        :apply_property_claim,
-        :resolve_claim_target,
-        :unresolved_property,
-        :removed_target?,
-        :removed_from?,
-        :apply_derived_bounds,
-        :reason,
-        :node_type,
-        :new_occurrence
-      ])
-  end
+  def items, do: __rustq_items__()
 
   # Interprets a page, component, or instance record: the occurrence tree and the diagnostics
   # collected while expanding it. Slot content frames are left out of a page's children: they

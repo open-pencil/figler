@@ -73,22 +73,9 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
            required(:owner) => R.option(graph_guid())
          }
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [
-        :build_graph,
-        :root_ids,
-        :put_root,
-        :put_interpreted,
-        :put_occurrence,
-        :explicit_modes,
-        :child_guid,
-        :put_node,
-        :provenance
-      ])
-  end
+  def items, do: __rustq_items__()
 
   # Interprets every root of `index` into a graph, resolving variables when given them.
   @spec build_graph(R.ref(SourceIndex.source_index()), R.option(R.ref(Variables.variables()))) ::
@@ -96,40 +83,28 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   defrust build_graph(index, vars) do
     unresolved =
       case vars do
-        {:some, vars} ->
-          for diagnostic <- vars.diagnostics.iter(), do: {:variable, diagnostic.clone()}
-
-        :none ->
-          Vec.new()
+        {:some, vars} -> for diagnostic <- vars.diagnostics, do: {:variable, diagnostic}
+        :none -> []
       end
 
-    graph =
-      struct_literal(Graph,
-        nodes: Vec.new(),
-        positions: HashMap.new(),
-        roots: Vec.new(),
-        unresolved: unresolved
-      )
+    graph = struct_literal(Graph, nodes: [], positions: %{}, roots: [], unresolved: unresolved)
 
     for id <- root_ids(index) do
       put_root(index, mut_ref(graph), id, vars)
     end
 
-    ok(graph)
+    {:ok, graph}
   end
 
   # Records without a parent in the index, in GUID order.
   @spec root_ids(R.ref(SourceIndex.source_index())) :: R.vec(Records.guid_key())
   defrust root_ids(index) do
     roots =
-      for {id, record} <- index.sources.iter(),
-          parent_id(record).is_none_or(fn parent ->
-            not index.sources.contains_key(ref(parent))
-          end),
-          do: deref(id)
+      for {id, record} <- index.sources,
+          parent_id(record).is_none_or(fn parent -> not Map.has_key?(index.sources, parent) end),
+          do: id
 
-    roots.sort()
-    roots
+    Enum.sort(roots)
   end
 
   # A document holds pages, which are interpreted one by one.
@@ -149,13 +124,13 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
         modes = explicit_modes(record, vars)
 
         for page <- children_of(index, id) do
-          put_interpreted(index, graph, deref(page), some(position), ref(modes), vars)
+          put_interpreted(index, graph, page, some(position), modes, vars)
         end
 
-        ok(:ok)
+        :ok
 
       _ ->
-        put_interpreted(index, graph, id, nil, ref(HashMap.new()), vars)
+        put_interpreted(index, graph, id, nil, %{}, vars)
     end
   end
 
@@ -174,7 +149,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
 
     placement = struct_literal(Placement, guid: {:source, id}, parent: parent, owner: nil)
     put_occurrence(graph, occurrence, placement, modes, vars)
-    ok(:ok)
+    :ok
   end
 
   @spec put_occurrence(
@@ -185,13 +160,12 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
           R.option(R.ref(Variables.variables()))
         ) :: R.unit()
   defrust put_occurrence(graph, occurrence, placement, modes, vars) do
-    modes = modes.clone()
-    modes.extend(explicit_modes(ref(occurrence.properties), vars))
+    modes = Map.merge(modes, explicit_modes(occurrence.properties, vars))
 
     record =
       case vars do
         {:some, vars} ->
-          apply_bindings(occurrence.properties.clone(), ref(occurrence), ref(modes), vars)
+          apply_bindings(occurrence.properties.clone(), occurrence, modes, vars)
 
         :none ->
           occurrence.properties.clone()
@@ -213,7 +187,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
       child_placement =
         struct_literal(Placement, guid: guid, parent: some(position), owner: owner.clone())
 
-      put_occurrence(graph, child, child_placement, ref(modes), vars)
+      put_occurrence(graph, child, child_placement, modes, vars)
     end
   end
 
@@ -221,28 +195,20 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   @spec explicit_modes(R.ref(Kiwi.kiwi_record()), R.option(R.ref(Variables.variables()))) ::
           Variables.modes()
   defrust explicit_modes(record, vars) do
-    modes = HashMap.new()
-
     case {vars, record.record(Kiwi.NodeChange.VARIABLE_MODE_BY_SET_MAP)} do
       {{:some, vars}, {:some, set_map}} ->
-        for entry <- set_map.records(Kiwi.VariableModeBySetMap.ENTRIES) do
-          collection =
-            entry.record(Kiwi.VariableModeBySetMapEntry.VARIABLE_SET_ID)
-            |> and_then(fn set -> reference(vars, set) end)
-
-          mode = guid_key(entry.record(Kiwi.VariableModeBySetMapEntry.VARIABLE_MODE_ID))
-
-          case {collection, mode} do
-            {{:some, collection}, {:some, mode}} -> modes.insert(collection, mode)
-            _ -> nil
-          end
-        end
+        for entry <- set_map.records(Kiwi.VariableModeBySetMap.ENTRIES),
+            {:some, set} <- [entry.record(Kiwi.VariableModeBySetMapEntry.VARIABLE_SET_ID)],
+            {:some, collection} <- [reference(vars, set)],
+            {:some, mode} <- [
+              guid_key(entry.record(Kiwi.VariableModeBySetMapEntry.VARIABLE_MODE_ID))
+            ],
+            into: %{},
+            do: {collection, mode}
 
       _ ->
-        :ok
+        %{}
     end
-
-    modes
   end
 
   # Layers of an instance expansion, and everything below them, are clones.
@@ -250,12 +216,10 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   defrust child_guid(guid, instance, child) do
     case guid do
       {:clone, clone} ->
-        path = clone.path.clone()
-        path.push(child)
-        {:clone, struct_literal(CloneGuid, root: clone.root, path: path)}
+        {:clone, struct_literal(CloneGuid, root: clone.root, path: clone.path ++ [child])}
 
       {:source, id} when instance ->
-        {:clone, struct_literal(CloneGuid, root: deref(id), path: [child])}
+        {:clone, struct_literal(CloneGuid, root: id, path: [child])}
 
       _ ->
         {:source, child}
@@ -270,7 +234,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
           R.option(provenance())
         ) :: R.usize()
   defrust put_node(graph, guid, parent, record, provenance) do
-    position = graph.nodes.len()
+    position = length(graph.nodes)
     parent_guid = parent.map(fn parent -> graph.nodes[parent].guid.clone() end)
 
     case parent do
@@ -286,7 +250,7 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
         parent: parent_guid,
         record: record,
         provenance: provenance,
-        children: Vec.new()
+        children: []
       )
     )
 
@@ -304,8 +268,8 @@ defmodule Figler.Codegen.Native.Graph.Materialize do
   defrust provenance(occurrence, guid, owner) do
     clone = match?({:clone, _clone}, guid)
 
-    if clone or instance?(occurrence) or not occurrence.property_claims.is_empty() or
-         not occurrence.binding_claims.is_empty() do
+    if clone or instance?(occurrence) or occurrence.property_claims != [] or
+         occurrence.binding_claims != [] do
       some(
         struct_literal(Provenance,
           clone: clone,

@@ -17124,7 +17124,7 @@ pub mod graph {
             .collect::<Vec<_>>();
         let refs = entries
             .iter()
-            .filter_map(|entry| prop_ref(entry))
+            .filter_map(prop_ref)
             .fold(saved, |refs, prop_ref| upsert_ref(refs, prop_ref));
         if refs.is_empty() {
             record
@@ -17242,6 +17242,16 @@ pub mod graph {
             Ok(records)
         }
     }
+    fn records_by_id(records: &[KiwiRecord]) -> HashMap<GuidKey, &KiwiRecord> {
+        records
+            .iter()
+            .map(|record| (record_id(record), record))
+            .filter_map(|item| match item {
+                (Some(id), record) => Some((id, record)),
+                _ => None,
+            })
+            .collect()
+    }
     fn linked_definitions(record: &KiwiRecord) -> bool {
         record
             .records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS)
@@ -17284,6 +17294,12 @@ pub mod graph {
             }
         }
     }
+    fn cached(resolved: &Resolved, id: GuidKey) -> NifResult<KiwiRecord> {
+        match resolved.get(&id) {
+            Some(record) => Ok(record.clone()),
+            None => Err(rustler::Error::BadArg),
+        }
+    }
     fn resolved_ancestors(
         record: &KiwiRecord,
         by_id: &HashMap<GuidKey, &KiwiRecord>,
@@ -17322,6 +17338,16 @@ pub mod graph {
             Ok(record.clone())
         }
     }
+    fn inherit_definitions(
+        record: &KiwiRecord,
+        ancestors: &[KiwiRecord],
+    ) -> NifResult<Vec<KiwiRecord>> {
+        record
+            .records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS)
+            .into_iter()
+            .map(|definition| inherit_definition(definition, ancestors))
+            .collect()
+    }
     fn inherit_definition(
         definition: &KiwiRecord,
         ancestors: &[KiwiRecord],
@@ -17355,6 +17381,16 @@ pub mod graph {
             }
         }
     }
+    fn definitions_named(ancestor: &KiwiRecord, id: GuidKey) -> Vec<&KiwiRecord> {
+        ancestor
+            .records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS)
+            .into_iter()
+            .filter(|&definition| {
+                guid_key(definition.record(kiwi_records::ComponentPropDef::ID))
+                    == Some(id)
+            })
+            .collect::<Vec<&KiwiRecord>>()
+    }
     fn apply_styles(records: Vec<KiwiRecord>) -> Vec<KiwiRecord> {
         let styles = style_records(&&records);
         if styles.is_empty() {
@@ -17386,6 +17422,26 @@ pub mod graph {
     }
     fn style_keys(records: &[KiwiRecord]) -> StyleKeys {
         records.iter().flat_map(style_names).collect()
+    }
+    fn style_names(record: &KiwiRecord) -> Vec<(String, GuidKey)> {
+        match record.str(kiwi_records::NodeChange::KEY) {
+            Some(key) => {
+                match record_id(record) {
+                    Some(id) => {
+                        match record.str(kiwi_records::NodeChange::VERSION) {
+                            Some(version) => {
+                                vec![
+                                    (key.to_string(), id), (format!("{key}@{version}"), id)
+                                ]
+                            }
+                            None => vec![(key.to_string(), id)],
+                        }
+                    }
+                    _ => vec![],
+                }
+            }
+            _ => vec![],
+        }
     }
     fn apply_style_refs(
         record: &KiwiRecord,
@@ -17487,6 +17543,25 @@ pub mod graph {
             None => record,
         }
     }
+    fn with_text_style(record: KiwiRecord, style: &KiwiRecord) -> KiwiRecord {
+        let text = style
+            .take(
+                &[
+                    kiwi_records::NodeChange::FONT_SIZE,
+                    kiwi_records::NodeChange::FONT_NAME,
+                    kiwi_records::NodeChange::LINE_HEIGHT,
+                    kiwi_records::NodeChange::LETTER_SPACING,
+                    kiwi_records::NodeChange::TEXT_CASE,
+                ],
+            );
+        let merged = record.merge(&text);
+        match style.get(kiwi_records::NodeChange::TEXT_DECORATION) {
+            Some(decoration) => {
+                merged.put(kiwi_records::NodeChange::TEXT_DECORATION, decoration.clone())
+            }
+            None => merged.delete(kiwi_records::NodeChange::TEXT_DECORATION),
+        }
+    }
     fn referenced_style(
         record: &KiwiRecord,
         field: u32,
@@ -17528,61 +17603,6 @@ pub mod graph {
             }
         }
     }
-    fn records_by_id(records: &[KiwiRecord]) -> HashMap<GuidKey, &KiwiRecord> {
-        records
-            .iter()
-            .map(|record| (record_id(record), record))
-            .filter_map(|item| match item {
-                (Some(id), record) => Some((id, record)),
-                _ => None,
-            })
-            .collect()
-    }
-    fn inherit_definitions(
-        record: &KiwiRecord,
-        ancestors: &[KiwiRecord],
-    ) -> NifResult<Vec<KiwiRecord>> {
-        record
-            .records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS)
-            .into_iter()
-            .map(|definition| inherit_definition(definition, ancestors))
-            .collect()
-    }
-    fn definitions_named(ancestor: &KiwiRecord, id: GuidKey) -> Vec<&KiwiRecord> {
-        ancestor
-            .records(kiwi_records::NodeChange::COMPONENT_PROP_DEFS)
-            .into_iter()
-            .filter(|&definition| {
-                guid_key(definition.record(kiwi_records::ComponentPropDef::ID))
-                    == Some(id)
-            })
-            .collect::<Vec<&KiwiRecord>>()
-    }
-    fn with_text_style(record: KiwiRecord, style: &KiwiRecord) -> KiwiRecord {
-        let text = style
-            .take(
-                &[
-                    kiwi_records::NodeChange::FONT_SIZE,
-                    kiwi_records::NodeChange::FONT_NAME,
-                    kiwi_records::NodeChange::LINE_HEIGHT,
-                    kiwi_records::NodeChange::LETTER_SPACING,
-                    kiwi_records::NodeChange::TEXT_CASE,
-                ],
-            );
-        let merged = record.merge(&text);
-        match style.get(kiwi_records::NodeChange::TEXT_DECORATION) {
-            Some(decoration) => {
-                merged.put(kiwi_records::NodeChange::TEXT_DECORATION, decoration.clone())
-            }
-            None => merged.delete(kiwi_records::NodeChange::TEXT_DECORATION),
-        }
-    }
-    fn cached(resolved: &Resolved, id: GuidKey) -> NifResult<KiwiRecord> {
-        match resolved.get(&id) {
-            Some(record) => Ok(record.clone()),
-            None => Err(rustler::Error::BadArg),
-        }
-    }
     fn unversioned_style(
         styles: &Styles,
         keys: &StyleKeys,
@@ -17597,26 +17617,6 @@ pub mod graph {
         match styles.get(&id) {
             Some(style) => Some(style.clone()),
             None => None,
-        }
-    }
-    fn style_names(record: &KiwiRecord) -> Vec<(String, GuidKey)> {
-        match record.str(kiwi_records::NodeChange::KEY) {
-            Some(key) => {
-                match record_id(record) {
-                    Some(id) => {
-                        match record.str(kiwi_records::NodeChange::VERSION) {
-                            Some(version) => {
-                                vec![
-                                    (key.to_string(), id), (format!("{key}@{version}"), id)
-                                ]
-                            }
-                            None => vec![(key.to_string(), id)],
-                        }
-                    }
-                    _ => vec![],
-                }
-            }
-            _ => vec![],
         }
     }
     pub type Children = HashMap<GuidKey, Vec<GuidKey>>;
@@ -17831,9 +17831,7 @@ pub mod graph {
                             match find_static_segment(index, current, segment).record {
                                 Some(_found) if position + 1 == path.len() => true,
                                 Some(found) => {
-                                    match source(index, found)
-                                        .and_then(|found| symbol_id(found))
-                                    {
+                                    match source(index, found).and_then(symbol_id) {
                                         Some(next) => resolves_from(index, next, path, position + 1),
                                         None => false,
                                     }
@@ -19529,7 +19527,7 @@ pub mod graph {
     fn component_keys(index: &SourceIndex, guid: Option<GuidKey>) -> Vec<GuidKey> {
         match guid {
             Some(guid) => {
-                match source(index, guid).and_then(|record| override_key(record)) {
+                match source(index, guid).and_then(override_key) {
                     Some(key) => vec![guid, key],
                     None => vec![guid],
                 }
@@ -19868,6 +19866,32 @@ pub mod graph {
             ..occurrence
         }
     }
+    fn new_occurrence(
+        id: GuidKey,
+        properties: KiwiRecord,
+        children: Vec<Occurrence>,
+    ) -> Occurrence {
+        Occurrence {
+            source_id: id,
+            override_key: None,
+            main_component_id: None,
+            main_component_override_key: None,
+            source_component_id: None,
+            source_component_override_key: None,
+            derived_size: None,
+            slot_content_id: None,
+            default_instance_name: None,
+            properties,
+            children,
+            property_claims: Vec::new(),
+            binding_claims: Vec::new(),
+            layout_scale: 1.0,
+            has_own_name: false,
+            bound_fields: HashMap::new(),
+            replaced_components: Vec::new(),
+            overridden: HashSet::new(),
+        }
+    }
     fn effective_properties(
         index: &SourceIndex,
         source: &KiwiRecord,
@@ -19973,7 +19997,7 @@ pub mod graph {
         assignment
             .record(kiwi_records::ComponentPropAssignment::VAR_VALUE)
             .and_then(|variable| variable.record(kiwi_records::VariableData::VALUE))
-            .and_then(|value| slot_content(value))
+            .and_then(slot_content)
             .is_some_and(|content| !index.sources.contains_key(&content))
     }
     fn rename_swapped(
@@ -20009,7 +20033,7 @@ pub mod graph {
         occurrence: &Occurrence,
     ) -> Option<String> {
         let parent = source(index, occurrence.source_id)
-            .and_then(|record| parent_id(record))
+            .and_then(parent_id)
             .and_then(|parent| source(index, parent));
         match parent {
             Some(
@@ -20203,32 +20227,6 @@ pub mod graph {
     fn node_type(index: &SourceIndex, id: GuidKey) -> Option<u32> {
         source(index, id)
             .and_then(|record| record.enum_value(kiwi_records::NodeChange::TYPE))
-    }
-    fn new_occurrence(
-        id: GuidKey,
-        properties: KiwiRecord,
-        children: Vec<Occurrence>,
-    ) -> Occurrence {
-        Occurrence {
-            source_id: id,
-            override_key: None,
-            main_component_id: None,
-            main_component_override_key: None,
-            source_component_id: None,
-            source_component_override_key: None,
-            derived_size: None,
-            slot_content_id: None,
-            default_instance_name: None,
-            properties,
-            children,
-            property_claims: Vec::new(),
-            binding_claims: Vec::new(),
-            layout_scale: 1.0,
-            has_own_name: false,
-            bound_fields: HashMap::new(),
-            replaced_components: Vec::new(),
-            overridden: HashSet::new(),
-        }
     }
     #[derive(Clone, Debug)]
     pub struct Collection {
@@ -20855,13 +20853,12 @@ pub mod graph {
         match formula {
             Formula::Literal(literal) => finite(literal.clone()),
             Formula::Alias(id) => {
-                resolve_reference(vars, *id, modes, visiting)
-                    .and_then(|value| finite(value))
+                resolve_reference(vars, *id, modes, visiting).and_then(finite)
             }
             Formula::Operation(operation) => {
                 evaluated_operands(vars, &&operation.operands, modes, visiting)
                     .and_then(|operands| apply_operator(operation.operator, operands))
-                    .and_then(|value| finite(value))
+                    .and_then(finite)
             }
         }
     }
@@ -20875,6 +20872,12 @@ pub mod graph {
             .iter()
             .map(|operand| evaluate_formula(vars, operand, modes, visiting))
             .collect::<Option<Vec<VariableValue>>>()
+    }
+    fn finite(value: VariableValue) -> Option<VariableValue> {
+        match value {
+            VariableValue::Float(number) if !number.is_finite() => None,
+            _ => Some(value),
+        }
     }
     fn apply_operator(
         operator: u32,
@@ -21001,12 +21004,6 @@ pub mod graph {
             _ => None,
         }
     }
-    fn finite(value: VariableValue) -> Option<VariableValue> {
-        match value {
-            VariableValue::Float(number) if !number.is_finite() => None,
-            _ => Some(value),
-        }
-    }
     fn concatenated(a: &VariableValue, b: &VariableValue) -> Option<VariableValue> {
         match (value_type(a), value_type(b)) {
             (VariableType::String, VariableType::String) => {
@@ -21121,15 +21118,6 @@ pub mod graph {
         } else {
             BoundTarget::StrokePaint(index)
         }
-    }
-    fn argument_alias(argument: &KiwiRecord) -> Option<Linear> {
-        argument
-            .record(kiwi_records::VariableData::VALUE)
-            .and_then(|value| value.record(kiwi_records::VariableAnyValue::ALIAS))
-            .map(|reference| Linear {
-                multiplier: 1.0,
-                reference: Some(reference.clone()),
-            })
     }
     fn bound(record: &KiwiRecord, vars: &Variables) -> Vec<VariableBinding> {
         let mut bindings = Vec::new();
@@ -21248,6 +21236,15 @@ pub mod graph {
             }
             _ => None,
         }
+    }
+    fn argument_alias(argument: &KiwiRecord) -> Option<Linear> {
+        argument
+            .record(kiwi_records::VariableData::VALUE)
+            .and_then(|value| value.record(kiwi_records::VariableAnyValue::ALIAS))
+            .map(|reference| Linear {
+                multiplier: 1.0,
+                reference: Some(reference.clone()),
+            })
     }
     fn linear_product(factors: &[&KiwiRecord], depth: u32) -> Option<Linear> {
         factors
@@ -21377,6 +21374,13 @@ pub mod graph {
         } else {
             record
         }
+    }
+    fn color_record(color: &Color) -> KiwiRecord {
+        KiwiRecord::new(kiwi_record_definitions::COLOR)
+            .put_float(kiwi_records::Color::R, color.r as f32)
+            .put_float(kiwi_records::Color::G, color.g as f32)
+            .put_float(kiwi_records::Color::B, color.b as f32)
+            .put_float(kiwi_records::Color::A, 1.0)
     }
     fn apply_number(
         record: KiwiRecord,
@@ -21551,13 +21555,6 @@ pub mod graph {
             _ => None,
         }
     }
-    fn color_record(color: &Color) -> KiwiRecord {
-        KiwiRecord::new(kiwi_record_definitions::COLOR)
-            .put_float(kiwi_records::Color::R, color.r as f32)
-            .put_float(kiwi_records::Color::G, color.g as f32)
-            .put_float(kiwi_records::Color::B, color.b as f32)
-            .put_float(kiwi_records::Color::A, 1.0)
-    }
     #[derive(Clone, Debug, PartialEq, Eq, Hash)]
     pub struct CloneGuid {
         pub root: GuidKey,
@@ -21606,17 +21603,14 @@ pub mod graph {
     fn build_graph(index: &SourceIndex, vars: Option<&Variables>) -> NifResult<Graph> {
         let unresolved = match vars {
             Some(vars) => {
-                vars.diagnostics
-                    .iter()
-                    .map(|diagnostic| Unresolved::Variable(diagnostic.clone()))
-                    .collect()
+                vars.diagnostics.iter().cloned().map(Unresolved::Variable).collect()
             }
-            None => Vec::new(),
+            None => vec![],
         };
         let mut graph = Graph {
-            nodes: Vec::new(),
+            nodes: vec![],
             positions: HashMap::new(),
-            roots: Vec::new(),
+            roots: vec![],
             unresolved,
         };
         for id in root_ids(index) {
@@ -21625,9 +21619,10 @@ pub mod graph {
         Ok(graph)
     }
     fn root_ids(index: &SourceIndex) -> Vec<GuidKey> {
-        let mut roots = index
+        let roots = index
             .sources
             .iter()
+            .map(|(key, value)| (*key, value))
             .filter_map(|item| match item {
                 (
                     id,
@@ -21638,10 +21633,13 @@ pub mod graph {
                 }
                 _ => None,
             })
-            .map(|(id, _)| *id)
+            .map(|(id, _)| id)
             .collect::<Vec<GuidKey>>();
-        roots.sort();
-        roots
+        {
+            let mut rustq_updated = roots;
+            rustq_updated.sort();
+            rustq_updated
+        }
     }
     fn put_root(
         index: &SourceIndex,
@@ -21685,7 +21683,7 @@ pub mod graph {
             .extend(
                 diagnostics
                     .into_iter()
-                    .map(|diagnostic| Unresolved::Occurrence(diagnostic))
+                    .map(Unresolved::Occurrence)
                     .collect::<Vec<Unresolved>>(),
             );
         let placement = Placement {
@@ -21703,8 +21701,11 @@ pub mod graph {
         modes: &Modes,
         vars: Option<&Variables>,
     ) {
-        let mut modes = modes.clone();
-        modes.extend(explicit_modes(&occurrence.properties, vars));
+        let modes = {
+            let mut rustq_updated = modes.clone();
+            rustq_updated.extend(explicit_modes(&occurrence.properties, vars));
+            rustq_updated
+        };
         let record = match vars {
             Some(vars) => {
                 apply_bindings(occurrence.properties.clone(), &occurrence, &modes, vars)
@@ -21736,36 +21737,61 @@ pub mod graph {
         }
     }
     fn explicit_modes(record: &KiwiRecord, vars: Option<&Variables>) -> Modes {
-        let mut modes: Modes = HashMap::new();
-        if let (Some(vars), Some(set_map)) = (
-            vars,
-            record.record(kiwi_records::NodeChange::VARIABLE_MODE_BY_SET_MAP),
-        ) {
-            for entry in set_map.records(kiwi_records::VariableModeBySetMap::ENTRIES) {
-                let collection = entry
-                    .record(kiwi_records::VariableModeBySetMapEntry::VARIABLE_SET_ID)
-                    .and_then(|set| reference(vars, set));
-                let mode = guid_key(
-                    entry
-                        .record(
-                            kiwi_records::VariableModeBySetMapEntry::VARIABLE_MODE_ID,
+        match (vars, record.record(kiwi_records::NodeChange::VARIABLE_MODE_BY_SET_MAP)) {
+            (Some(vars), Some(set_map)) => {
+                set_map
+                    .records(kiwi_records::VariableModeBySetMap::ENTRIES)
+                    .into_iter()
+                    .map(|entry| (
+                        entry
+                            .record(
+                                kiwi_records::VariableModeBySetMapEntry::VARIABLE_SET_ID,
+                            ),
+                        entry,
+                    ))
+                    .filter_map(|item| match item {
+                        (Some(set), entry) => Some((set, entry)),
+                        _ => None,
+                    })
+                    .map(|(set, entry)| (reference(vars, set), (set, entry)))
+                    .filter_map(|item| match item {
+                        (Some(collection), (set, entry)) => {
+                            Some((collection, set, entry))
+                        }
+                        _ => None,
+                    })
+                    .map(|(collection, set, entry)| (
+                        guid_key(
+                            entry
+                                .record(
+                                    kiwi_records::VariableModeBySetMapEntry::VARIABLE_MODE_ID,
+                                ),
                         ),
-                );
-                if let (Some(collection), Some(mode)) = (collection, mode) {
-                    modes.insert(collection, mode);
-                }
+                        (collection, set, entry),
+                    ))
+                    .filter_map(|item| match item {
+                        (Some(mode), (collection, set, entry)) => {
+                            Some((mode, collection, set, entry))
+                        }
+                        _ => None,
+                    })
+                    .map(|(mode, collection, _, _)| (collection, mode))
+                    .collect()
             }
+            _ => HashMap::new(),
         }
-        modes
     }
     fn child_guid(guid: &GraphGuid, instance: bool, child: GuidKey) -> GraphGuid {
         match guid {
             GraphGuid::Clone(clone) => {
-                let mut path = clone.path.clone();
-                path.push(child);
                 GraphGuid::Clone(CloneGuid {
                     root: clone.root,
-                    path,
+                    path: clone
+                        .path
+                        .iter()
+                        .copied()
+                        .chain(vec![child])
+                        .collect::<Vec<GuidKey>>(),
                 })
             }
             GraphGuid::Source(id) if instance => {
@@ -21797,7 +21823,7 @@ pub mod graph {
                 parent: parent_guid,
                 record,
                 provenance,
-                children: Vec::new(),
+                children: vec![],
             });
         position
     }

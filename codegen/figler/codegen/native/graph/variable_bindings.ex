@@ -40,33 +40,9 @@ defmodule Figler.Codegen.Native.Graph.VariableBindings do
            required(:reference) => R.option(Kiwi.kiwi_record())
          }
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [
-        :bindable?,
-        :field_target,
-        :paint_target,
-        :argument_alias,
-        :bound,
-        :bind_entry,
-        :put_binding,
-        :linear,
-        :linear_expression,
-        :linear_product,
-        :bind_paints,
-        :apply_bindings,
-        :apply_binding,
-        :apply_paint,
-        :apply_number,
-        :put_text,
-        :put_length,
-        :put_position,
-        :numeric_target,
-        :color_record
-      ])
-  end
+  def items, do: __rustq_items__()
 
   @spec bindable?(R.u32()) :: R.bool()
   defrust bindable?(field) do

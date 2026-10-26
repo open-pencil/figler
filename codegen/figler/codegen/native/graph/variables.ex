@@ -84,52 +84,9 @@ defmodule Figler.Codegen.Native.Graph.Variables do
 
   @typep modes :: HashMap.t(Records.guid_key(), Records.guid_key())
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [
-        :new_variables,
-        :asset_keys,
-        :reference,
-        :asset_reference,
-        :collection,
-        :variable_type,
-        :put_variable,
-        :mode_values,
-        :stored_value,
-        :literal,
-        :literal_color,
-        :alias_value,
-        :expression,
-        :compose_color,
-        :color_operand,
-        :formula,
-        :formula_operands,
-        :formula_operand,
-        :resolve_variable,
-        :resolve_chain,
-        :value_in_mode,
-        :evaluate,
-        :evaluate_operand,
-        :resolve_reference,
-        :drawable,
-        :value_type,
-        :evaluate_formula,
-        :evaluated_operands,
-        :apply_operator,
-        :unary,
-        :binary,
-        :ternary,
-        :equal,
-        :finite,
-        :concatenated,
-        :text,
-        :number_text,
-        :two_decimals,
-        :truthy
-      ])
-  end
+  def items, do: __rustq_items__()
 
   # Reads the collections and variables among `records`.
   @spec new_variables(R.ref(SourceIndex.sources())) :: variables()

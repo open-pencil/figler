@@ -13,37 +13,9 @@ defmodule Figler.Codegen.Native.Graph.Geometry do
   alias KiwiCodec.RustlerGenerator.Records, as: Kiwi
   alias RustQ.Type, as: R
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    RustQ.Meta.AST.functions!(__MODULE__, [
-      :visual_lengths,
-      :layout_distances,
-      :scaled_fields,
-      :derived_fields,
-      :uniform_scale,
-      :apply_layout_scale,
-      :scale_occurrence,
-      :scale_properties,
-      :scale_effect,
-      :scale_text_layout,
-      :scale_derived_text,
-      :scale_glyph,
-      :scale_baseline,
-      :scale_pixel_value,
-      :scale_numbers,
-      :scale_vector,
-      :scale_floats,
-      :vector_size,
-      :apply_placed_constraints,
-      :resize,
-      :resize_child,
-      :resized_child,
-      :constrained_axis,
-      :identity_matrix,
-      :apply_derived_entry
-    ])
-  end
+  def items, do: __rustq_items__()
 
   @spec visual_lengths() :: R.slice(R.u32(), R.lifetime(:static))
   defrust visual_lengths() do

@@ -21,44 +21,9 @@ defmodule Figler.Codegen.Native.Graph.Prepare do
   @typep styles :: HashMap.t(Records.guid_key(), Kiwi.kiwi_record())
   @typep style_keys :: HashMap.t(String.t(), Records.guid_key())
 
-  @doc false
+  @doc "The Rust types and functions this module defines."
   @spec items() :: [term()]
-  def items do
-    __rustq_type_items__() ++
-      RustQ.Meta.AST.functions!(__MODULE__, [
-        :prepare,
-        :normalize,
-        :normalize_default,
-        :default_value,
-        :put_prop_refs,
-        :prop_ref,
-        :node_field,
-        :upsert_ref,
-        :inherit_property_definitions,
-        :linked_definitions,
-        :resolve,
-        :resolved_ancestors,
-        :inherit_from,
-        :inherit_definition,
-        :parent_definition,
-        :apply_styles,
-        :style_records,
-        :style_keys,
-        :apply_style_refs,
-        :style_field,
-        :text_style,
-        :referenced_style,
-        :asset_style,
-        :records_by_id,
-        :inherit_definitions,
-        :definitions_named,
-        :with_text_style,
-        :cached,
-        :unversioned_style,
-        :style_by_id,
-        :style_names
-      ])
-  end
+  def items, do: __rustq_items__()
 
   @spec prepare(R.vec(Kiwi.kiwi_record()), R.bool()) :: R.nif_result(R.vec(Kiwi.kiwi_record()))
   defrust prepare(records, styles) do
